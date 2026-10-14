@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLeadgerClick2callLogsTable extends Migration
+return new class extends Migration
 {
     public function up()
     {
@@ -22,4 +22,4 @@ class CreateLeadgerClick2callLogsTable extends Migration
     {
         Schema::dropIfExists('leadger_click2call_logs');
     }
-}
+};

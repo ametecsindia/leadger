@@ -6,7 +6,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-class CreateAiCallIntelligenceTables extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -109,4 +109,4 @@ class CreateAiCallIntelligenceTables extends Migration
         Schema::dropIfExists('call_ai_analyses');
         Schema::dropIfExists('company_ai_settings');
     }
-}
+};

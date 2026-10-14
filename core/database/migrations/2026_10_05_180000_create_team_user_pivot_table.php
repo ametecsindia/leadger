@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-class CreateTeamUserPivotTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -67,4 +67,4 @@ class CreateTeamUserPivotTable extends Migration
     {
         Schema::dropIfExists('team_user');
     }
-}
+};
