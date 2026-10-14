@@ -41,23 +41,15 @@ return new class extends Migration
         }
 
         // Ensure call_logs and dialer_logs have index on (phone, created_at)
-        if (Schema::hasTable('call_logs')) {
+        if (Schema::hasTable('call_logs') && !Schema::hasIndex('call_logs', 'idx_call_logs_phone_created_at')) {
             Schema::table('call_logs', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes(Schema::getConnection()->getTablePrefix() . 'call_logs'));
-                if (!in_array('idx_call_logs_phone_created_at', $indexes)) {
-                    $table->index(['phonenumber', 'created_at'], 'idx_call_logs_phone_created_at');
-                }
+                $table->index(['phonenumber', 'created_at'], 'idx_call_logs_phone_created_at');
             });
         }
 
-        if (Schema::hasTable('dialer_logs')) {
+        if (Schema::hasTable('dialer_logs') && !Schema::hasIndex('dialer_logs', 'idx_dialer_logs_phone_created_at')) {
             Schema::table('dialer_logs', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes(Schema::getConnection()->getTablePrefix() . 'dialer_logs'));
-                if (!in_array('idx_dialer_logs_phone_created_at', $indexes)) {
-                    $table->index(['phone_number', 'created_at'], 'idx_dialer_logs_phone_created_at');
-                }
+                $table->index(['phone_number', 'created_at'], 'idx_dialer_logs_phone_created_at');
             });
         }
     }
