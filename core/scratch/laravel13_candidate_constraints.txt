@@ -1,0 +1,18 @@
+# Proposed Composer Constraint Changes for Laravel 13
+
+laravel/framework: ^12.0 -> ^13.0
+laravel/tinker: ^2.9 -> ^3.0
+phpunit/phpunit: ^11.5 -> ^12.0
+
+# Notes on Dependencies Confirmed Already Compatible with Laravel 13:
+# barryvdh/laravel-dompdf: ^3.1 (already compatible with illuminate/support ^13.0)
+# prabowosd/laravel-collective-html: ^1.1 (already compatible with illuminate/* ^13.0)
+# nunomaduro/collision: ^8.6 (v8.9.5 already compatible with laravel/framework ^13.20.0)
+# spatie/laravel-ignition: ^2.4 (already compatible with illuminate/support ^13.0)
+# laravel/sanctum: ^4.0 (already compatible with illuminate/* ^13.0)
+# laravel/socialite: ^5.5 (already compatible with illuminate/* ^13.0)
+# laravel/ui: ^4.5 (already compatible with illuminate/* ^13.0)
+# alexusmai/laravel-file-manager: ^3.0 (v3.3.3 already compatible with laravel/framework ^13.0)
+# intervention/image-laravel: ^1.2 (v1.5.9 already compatible with illuminate/* ^13)
+# spatie/laravel-feed: ^4.1 (already compatible with illuminate/* ^13.0)
+# torann/geoip: ^3.0 (already compatible with illuminate/* ^13.0)

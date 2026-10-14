@@ -1,0 +1,347 @@
+/* ==========================================================================
+   LeadGER admin themes: Original (default) | Executive Slate | Professional Green | Midnight Dark
+   --------------------------------------------------------------------------
+   The theme is html[data-theme], set in the <head> before any CSS loads (layouts/head.blade.php).
+   ORIGINAL: nothing in this file changes it (every rule below is scoped to the other three themes),
+   so the original look stays exactly as it was. The semantic tokens on :root hold the original values.
+   Hard-coded colors in the pages' own CSS and inline styles are mapped by assets/dashboard/js/lg-themes.js.
+   Brand elements keep their colors in every theme: logo, green "Make a Call" header, green Click2Call
+   buttons, the green Calling / Call Blocked toast, status colors.
+   ========================================================================== */
+
+:root {
+  --t-bg-page: #F7F8FA;
+  --t-bg-card: #FFFFFF;
+  --t-bg-alt: #F8FAFC;
+  --t-bg-input: #FFFFFF;
+  --t-bg-header: #0F172A;
+  --t-bg-sidebar: #071426;
+  --t-bg-sidebar-sub: #0D1B33;
+  --t-sidebar-active: #14428B;
+  --t-sidebar-sub-active: #1A3660;
+  --t-border: #E2E8F0;
+  --t-border-strong: #CBD5E1;
+  --t-text: #0F172A;
+  --t-text-body: #334155;
+  --t-text-muted: #64748B;
+  --t-accent: #1464F4;
+  --t-accent-hover: #0F52D6;
+  --t-accent-soft: #EFF6FF;
+  --t-accent-border: #BFDBFE;
+  --t-accent-contrast: #FFFFFF;
+  /* filled accent surfaces with white text (buttons, selected items); Midnight Dark uses a deeper blue for 4.5:1 */
+  --t-accent-fill: var(--t-accent);
+  --t-accent-fill-hover: var(--t-accent-hover);
+  --t-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 12px rgba(15, 23, 42, 0.02);
+  --t-shadow-pop: 0 12px 32px rgba(15, 23, 42, 0.16);
+  /* Status: the same in every theme (lighter tints on Midnight Dark) */
+  --t-success: #12A66A;
+  --t-danger: #DC2626;
+  --t-warning: #D97706;
+  --t-info: #1F5FBF;
+}
+
+html[data-theme="slate"] {
+  --t-bg-page: #F5F6F8;
+  --t-bg-card: #FFFFFF;
+  --t-bg-alt: #F8F9FA;
+  --t-bg-input: #FFFFFF;
+  --t-bg-header: #2B3340;
+  --t-bg-sidebar: #2B3340;
+  --t-bg-sidebar-sub: #232A35;
+  --t-sidebar-active: #4A6FA5;
+  --t-sidebar-sub-active: #3A4556;
+  --t-border: #E0E3E8;
+  --t-border-strong: #C7CCD4;
+  --t-text: #1E293B;
+  --t-text-body: #334155;
+  --t-text-muted: #667080; /* #6A7280 is 4.48:1 on the page background; this keeps 4.5:1 */
+  --t-accent: #4A6FA5;
+  --t-accent-hover: #3C5C8C;
+  --t-accent-soft: #EDF1F7;
+  --t-accent-border: #C5D2E6;
+  --t-accent-contrast: #FFFFFF;
+  --t-shadow: 0 1px 3px rgba(30, 41, 59, 0.05), 0 4px 12px rgba(30, 41, 59, 0.04);
+  --t-shadow-pop: 0 12px 32px rgba(30, 41, 59, 0.18);
+}
+
+html[data-theme="green"] {
+  --t-bg-page: #F2F8F5;
+  --t-bg-card: #FFFFFF;
+  --t-bg-alt: #F6FAF8;
+  --t-bg-input: #FFFFFF;
+  --t-bg-header: #0F3D2E;
+  --t-bg-sidebar: #0F3D2E;
+  --t-bg-sidebar-sub: #0B3024;
+  --t-sidebar-active: #12805A;
+  --t-sidebar-sub-active: #17513D;
+  --t-border: #D4E6DD;
+  --t-border-strong: #B5D0C3;
+  --t-text: #0F2F23;
+  --t-text-body: #23463A;
+  --t-text-muted: #557465;
+  --t-accent: #12805A;
+  --t-accent-hover: #0E6B4B;
+  --t-accent-soft: #E7F3ED;
+  --t-accent-border: #BCDCCB;
+  --t-accent-contrast: #FFFFFF;
+  --t-shadow: 0 1px 3px rgba(15, 47, 35, 0.05), 0 4px 12px rgba(15, 47, 35, 0.04);
+  --t-shadow-pop: 0 12px 32px rgba(15, 47, 35, 0.18);
+}
+
+html[data-theme="dark"] {
+  --t-bg-page: #0F172A;
+  --t-bg-card: #18233B;
+  --t-bg-alt: #1F2C47;
+  --t-bg-input: #1F2C47;
+  --t-bg-header: #070D1C;
+  --t-bg-sidebar: #070D1C;
+  --t-bg-sidebar-sub: #0C152A;
+  --t-sidebar-active: #1E4A8F;
+  --t-sidebar-sub-active: #17294A;
+  --t-border: #27344F;
+  --t-border-strong: #34435F;
+  --t-text: #E5EAF5;
+  --t-text-body: #CDD5E5;
+  --t-text-muted: #93A1BD;
+  --t-accent: #3B82F6;
+  --t-accent-hover: #60A5FA;
+  --t-accent-soft: #1A2E52;
+  --t-accent-border: #2E4C80;
+  --t-accent-contrast: #FFFFFF;
+  --t-accent-fill: #2563EB;
+  --t-accent-fill-hover: #1D4ED8;
+  --t-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --t-shadow-pop: 0 14px 36px rgba(0, 0, 0, 0.55);
+  --t-success: #34D399;
+  --t-danger: #F87171;
+  --t-warning: #FBBF24;
+  --t-info: #60A5FA;
+}
+
+/* --------------------------------------------------------------------------
+   Existing design tokens -> theme tokens (the three new themes only)
+   -------------------------------------------------------------------------- */
+html[data-theme]:not([data-theme="original"]) {
+  --lg-navy: var(--t-bg-sidebar);
+  --lg-accent: var(--t-accent);
+  --lg-accent-hover: var(--t-accent-hover);
+  --lg-accent-soft: var(--t-accent-soft);
+  --lg-accent-border: var(--t-accent-border);
+  --lg-bg: var(--t-bg-page);
+  --lg-surface: var(--t-bg-card);
+  --lg-surface-alt: var(--t-bg-alt);
+  --lg-border: var(--t-border);
+  --lg-border-strong: var(--t-border-strong);
+  --lg-text: var(--t-text);
+  --lg-text-body: var(--t-text-body);
+  --lg-text-label: var(--t-text-body);
+  --lg-text-muted: var(--t-text-muted);
+  --lg-shadow-card: var(--t-shadow);
+  --lg-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--t-accent) 22%, transparent);
+  --cw-navy: var(--t-text);
+  --cw-navy-light: var(--t-bg-alt);
+  --cw-blue: var(--t-accent);
+  --cw-blue-hover: var(--t-accent-hover);
+  --cw-blue-light: var(--t-accent-soft);
+  --cw-bg: var(--t-bg-page);
+  --cw-card-bg: var(--t-bg-card);
+  --cw-border: var(--t-border);
+  --cw-text-main: var(--t-text);
+  --cw-text-sub: var(--t-text-muted);
+}
+html[data-theme="dark"] {
+  --lg-success: var(--t-success); --lg-success-bg: #10302A; --lg-success-border: #1D5A47;
+  --lg-warning: var(--t-warning); --lg-warning-bg: #33280F; --lg-warning-border: #5C4718;
+  --lg-danger:  var(--t-danger);  --lg-danger-bg:  #3A1A1F; --lg-danger-border:  #66282F;
+  --cw-green-light: #10302A;
+  --cw-red-light: #3A1A1F;
+  --cw-amber-light: #33280F;
+}
+
+/* --------------------------------------------------------------------------
+   Layout: page, header, sidebar
+   -------------------------------------------------------------------------- */
+html[data-theme]:not([data-theme="original"]) body,
+html[data-theme]:not([data-theme="original"]) .app,
+html[data-theme]:not([data-theme="original"]) #content.app-content,
+html[data-theme]:not([data-theme="original"]) .app-body {
+  background-color: var(--t-bg-page) !important;
+}
+html[data-theme="dark"] body { color: var(--t-text-body); }
+
+html[data-theme]:not([data-theme="original"]) .top-header.app-header {
+  background: var(--t-bg-header) !important;
+}
+html[data-theme]:not([data-theme="original"]) #headerNotificationBell span[style*="border"] {
+  border-color: var(--t-bg-header) !important;
+}
+
+html[data-theme]:not([data-theme="original"]) .sidebar,
+html[data-theme]:not([data-theme="original"]) #aside.app-aside,
+html[data-theme]:not([data-theme="original"]) .app-aside .navside,
+html[data-theme]:not([data-theme="original"]) .app-aside .left.navside,
+html[data-theme]:not([data-theme="original"]) .lg-sidebar-inner,
+html[data-theme]:not([data-theme="original"]) .sidebar-header,
+html[data-theme]:not([data-theme="original"]) .sidebar-brand,
+html[data-theme]:not([data-theme="original"]) .lg-sidebar-brand,
+html[data-theme]:not([data-theme="original"]) .sidebar-nav,
+html[data-theme]:not([data-theme="original"]) .sidebar-navigation,
+html[data-theme]:not([data-theme="original"]) .lg-sidebar-navigation,
+html[data-theme]:not([data-theme="original"]) .sidebar-footer,
+html[data-theme]:not([data-theme="original"]) .lg-sidebar-footer {
+  background: var(--t-bg-sidebar) !important;
+}
+html[data-theme]:not([data-theme="original"]) .lg-submenu { background: var(--t-bg-sidebar-sub) !important; }
+html[data-theme]:not([data-theme="original"]) .lg-menu-row.active {
+  background: var(--t-sidebar-active) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+html[data-theme]:not([data-theme="original"]) .lg-sub-link.active { background: var(--t-sidebar-sub-active) !important; }
+
+/* --------------------------------------------------------------------------
+   Common components
+   -------------------------------------------------------------------------- */
+html[data-theme]:not([data-theme="original"]) .card,
+html[data-theme]:not([data-theme="original"]) .box,
+html[data-theme]:not([data-theme="original"]) .panel,
+html[data-theme]:not([data-theme="original"]) .modal-content,
+html[data-theme]:not([data-theme="original"]) .lg-dropdown-menu,
+html[data-theme]:not([data-theme="original"]) .popover,
+html[data-theme]:not([data-theme="original"]) .swal2-popup,
+html[data-theme]:not([data-theme="original"]) .select2-dropdown {
+  background-color: var(--t-bg-card) !important;
+  border-color: var(--t-border) !important;
+  color: var(--t-text-body);
+}
+html[data-theme]:not([data-theme="original"]) .modal-header,
+html[data-theme]:not([data-theme="original"]) .modal-footer { border-color: var(--t-border) !important; }
+
+html[data-theme]:not([data-theme="original"]) .form-control,
+html[data-theme]:not([data-theme="original"]) .select2-container--default .select2-selection--single,
+html[data-theme]:not([data-theme="original"]) .select2-container--default .select2-selection--multiple,
+html[data-theme]:not([data-theme="original"]) .select2-search__field,
+html[data-theme]:not([data-theme="original"]) .dataTables_wrapper .dataTables_filter input,
+html[data-theme]:not([data-theme="original"]) .dataTables_wrapper .dataTables_length select {
+  background-color: var(--t-bg-input) !important;
+  border-color: var(--t-border-strong) !important;
+  color: var(--t-text) !important;
+}
+html[data-theme]:not([data-theme="original"]) .select2-container--default .select2-selection__rendered { color: var(--t-text) !important; }
+html[data-theme]:not([data-theme="original"]) .select2-results__option--highlighted[aria-selected],
+html[data-theme]:not([data-theme="original"]) .select2-container--default .select2-results__option--highlighted { background-color: var(--t-accent-fill) !important; color: var(--t-accent-contrast) !important; }
+html[data-theme]:not([data-theme="original"]) ::placeholder { color: var(--t-text-muted) !important; opacity: 1; }
+
+html[data-theme]:not([data-theme="original"]) .btn-primary {
+  background-color: var(--t-accent-fill) !important;
+  border-color: var(--t-accent-fill) !important;
+  color: var(--t-accent-contrast) !important;
+}
+html[data-theme]:not([data-theme="original"]) .btn-primary:hover { background-color: var(--t-accent-fill-hover) !important; border-color: var(--t-accent-fill-hover) !important; }
+
+html[data-theme]:not([data-theme="original"]) .dropdown-menu:not([aria-labelledby="headerNotificationBell"]) {
+  background-color: var(--t-bg-card);
+  border-color: var(--t-border);
+}
+html[data-theme]:not([data-theme="original"]) .dropdown-item:hover,
+html[data-theme]:not([data-theme="original"]) .dropdown-menu > li > a:hover { background-color: var(--t-bg-alt) !important; }
+
+/* Tables (DataTables headers stay readable; sticky headers follow the theme) */
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table { color: var(--t-text-body); }
+html[data-theme="dark"] .table > thead > tr > th,
+html[data-theme="dark"] table.dataTable thead th,
+html[data-theme="dark"] .dataTables_scrollHead { background-color: var(--t-bg-alt) !important; color: var(--t-text-body) !important; border-color: var(--t-border) !important; }
+html[data-theme="dark"] .table td,
+html[data-theme="dark"] .table th { border-color: var(--t-border) !important; }
+html[data-theme="dark"] table.dataTable tbody tr { background-color: var(--t-bg-card); }
+html[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd),
+html[data-theme="dark"] table.dataTable.stripe tbody tr.odd { background-color: var(--t-bg-alt) !important; }
+html[data-theme="dark"] .table-hover tbody tr:hover,
+html[data-theme="dark"] table.dataTable.hover tbody tr:hover { background-color: #22304D !important; }
+html[data-theme="dark"] .dataTables_wrapper .dataTables_info,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button { color: var(--t-text-muted) !important; }
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: var(--t-accent-fill) !important; border-color: var(--t-accent-fill) !important; color: #FFFFFF !important; }
+
+/* Text helpers */
+html[data-theme]:not([data-theme="original"]) .text-muted { color: var(--t-text-muted) !important; }
+html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3,
+html[data-theme="dark"] h4, html[data-theme="dark"] h5, html[data-theme="dark"] h6 { color: var(--t-text); }
+html[data-theme="dark"] .text-dark, html[data-theme="dark"] .text-black { color: var(--t-text) !important; }
+html[data-theme="dark"] a:not(.btn):not([class*="badge"]) { color: inherit; }
+html[data-theme="dark"] a.text-primary, html[data-theme="dark"] .text-primary { color: var(--t-accent-hover) !important; }
+html[data-theme="dark"] hr { border-color: var(--t-border); }
+
+/* Date / time pickers */
+html[data-theme="dark"] .flatpickr-calendar { background: var(--t-bg-card) !important; border-color: var(--t-border) !important; box-shadow: var(--t-shadow-pop) !important; }
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-day,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-weekday,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-month,
+html[data-theme="dark"] .flatpickr-calendar .cur-month,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-current-month input.cur-year,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months { color: var(--t-text) !important; fill: var(--t-text) !important; background: transparent; }
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-day.prevMonthDay,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-day.nextMonthDay,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-day.flatpickr-disabled { color: #5B6A88 !important; }
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-day:hover { background: var(--t-bg-alt) !important; border-color: var(--t-bg-alt) !important; }
+html[data-theme]:not([data-theme="original"]) .flatpickr-calendar .flatpickr-day.selected { background: var(--t-accent-fill) !important; border-color: var(--t-accent-fill) !important; color: #FFFFFF !important; }
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-months .flatpickr-prev-month svg,
+html[data-theme="dark"] .flatpickr-calendar .flatpickr-months .flatpickr-next-month svg { fill: var(--t-text) !important; }
+
+/* Toasts / SweetAlert text */
+html[data-theme="dark"] .swal2-title, html[data-theme="dark"] .swal2-html-container, html[data-theme="dark"] .swal2-content { color: var(--t-text) !important; }
+
+/* Native controls follow the theme (also set on <html> by the head script) */
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb { background-color: #34435F; }
+
+/* --------------------------------------------------------------------------
+   Brand elements: same in every theme
+   -------------------------------------------------------------------------- */
+html[data-theme]:not([data-theme="original"]) .cw-card-green-header { background: linear-gradient(135deg, #0FB77A 0%, #0A9A66 100%) !important; }
+html[data-theme]:not([data-theme="original"]) .cw-call-toast.is-call { color: #FFFFFF !important; }
+
+/* --------------------------------------------------------------------------
+   Theme change: short color transition (not on page load; off for reduced motion)
+   -------------------------------------------------------------------------- */
+html.lg-theme-anim, html.lg-theme-anim * {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, fill 150ms ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.lg-theme-anim, html.lg-theme-anim * { transition: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Theme picker (header, left of the bell) - uses the tokens so it fits every theme
+   -------------------------------------------------------------------------- */
+.lg-theme-picker { position: relative; display: flex; align-items: center; height: 100%; flex-shrink: 0; }
+.lg-theme-btn {
+  height: 38px; width: 38px; min-width: 38px; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF; cursor: pointer; padding: 0; transition: background 0.15s ease; box-sizing: border-box;
+}
+.lg-theme-btn:hover, .lg-theme-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.14); }
+.lg-theme-btn:focus { outline: none; }
+.lg-theme-btn:focus-visible { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
+.lg-theme-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; width: 280px; z-index: 1065;
+  background: var(--t-bg-card); border: 1px solid var(--t-border); border-radius: 14px;
+  box-shadow: var(--t-shadow-pop); padding: 10px; color: var(--t-text-body);
+}
+.lg-theme-menu[hidden] { display: none; }
+.lg-theme-menu-title { font-size: 12px; font-weight: 700; color: var(--t-text-muted); text-transform: uppercase; letter-spacing: .04em; padding: 4px 8px 8px; }
+.lg-theme-opt {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: none; border-radius: 10px;
+  background: transparent; color: var(--t-text); font-size: 13.5px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.lg-theme-opt:hover, .lg-theme-opt:focus-visible { background: var(--t-bg-alt); outline: none; }
+.lg-theme-opt[aria-checked="true"] { background: var(--t-accent-soft); }
+.lg-theme-dots { display: inline-flex; gap: 3px; flex-shrink: 0; }
+.lg-theme-dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.12); display: inline-block; }
+.lg-theme-name { flex: 1; }
+.lg-theme-default { font-size: 10.5px; font-weight: 700; color: var(--t-text-muted); border: 1px solid var(--t-border); border-radius: 999px; padding: 1px 7px; }
+.lg-theme-check { width: 16px; color: var(--t-accent); visibility: hidden; }
+.lg-theme-opt[aria-checked="true"] .lg-theme-check { visibility: visible; }
+.lg-theme-reset { display: block; margin: 6px 8px 2px; padding: 0; border: none; background: none; font-size: 12.5px; font-weight: 600; color: var(--t-accent); cursor: pointer; }
+html[data-theme="dark"] .lg-theme-reset { color: var(--t-accent-hover); }
+.lg-theme-reset:hover { text-decoration: underline; }

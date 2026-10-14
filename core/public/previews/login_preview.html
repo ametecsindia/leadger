@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8"/>
+<title>LeadGER</title>
+<meta name="description" content="Website description and some little information about it"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimal-ui"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-barstyle" content="black-translucent">
+<link rel="apple-touch-icon" href="http://192.168.0.127:8000/assets/dashboard/images/logo.png">
+<meta name="apple-mobile-web-app-title" content="LeadGER">
+<base href="http://192.168.0.127:8000/admin">
+<meta name="csrf-token" content="w8scxwryzx3bXXdBHI1lMAXiW2xQMpXHUplRoZt4">
+
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="shortcut icon" sizes="196x196" href="http://192.168.0.127:8000/assets/dashboard/images/logo.png">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/animate.css/animate.min.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/animate.css/animate.min.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/glyphicons/glyphicons.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/font-awesome/css/font-awesome.min.css"
+      type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/material-design-icons/material-design-icons.css"
+      type="text/css"/>
+      <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"> -->
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/bootstrap/dist/css/bootstrap.min.css"
+      type="text/css"/>
+      <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/js/select2/dist/css/select2.min.css"
+      type="text/css"/>
+      <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/toastr/toastr.min.css"
+      type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/app.css" type="text/css"/>
+
+<!-- <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/font.css" type="text/css"/> -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/topic.css" type="text/css"/>
+
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/custom.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/leadger-theme.css?v=1.2" type="text/css"/>
+
+</head>
+<body>
+<div class="app auth_app" id="app">
+    
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/login-custom.css" type="text/css"/>
+
+<!-- Full Viewport Cinematic Background with Tele-Sales Office Environment -->
+<div class="lg-cinematic-bg"></div>
+
+<!-- Vertically and Horizontally Centered Login Experience -->
+<div class="lg-login-wrapper">
+    <div class="lg-login-card">
+        
+        <!-- Header & Branding (Matching LeadGER Reference Image: [Lightning Logo] LeadGER) -->
+        <div class="lg-login-brand-header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px;">
+                <div class="lg-logo-badge" style="margin: 0 !important;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="lgLoginBoltGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+                                <stop offset="0%" stop-color="#00F0FF"/>
+                                <stop offset="50%" stop-color="#00A3FF"/>
+                                <stop offset="100%" stop-color="#0066FF"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M13 2.5L3.5 13.5H11.5L9.5 21.5L20.5 10.5H12.5L14.5 2.5H13Z" fill="url(#lgLoginBoltGrad)"/>
+                    </svg>
+                </div>
+                <div class="lg-login-brand-title" style="margin: 0 !important; font-size: 28px !important; font-weight: 800 !important; letter-spacing: -0.02em !important; line-height: 1 !important; display: inline-flex !important; align-items: center !important;">
+                    <span style="color: #0F172A;">Lead</span><span class="lg-login-accent" style="color: #00A3FF !important; background: linear-gradient(180deg, #00A3FF 0%, #0066FF 100%) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;">GER</span>
+                </div>
+            </div>
+            
+            <h2 class="lg-welcome-heading">Welcome Back!</h2>
+            <p class="lg-welcome-desc">Sign in to your LeadGER command center</p>
+        </div>
+
+        <!-- Global / Server Error Message Display -->
+        <div id="msg_title_fail" class="lg-alert-danger" style="display:none;"></div>
+        <div id="msg_title" class="lg-alert-success" style="display:none;"></div>
+
+        
+        <!-- Login Form -->
+        <form name="form" method="POST" action="http://192.168.0.127:8000/admin/login" autocomplete="on">
+            <input type="hidden" name="_token" value="w8scxwryzx3bXXdBHI1lMAXiW2xQMpXHUplRoZt4" autocomplete="off">
+
+            <!-- Email / Username Input -->
+            <div class="lg-form-group ">
+                <label class="lg-form-label" for="email">Email / Username</label>
+                <div class="lg-input-wrapper">
+                    <span class="lg-input-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </span>
+                    <input 
+                        type="email" 
+                        name="email" 
+                        id="email" 
+                        value="admin@leadger.com" 
+                        class="lg-input" 
+                        placeholder="admin@leadger.com" 
+                        required 
+                        autofocus
+                    >
+                </div>
+                <span id="err_email" class="lg-error-text"></span>
+            </div>
+
+            <!-- Password Input -->
+            <div class="lg-form-group ">
+                <label class="lg-form-label" for="password">Password</label>
+                <div class="lg-input-wrapper">
+                    <span class="lg-input-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </span>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        class="lg-input" 
+                        placeholder="••••••••••••" 
+                        required
+                    >
+                    <button type="button" class="lg-pwd-toggle" onclick="togglePasswordVisibility()" title="Toggle password visibility" tabindex="-1">
+                        <svg id="pwd-icon-eye" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <svg id="pwd-icon-eye-off" viewBox="0 0 24 24" style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
+                <span id="err_password" class="lg-error-text"></span>
+                            </div>
+
+            <!-- OTP Verification Section (Hidden by default, shown during 2FA flow) -->
+            <div class="lg-otp-box" style="display:none;" id="div_otp">
+                <label class="lg-form-label" for="otp">Security Code (OTP)</label>
+                <div class="lg-input-wrapper">
+                    <span class="lg-input-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                    </span>
+                    <input type="text" name="otp" id="otp" class="lg-input" placeholder="Enter 4-digit OTP" maxlength="4" pattern="\d{4}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);">
+                </div>
+                <div class="lg-timer-text" style="font-size: 12px; color: #64748B; margin-top: 6px;">
+                    <span id="otp_msg"></span> 
+                    <span>Expires in <strong id="timer-show">60</strong>s</span>
+                </div>
+                <span id="err_otp" class="lg-error-text"></span>
+            </div>
+
+            <!-- Sign In Submit Button -->
+            <button onclick="login();return false;" type="button" class="lg-submit-btn" id="_login">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 16 16 12 12 8"></polyline>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span>Sign In</span>
+            </button>
+
+            <button onclick="validateOTP();return false;" type="button" class="lg-submit-btn" id="_validate_otp" style="display:none;">
+                <span>Verify OTP & Continue</span>
+            </button>
+
+            <button onclick="resendOTP();return false;" type="button" class="lg-submit-btn" id="_resend_otp" style="display:none; background: #475569;">
+                <span>Resend OTP</span>
+            </button>
+        </form>
+
+        <!-- Forgot Password Link -->
+        <div class="lg-footer-links">
+            <a href="http://192.168.0.127:8000/admin/password/reset" class="lg-forgot-link">
+                Forgot password?
+            </a>
+        </div>
+
+        <!-- Copyright Footer -->
+        <div class="lg-copyright">
+            &copy; 2026 Tricube Media Solutions. All rights reserved.
+        </div>
+    </div>
+</div>
+
+</div>
+<script type="text/javascript">
+    var public_lang = "en";
+    var public_folder_path = "http://192.168.0.127:8000/";
+    var first_day_of_week = "0";
+
+</script>
+<!-- jQuery -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/jquery/dist/jquery.js"></script>
+<!-- Bootstrap -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/tether/dist/js/tether.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/bootstrap/dist/js/bootstrap.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/moment/moment.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/moment/locale/en.js" defer></script>
+<!-- core -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/underscore/underscore-min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/jQuery-Storage-API/jquery.storageapi.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/pace/pace.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/config.lazyload.js" defer></script>
+
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/palette.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-load.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-jp.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-include.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-device.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-form.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-nav.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-screenfull.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-scroll-to.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-toggle-class.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/select2/dist/js/select2.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/toastr/toastr.min.js" defer></script>
+
+
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/app.js" defer></script>
+
+
+
+
+<script>
+    function togglePasswordVisibility() {
+        var pwdInput = document.getElementById('password');
+        var eyeIcon = document.getElementById('pwd-icon-eye');
+        var eyeOffIcon = document.getElementById('pwd-icon-eye-off');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIcon.style.display = 'none';
+            eyeOffIcon.style.display = 'block';
+        } else {
+            pwdInput.type = 'password';
+            eyeIcon.style.display = 'block';
+            eyeOffIcon.style.display = 'none';
+        }
+    }
+
+    function login() {
+        let strUrl = "http://192.168.0.127:8000/admin/custom_login";
+        let objInputs = {
+            email: $('#email').val(),
+            password: $('#password').val(),
+            _token: 'w8scxwryzx3bXXdBHI1lMAXiW2xQMpXHUplRoZt4',
+            remember: false
+        };
+        let intValid = validateInputs(objInputs);
+        if (1 == intValid) {
+            $('#_login').prop('disabled', true).css('opacity', '0.75');
+            $.post(strUrl, objInputs, function (response) {
+                $('#_login').prop('disabled', false).css('opacity', '1');
+                try {
+                    if (typeof response === 'string') {
+                        response = JSON.parse(response);
+                    }
+                } catch(e) {}
+
+                $('#div_otp').hide();
+                $('#_validate_otp').hide();
+                $('#_resend_otp').hide();
+                $('#_login').show();
+                $('#msg_title').hide().html('');
+                $('#msg_title_fail').hide().html('');
+
+                if (response.hasOwnProperty('success')) {
+                    $('#div_otp').show();
+                    $("#otp_msg").html(response.otp_msg || 'OTP code sent to your registered device.');
+                    startTimer(60);
+                    $('#_validate_otp').show();
+                    $('#_login').hide();
+                    $('#msg_title').show().html(response.success);
+                    return true;
+                } else {
+                    $('#msg_title_fail').show().html(response.error || 'Invalid credentials.');
+                    if (response.error == 'Application License Expired') {
+                        window.location = 'http://192.168.0.127:8000/admin/license';
+                    }
+                    return false;
+                }
+            }).fail(function() {
+                $('#_login').prop('disabled', false).css('opacity', '1');
+                document.forms['form'].submit();
+            });
+        }
+    }
+
+    function validateInputs(objInputs) {
+        clearErrors('do_login');
+        let intValid = 1;
+
+        // Email
+        if (objInputs.hasOwnProperty('email') && (!objInputs.email || objInputs.email.trim().length <= 0)) {
+            intValid = 0;
+            $('#err_email').html('Email address is required');
+        }
+
+        // Password
+        if (objInputs.hasOwnProperty('password') && (!objInputs.password || objInputs.password.length <= 0)) {
+            intValid = 0;
+            $('#err_password').html('Password is required');
+        }
+
+        // OTP
+        if (objInputs.hasOwnProperty('otp')) {
+            const otpVal = objInputs.otp ? objInputs.otp.trim() : '';
+            if (!otpVal || !/^\d{4}$/.test(otpVal)) {
+                intValid = 0;
+                $('#err_otp').html('Please enter a valid 4-digit OTP.');
+            }
+        }
+
+        return intValid;
+    }
+
+    function clearErrors(strScenario) {
+        switch (strScenario) {
+            case 'do_login':
+                $('#err_email').html('');
+                $('#err_password').html('');
+                break;
+            case 'validate_otp':
+                $('#msg_title').hide().html('');
+                $('#msg_title_fail').hide().html('');
+                $('#err_otp').html('');
+                break;
+            case 'clear_default_errs':
+                $('#msg_title').hide().html('');
+                $('#msg_title_fail').hide().html('');
+                $('#err_email').html('');
+                $('#err_password').html('');
+                $('#err_otp').html('');
+                break;
+        }
+        return true;
+    }
+
+    function validateOTP() {
+        clearErrors('validate_otp');
+        let strUrl = "http://192.168.0.127:8000/admin/validate_otp";
+        var mobile = false;
+        if (typeof Android != 'undefined') {
+            mobile = true;
+        }
+        let objInputs = {
+            _token: 'w8scxwryzx3bXXdBHI1lMAXiW2xQMpXHUplRoZt4',
+            otp: $('#otp').val(),
+            email: $('#email').val(),
+            password: $('#password').val(),
+            remember: false,
+            mobile: mobile
+        };
+
+        let intValid = validateInputs(objInputs);
+
+        if (1 == intValid) {
+            $('#_validate_otp').prop('disabled', true);
+            $.post(strUrl, objInputs, function (response) {
+                $('#_validate_otp').prop('disabled', false);
+                try {
+                    if (typeof response === 'string') {
+                        response = JSON.parse(response);
+                    }
+                } catch(e) {}
+                
+                if (response.hasOwnProperty('success')) {
+                    window.location.href = response.url || 'http://192.168.0.127:8000/admin';
+                } else {
+                    $('#msg_title_fail').show().html(response.error || 'Please enter a valid 4-digit OTP.');
+                    return false;
+                }
+            }).fail(function() {
+                $('#_validate_otp').prop('disabled', false);
+            });
+        }
+    }
+
+    function resendOTP() {
+        $("#div_otp").hide();
+        login();
+    }
+
+    function startTimer(timeleft) {
+        $("#timer-show").html(timeleft);
+        var countdownTimer = setInterval(() => {
+            timeleft--;
+            $("#timer-show").html(timeleft);
+            if (timeleft <= 0) {
+                clearInterval(countdownTimer);
+                $("#div_otp").hide();
+                $("#_validate_otp").hide();
+                $("#_resend_otp").show();
+            }
+        }, 1000);
+    }
+</script>
+</body>
+</html>

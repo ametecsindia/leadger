@@ -1,0 +1,23 @@
+Agent:
+Hello, this is Akshitha calling from LeadGER. Am I speaking with Mr. Rahul?
+
+Customer:
+Yes, this is Rahul. How can I help you?
+
+Agent:
+I'm calling regarding your home loan inquiry. We have an option with a competitive interest rate and flexible repayment period.
+
+Customer:
+Okay, I'm interested. Please tell me the eligibility and documents required.
+
+Agent:
+Sure. We need identity proof, address proof, income documents, and recent bank statements. I can arrange a follow-up call tomorrow afternoon to explain the details.
+
+Customer:
+That works for me. Please call me tomorrow at three PM.
+
+Agent:
+Perfect. I have scheduled the follow-up for tomorrow at three PM. Thank you for your time.
+
+Customer:
+Thank you. I'll be available.

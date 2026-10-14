@@ -1,0 +1,1717 @@
+/* ==========================================================================
+   LeadGER Master Theme & Table Design System
+   Matches Dark Navy Blue Sidebar & Modern CRM Interface Standards
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Typography & Global Body Foundations
+   -------------------------------------------------------------------------- */
+body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  font-family: 'IBM Plex Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   2. Dark Navy Sidebar (Strict Reference Implementation)
+   -------------------------------------------------------------------------- */
+.sidebar,
+#aside.app-aside,
+.app-aside .navside,
+.app-aside .left.navside {
+  background: #071426 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+  width: 240px !important;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25) !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+@media (min-width: 992px) {
+  .app-header,
+  .top-header {
+    left: 240px !important;
+    width: calc(100% - 240px) !important;
+  }
+}
+
+.lg-sidebar-inner {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  background: #071426 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+/* Top Call Queue CTA */
+.rail-cta {
+  height: 40px !important;
+  margin: 14px 14px 10px 14px !important;
+  padding: 0 16px !important;
+  border-radius: 20px !important;
+  background: var(--lg-accent) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  text-decoration: none !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+}
+.rail-cta:hover {
+  background: var(--lg-accent-hover) !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45) !important;
+  transform: translateY(-1px) !important;
+  color: #FFFFFF !important;
+}
+
+/* Sidebar Branding Header */
+.sidebar-header,
+.sidebar-brand,
+.lg-sidebar-brand {
+  flex-shrink: 0 !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  padding: 0 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-decoration: none !important;
+  background: #071426 !important;
+  box-sizing: border-box !important;
+}
+
+.lg-sidebar-brand img {
+  height: 57px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* Sidebar Scroll Area */
+.sidebar-nav,
+.sidebar-navigation,
+.lg-sidebar-navigation {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+  background: #071426 !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar,
+.sidebar-navigation::-webkit-scrollbar,
+.lg-sidebar-navigation::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb,
+.sidebar-navigation::-webkit-scrollbar-thumb,
+.lg-sidebar-navigation::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+/* Nav Item Rows */
+.lg-nav-list {
+  list-style: none !important;
+  padding: 10px 10px 48px 10px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.lg-nav-item {
+  margin-bottom: 4px !important;
+  width: 100% !important;
+}
+
+.lg-menu-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 42px !important;
+  height: 42px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #CBD5E1 !important;
+  background: transparent !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.lg-menu-row:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #FFFFFF !important;
+}
+
+/* Active Main Parent Menu */
+.lg-menu-row.active {
+  background: #14428B !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(20, 66, 139, 0.35) !important;
+}
+
+.lg-menu-icon {
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94A3B8;
+  flex-shrink: 0 !important;
+}
+
+.lg-menu-row.active .lg-menu-icon,
+.lg-nav-item.open > .lg-menu-row .lg-menu-icon {
+  color: #FFFFFF !important;
+}
+
+.lg-arrow {
+  width: 16px !important;
+  height: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #64748B;
+  flex-shrink: 0 !important;
+}
+
+.lg-nav-item.open .lg-arrow {
+  transform: rotate(180deg) !important;
+  color: #FFFFFF !important;
+}
+
+/* Submenu Panel: Rounded Dark Navy Card */
+.lg-submenu {
+  display: none;
+  background: #0D1B33 !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  margin: 4px 0 8px 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  width: 100% !important;
+}
+
+.lg-nav-item.open .lg-submenu {
+  display: flex !important;
+}
+
+.lg-sub-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 10px !important;
+  border-radius: 7px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #94A3B8 !important;
+  text-decoration: none !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  user-select: none !important;
+  width: 100% !important;
+}
+
+.lg-sub-link:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+}
+
+/* Active Submenu Item */
+.lg-sub-link.active {
+  background: #1A3660 !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border-left: 3px solid var(--lg-accent) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.lg-sub-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.lg-sub-icon {
+  width: 18px !important;
+  height: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748B;
+  flex-shrink: 0 !important;
+  transition: color 0.15s ease !important;
+}
+
+.lg-sub-link:hover .lg-sub-icon {
+  color: #FFFFFF !important;
+}
+
+.lg-sub-link.active .lg-sub-icon {
+  color: #38BDF8 !important;
+}
+
+.lg-sub-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  min-width: 0 !important;
+}
+
+/* AI Toggle Switch */
+.lg-ai-toggle-wrap {
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.lg-ai-toggle {
+  width: 30px;
+  height: 16px;
+  background: #1E293B;
+  border-radius: 20px;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.lg-ai-toggle.on {
+  background: var(--lg-accent);
+}
+
+.lg-ai-toggle-knob {
+  width: 12px;
+  height: 12px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  transition: transform 0.2s ease;
+}
+
+.lg-ai-toggle.on .lg-ai-toggle-knob {
+  transform: translateX(14px);
+}
+
+/* Sidebar Footer */
+.sidebar-footer,
+.lg-sidebar-footer {
+  flex-shrink: 0 !important;
+  margin-top: auto !important;
+  padding: 12px 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  text-align: center !important;
+  background: #071426 !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Unified LeadGER Master Design System (Master Visual Reference)
+   -------------------------------------------------------------------------- */
+
+/* Global Typography Foundations */
+body {
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  color: #0F172A !important;
+  background-color: #F8FAFC !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Master Page Headings */
+.lg-page-title,
+.page-title,
+.lg-title-main,
+.content-header h1,
+h1.page-heading,
+h2.text-md,
+.p-a h3 {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 !important;
+}
+
+.lg-page-subtitle,
+.lg-subtitle,
+.page-subtitle,
+.sub-heading,
+.p-a .text-muted {
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  color: #64748B !important;
+  margin-top: 3px !important;
+}
+
+.lg-breadcrumb,
+.breadcrumb,
+.lg-breadcrumb-nav {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #0D9488 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  margin-bottom: 2px !important;
+}
+
+.lg-breadcrumb a,
+.breadcrumb a,
+.lg-breadcrumb-nav a {
+  color: #0D9488 !important;
+  text-decoration: none !important;
+}
+
+.lg-table-title,
+.card-title,
+.box-title,
+.panel-title,
+h4.card-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  margin: 0 !important;
+}
+
+label,
+.control-label,
+.lg-filter-label,
+.form-label {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin-bottom: 6px !important;
+  display: inline-block !important;
+}
+
+/* Master Card & Table Containers */
+.card,
+.box,
+.panel,
+.lg-card-container,
+.lg-main-card,
+.lg-settings-card,
+.lg-table-wrapper,
+.dataTables_wrapper,
+.table-responsive {
+  background: #FFFFFF !important;
+  border-radius: 12px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 12px rgba(15, 23, 42, 0.02) !important;
+  margin-bottom: 24px !important;
+}
+
+.card-header,
+.box-header,
+.panel-heading {
+  background: #F8FAFC !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  padding: 14px 20px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+}
+
+/* Master Table Structure */
+table.table,
+.table,
+table.dataTable,
+.dataTables_wrapper table,
+#leads_table,
+#call_history_table,
+#lgStaffTable,
+#lgGroupsTable,
+.lg-table,
+.lg-ch-table,
+.lg-staff-table,
+.lg-groups-table,
+.lg-sources-table,
+.lg-status-table,
+.lg-webrtc-table,
+.lg-prod-table {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-size: 13.5px !important;
+  color: #334155 !important;
+  background-color: #FFFFFF !important;
+}
+
+/* Master Table Headers (Matches Reference: LEAD ⇅ MOBILE ⇅ AGENT ⇅ STATUS ⇅ LAST CALL ⇅ ACTION) */
+table.table thead th,
+.table thead th,
+table.dataTable thead th,
+.dataTables_wrapper table thead th,
+#leads_table thead th,
+#call_history_table thead th,
+#lgStaffTable thead th,
+#lgGroupsTable thead th,
+.lg-table thead th,
+.lg-ch-table thead th,
+.lg-staff-table thead th,
+.lg-groups-table thead th,
+.lg-sources-table thead th,
+.lg-status-table thead th,
+.lg-webrtc-table thead th,
+.lg-prod-table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background-color: #F8FAFC !important;
+  box-shadow: inset 0 -1px 0 #E2E8F0, 0 1px 0 #E2E8F0 !important;
+  color: #475569 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 13px 18px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+/* Master Sort Arrow Styling (Dual subtle arrows matching master screenshot) */
+table.dataTable thead th.sorting,
+table.dataTable thead th.sorting_asc,
+table.dataTable thead th.sorting_desc {
+  cursor: pointer !important;
+  /* sticky (not relative): keeps sortable headings fixed while scrolling; a sticky cell is still the
+     positioning box for the sort arrows below. "relative !important" here disabled sticky headings
+     on every sortable table. */
+  position: sticky !important;
+  top: 0 !important;
+  padding-right: 28px !important;
+}
+
+table.dataTable thead th.sorting:before,
+table.dataTable thead th.sorting_asc:before,
+table.dataTable thead th.sorting_desc:before {
+  right: 14px !important;
+  bottom: 13px !important;
+  content: "↑" !important;
+  color: #94A3B8 !important;
+  font-size: 11px !important;
+  opacity: 0.4 !important;
+  position: absolute !important;
+}
+
+table.dataTable thead th.sorting:after,
+table.dataTable thead th.sorting_asc:after,
+table.dataTable thead th.sorting_desc:after {
+  right: 8px !important;
+  bottom: 13px !important;
+  content: "↓" !important;
+  color: #94A3B8 !important;
+  font-size: 11px !important;
+  opacity: 0.4 !important;
+  position: absolute !important;
+}
+
+table.dataTable thead th.sorting_asc:before {
+  color: var(--lg-accent) !important;
+  opacity: 1 !important;
+}
+
+table.dataTable thead th.sorting_desc:after {
+  color: var(--lg-accent) !important;
+  opacity: 1 !important;
+}
+
+/* Master Table Rows & Cells */
+table.table tbody td,
+.table tbody td,
+table.dataTable tbody td,
+.dataTables_wrapper table tbody td,
+#leads_table tbody td,
+#call_history_table tbody td,
+#lgStaffTable tbody td,
+#lgGroupsTable tbody td,
+.lg-table tbody td,
+.lg-ch-table tbody td,
+.lg-staff-table tbody td,
+.lg-groups-table tbody td,
+.lg-sources-table tbody td,
+.lg-status-table tbody td,
+.lg-webrtc-table tbody td,
+.lg-prod-table tbody td {
+  padding: 14px 18px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  color: #334155 !important;
+  font-size: 13.5px !important;
+  background-color: #FFFFFF;
+}
+
+table.table tbody tr:hover td,
+.table tbody tr:hover td,
+table.dataTable tbody tr:hover td,
+.dataTables_wrapper table tbody tr:hover td,
+#leads_table tbody tr:hover td,
+#call_history_table tbody tr:hover td,
+#lgStaffTable tbody tr:hover td,
+#lgGroupsTable tbody tr:hover td,
+.lg-table tbody tr:hover td,
+.lg-ch-table tbody tr:hover td,
+.lg-staff-table tbody tr:hover td,
+.lg-groups-table tbody tr:hover td {
+  background-color: #F8FAFC !important;
+}
+
+table.table tbody tr:last-child td,
+.table tbody tr:last-child td,
+table.dataTable tbody tr:last-child td,
+.dataTables_wrapper table tbody tr:last-child td,
+#leads_table tbody tr:last-child td,
+#call_history_table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Person/Lead Name Hierarchy Pattern (Name Bold #0F172A, ID Underneath #64748B) */
+.lg-lead-info-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.lg-lead-name,
+.lg-lead-name-text,
+.lg-lead-title-name,
+.lead-name,
+.primary-name,
+.user-name,
+.staff-name,
+.table td strong,
+.table td b {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  line-height: 1.3 !important;
+  text-decoration: none !important;
+}
+
+.lg-lead-title-name:hover,
+.lg-lead-name:hover {
+  color: var(--lg-accent) !important;
+}
+
+.lg-lead-subid,
+.lead-subid,
+.secondary-id,
+.sub-id,
+.lead-id-sub,
+.lg-lead-id-sub,
+.lead-id-muted {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #64748B !important;
+  margin-top: 2px !important;
+  line-height: 1.2 !important;
+}
+
+.lg-lead-id-text a,
+.lg-lead-id-sub a {
+  color: #64748B !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+
+.lg-lead-id-text a:hover,
+.lg-lead-id-sub a:hover {
+  color: var(--lg-accent) !important;
+}
+
+.lg-lead-id-link,
+.lead-id-link,
+.lead-id-pill {
+  color: var(--lg-accent) !important;
+  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  text-decoration: none !important;
+}
+
+.lg-lead-id-link:hover,
+.lead-id-link:hover,
+.lead-id-pill:hover {
+  color: var(--lg-accent-hover) !important;
+  text-decoration: underline !important;
+}
+
+/* Master Column Typography */
+.lg-lead-phone,
+.lg-agent-name-text,
+.lg-last-call-text {
+  font-size: 13.5px !important;
+  color: #334155 !important;
+  white-space: nowrap !important;
+}
+
+/* Master Status Badges (Matches Reference: Pill shape + Colored Dot) */
+.lg-status-badge,
+.lg-status-pill,
+.lg-status-pill-ref,
+.badge,
+.label,
+.status-pill,
+.lg-badge-blue,
+.lg-badge-green,
+.lg-badge-amber,
+.lg-badge-red {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 12px !important;
+  border-radius: 9999px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+.lg-status-badge .dot,
+.lg-status-pill .dot,
+.lg-badge-green .lg-dot-indicator,
+.lg-badge-blue .lg-dot-indicator,
+.lg-badge-amber .lg-dot-indicator,
+.badge .dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+/* Blue Badge (New, Ringing No Response, Not Contactable, rejected the call) */
+.badge-primary,
+.label-primary,
+.bg-primary,
+.lg-status-badge.blue,
+.lg-status-pill.blue,
+.lg-badge-blue {
+  background-color: #EFF6FF !important;
+  color: var(--lg-accent) !important;
+  border: 1px solid #BFDBFE !important;
+}
+.badge-primary .dot,
+.lg-status-badge.blue .dot,
+.lg-status-pill.blue .dot,
+.lg-badge-blue .lg-dot-indicator {
+  background-color: var(--lg-accent) !important;
+}
+
+/* Green Badge (Connected, Interested, Deal, Converted, Won, Completed, Active) */
+.badge-success,
+.label-success,
+.bg-success,
+.lg-status-badge.green,
+.lg-status-pill.green,
+.lg-badge-green {
+  background-color: #ECFDF5 !important;
+  color: #059669 !important;
+  border: 1px solid #A7F3D0 !important;
+}
+.badge-success .dot,
+.lg-status-badge.green .dot,
+.lg-status-pill.green .dot,
+.lg-badge-green .lg-dot-indicator {
+  background-color: #10B981 !important;
+}
+
+/* Amber / Orange Badge (Follow-up, Pending, Processing, Unactioned) */
+.badge-warning,
+.label-warning,
+.bg-warning,
+.lg-status-badge.amber,
+.lg-status-pill.amber,
+.lg-badge-amber {
+  background-color: #FFFBEB !important;
+  color: #D97706 !important;
+  border: 1px solid #FDE68A !important;
+}
+.badge-warning .dot,
+.lg-status-badge.amber .dot,
+.lg-status-pill.amber .dot,
+.lg-badge-amber .lg-dot-indicator {
+  background-color: #F59E0B !important;
+}
+
+/* Red Badge (Lost, DNC, Rejected, Failed, Overdue) */
+.badge-danger,
+.label-danger,
+.bg-danger,
+.lg-status-badge.red,
+.lg-status-pill.red,
+.lg-badge-red {
+  background-color: #FEF2F2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA !important;
+}
+.badge-danger .dot,
+.lg-status-badge.red .dot,
+.lg-status-pill.red .dot,
+.lg-badge-red .lg-dot-indicator {
+  background-color: #EF4444 !important;
+}
+
+/* Gray / Slate Badge (Not Contactable, Neutral, Draft) */
+.badge-secondary,
+.label-secondary,
+.bg-secondary,
+.badge-info,
+.label-info,
+.lg-status-badge.gray,
+.lg-status-pill.gray {
+  background-color: #F1F5F9 !important;
+  color: #475569 !important;
+  border: 1px solid #E2E8F0 !important;
+}
+.badge-secondary .dot,
+.lg-status-badge.gray .dot,
+.lg-status-pill.gray .dot {
+  background-color: #94A3B8 !important;
+}
+
+/* Master Action / Call Button (Matches Reference: Phone Icon + "Call") */
+.lg-table-call-btn,
+.lg-call-btn,
+.lg-call-link,
+.action-call-btn,
+.btn-call {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: var(--lg-accent) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  text-decoration: none !important;
+}
+
+.lg-table-call-btn:hover,
+.lg-call-btn:hover,
+.lg-call-link:hover,
+.action-call-btn:hover,
+.btn-call:hover {
+  background-color: #EFF6FF !important;
+  color: var(--lg-accent-hover) !important;
+  text-decoration: none !important;
+}
+
+.lg-table-call-btn svg,
+.lg-call-btn svg,
+.lg-call-link svg,
+.action-call-btn svg {
+  width: 15px !important;
+  height: 15px !important;
+  stroke-width: 2 !important;
+}
+
+/* Master Form Controls & Filter Inputs */
+.form-control,
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select.form-control,
+.lg-input-search,
+.lg-select-input,
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  padding: 0 14px;
+  height: 40px !important;
+  min-height: 40px !important;
+  font-size: 13.5px !important;
+  color: #0F172A !important;
+  background-color: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  line-height: 40px !important;
+}
+
+select.form-control:not([multiple]),
+select.lg-select-input,
+select.lg-filter-select,
+select.filter-input {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: calc(100% - 11px) center !important;
+  background-size: 12px 12px !important;
+  padding-right: 30px !important;
+  line-height: normal !important;
+}
+select.form-control::-ms-expand,
+select.lg-select-input::-ms-expand,
+select.lg-filter-select::-ms-expand,
+select.filter-input::-ms-expand {
+  display: none !important;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="search"]:focus,
+select.form-control:focus,
+.lg-input-search:focus,
+.lg-select-input:focus,
+.select2-container--default.select2-container--focus .select2-selection--single {
+  border-color: var(--lg-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}
+
+.form-control::placeholder,
+input::placeholder {
+  color: #64748B !important;
+  font-weight: 400 !important;
+}
+
+/* ==========================================================================
+   GLOBAL SEARCH INPUT & SEARCH ICON DESIGN SYSTEM (LeadGER Standard)
+   ========================================================================== */
+
+/* 1. Global Search Box / Wrapper positioning */
+.lg-search-box,
+.lg-search-wrap,
+.lg-search-wrapper,
+.lg-sources-search-wrapper,
+.lg-ps-search-wrapper,
+.products-services-page .lg-ps-search-wrapper,
+.lg-queue-search,
+.lg-search-control,
+.lg-search-field-wrap,
+.lg-transcript-search-wrap,
+.lg-user-popover-search,
+.search-box,
+.search-wrap,
+.search-group {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Global Search Icons */
+.lg-search-box svg,
+.lg-search-box i,
+.lg-search-wrap svg,
+.lg-search-wrap i,
+.lg-search-wrapper svg,
+.lg-search-wrapper i,
+.lg-sources-search-wrapper svg,
+.lg-sources-search-wrapper i,
+.lg-ps-search-wrapper svg,
+.lg-ps-search-wrapper i,
+.products-services-page .lg-ps-search-wrapper svg,
+.lg-queue-search svg,
+.lg-queue-search i,
+.lg-search-control svg,
+.lg-search-control i,
+.lg-search-field-wrap svg,
+.lg-search-field-wrap i,
+.lg-transcript-search-wrap svg,
+.lg-transcript-search-wrap i,
+.lg-user-popover-search svg,
+.lg-user-popover-search i,
+.search-box svg,
+.search-box i,
+.search-icon,
+svg.lg-search-icon,
+.lg-search-icon-inside,
+.lg-search-icon-field {
+  position: absolute !important;
+  left: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 18px !important;
+  height: 18px !important;
+  font-size: 16px !important;
+  color: #64748B !important;
+  stroke: #64748B !important;
+  stroke-width: 2.2 !important;
+  fill: none !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  transition: color 0.15s ease, stroke 0.15s ease !important;
+}
+
+/* 3. Global Search Input Fields */
+.lg-search-input-field,
+.lg-input-search,
+.lg-search-input,
+.lg-sources-search-input,
+.lg-queue-search-input,
+.lg-ps-search-input,
+.lg-user-search-field,
+.lg-search-field,
+.lg-transcript-search-input,
+.lg-ps-filter-input,
+#find_q,
+#dtSearchInput,
+#tableSearchInput,
+#custom-table-search,
+#lgStaffSearch,
+#lgSourcesSearch,
+#lgGroupSearch,
+#lgStatusSearch,
+#lgC2CUserSearch,
+#lgWebRTCSearch,
+input[type="search"] {
+  width: 100% !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding-left: 44px !important;
+  padding-right: 14px !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 9px !important;
+  font-size: 14px !important;
+  color: #0F172A !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+/* 4. Global Search Input Placeholders */
+.lg-search-input-field::placeholder,
+.lg-input-search::placeholder,
+.lg-search-input::placeholder,
+.lg-sources-search-input::placeholder,
+.lg-queue-search-input::placeholder,
+.lg-ps-search-input::placeholder,
+.lg-user-search-field::placeholder,
+.lg-search-field::placeholder,
+.lg-transcript-search-input::placeholder,
+.lg-ps-filter-input::placeholder,
+#find_q::placeholder,
+#dtSearchInput::placeholder,
+#tableSearchInput::placeholder,
+#custom-table-search::placeholder,
+#lgStaffSearch::placeholder,
+#lgSourcesSearch::placeholder,
+#lgGroupSearch::placeholder,
+#lgStatusSearch::placeholder,
+#lgC2CUserSearch::placeholder,
+#lgWebRTCSearch::placeholder,
+input[type="search"]::placeholder {
+  color: #64748B !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+/* 5. Focus State for Search Input & Search Icon */
+.lg-search-input-field:focus,
+.lg-input-search:focus,
+.lg-search-input:focus,
+.lg-sources-search-input:focus,
+.lg-queue-search-input:focus,
+.lg-ps-search-input:focus,
+.lg-user-search-field:focus,
+.lg-search-field:focus,
+.lg-transcript-search-input:focus,
+.lg-ps-filter-input:focus,
+#find_q:focus,
+#dtSearchInput:focus,
+#tableSearchInput:focus,
+#custom-table-search:focus,
+#lgStaffSearch:focus,
+#lgSourcesSearch:focus,
+#lgGroupSearch:focus,
+#lgStatusSearch:focus,
+#lgC2CUserSearch:focus,
+#lgWebRTCSearch:focus,
+input[type="search"]:focus {
+  border-color: var(--lg-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}
+
+.lg-search-box:focus-within svg,
+.lg-search-box:focus-within i,
+.lg-search-wrap:focus-within svg,
+.lg-search-wrap:focus-within i,
+.lg-search-wrapper:focus-within svg,
+.lg-search-wrapper:focus-within i,
+.lg-sources-search-wrapper:focus-within svg,
+.lg-sources-search-wrapper:focus-within i,
+.lg-ps-search-wrapper:focus-within svg,
+.lg-ps-search-wrapper:focus-within i,
+.products-services-page .lg-ps-search-wrapper:focus-within svg,
+.lg-queue-search:focus-within svg,
+.lg-queue-search:focus-within i,
+.lg-search-control:focus-within svg,
+.lg-search-control:focus-within i,
+.lg-search-field-wrap:focus-within svg,
+.lg-search-field-wrap:focus-within i,
+.lg-transcript-search-wrap:focus-within svg,
+.lg-transcript-search-wrap:focus-within i,
+.lg-user-popover-search:focus-within svg,
+.lg-user-popover-search:focus-within i,
+.search-box:focus-within svg,
+.search-box:focus-within i {
+  color: var(--lg-accent) !important;
+  stroke: var(--lg-accent) !important;
+}
+
+/* Master Button System */
+.btn-primary,
+.lg-btn-primary,
+.btn-info {
+  background-color: var(--lg-accent) !important;
+  border: 1px solid var(--lg-accent) !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 0 18px !important;
+  height: 40px !important;
+  font-size: 13.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22) !important;
+  transition: all 0.15s ease !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.btn-primary:hover,
+.lg-btn-primary:hover,
+.btn-info:hover {
+  background-color: var(--lg-accent-hover) !important;
+  border-color: var(--lg-accent-hover) !important;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+}
+
+.btn-secondary,
+.btn-default,
+.btn-light,
+.lg-btn-secondary,
+.lg-btn-followups {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #1E293B !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 0 18px !important;
+  height: 40px !important;
+  font-size: 13.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.15s ease !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.btn-secondary:hover,
+.btn-default:hover,
+.btn-light:hover,
+.lg-btn-secondary:hover,
+.lg-btn-followups:hover {
+  background-color: #F8FAFC !important;
+  border-color: #94A3B8 !important;
+  color: #0F172A !important;
+}
+
+.btn-success,
+.lg-btn-upload {
+  background-color: #0F766E !important;
+  border: 1px solid #0F766E !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 0 18px !important;
+  height: 40px !important;
+  font-size: 13.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.15s ease !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.btn-success:hover,
+.lg-btn-upload:hover {
+  background-color: #0D655E !important;
+  border-color: #0D655E !important;
+  color: #FFFFFF !important;
+}
+
+/* Master DataTables Pagination & Entries Info */
+.dataTables_info,
+.lg-entries-info {
+  font-size: 13px !important;
+  color: #64748B !important;
+  font-weight: 500 !important;
+  padding-top: 8px !important;
+}
+
+.dataTables_paginate .paginate_button,
+.pagination > li > a,
+.pagination > li > span,
+.lg-pagination a {
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  border: 1px solid #E2E8F0 !important;
+  background: #FFFFFF !important;
+  color: #475569 !important;
+  margin: 0 2px !important;
+  transition: all 0.15s ease !important;
+  display: inline-block !important;
+  text-decoration: none !important;
+}
+
+.dataTables_paginate .paginate_button:hover,
+.pagination > li > a:hover,
+.lg-pagination a:hover {
+  background: #F8FAFC !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+.dataTables_paginate .paginate_button.current,
+.dataTables_paginate .paginate_button.current:hover,
+.pagination > .active > a,
+.pagination > .active > span {
+  background: var(--lg-accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--lg-accent) !important;
+}
+
+/* Page Header Structure */
+.app-header,
+.p-a.white.lt {
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+/* ==========================================================================
+   NESTED CALL CHANNELS IN SIDEBAR (PEOPLE -> CALL CHANNELS)
+   ========================================================================== */
+.lg-nested-channel-group,
+.lg-nested-nav-group {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  margin: 1px 0 !important;
+}
+
+.lg-nested-channel-header,
+.lg-nested-nav-header {
+  cursor: pointer !important;
+  user-select: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.lg-nested-channel-header.active-parent,
+.lg-nested-nav-header.active-parent {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+.lg-nested-channel-header.active-parent .lg-sub-icon,
+.lg-nested-nav-header.active-parent .lg-sub-icon {
+  color: #38BDF8 !important;
+}
+
+.lg-nested-arrow {
+  width: 16px !important;
+  height: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748B !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s ease !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.lg-nested-channel-group.open .lg-nested-arrow,
+.lg-nested-nav-group.open .lg-nested-arrow {
+  transform: rotate(180deg) !important;
+  color: #FFFFFF !important;
+}
+
+.lg-nested-channel-list,
+.lg-nested-nav-list {
+  display: none !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 2px 0 2px 8px !important;
+  margin: 2px 0 3px 10px !important;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.lg-nested-channel-group.open .lg-nested-channel-list,
+.lg-nested-nav-group.open .lg-nested-nav-list {
+  display: flex !important;
+}
+
+.lg-nested-channel-list .lg-sub-link,
+.lg-nested-nav-list .lg-sub-link {
+  width: 100% !important;
+  padding: 0 8px !important;
+  font-size: 13px !important;
+}
+
+/* ==========================================================================
+   GLOBAL UI OVERRIDE — REMOVE ALL BREADCRUMBS GLOBALLY ACROSS LEADGER
+   ========================================================================== */
+.lg-breadcrumb-nav,
+.lg-breadcrumb,
+.lg-breadcrumb-label,
+.lg-sources-breadcrumbs,
+.lg-ps-breadcrumbs,
+.lg-breadcrumbs,
+.lg-header-breadcrumb,
+.dl-breadcrumb,
+.breadcrumb,
+.breadcrumb-nav,
+.breadcrumbs,
+.page-breadcrumb,
+.app-header-breadcrumb,
+.box-header > small,
+.box-header small:first-of-type,
+.b-b.nav-active-bg,
+ul.breadcrumb,
+ol.breadcrumb,
+div.breadcrumb,
+nav.breadcrumb,
+[aria-label="breadcrumb"],
+[aria-label="Breadcrumb"] {
+  display: none !important;
+}
+
+/* Natural Header Spacing Adjustment (No Blank Gap) */
+.lg-header-text-group,
+.lg-header-titles,
+.lg-ps-header > div,
+.lg-sources-header > div {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.lg-page-title,
+.lg-ps-title,
+.lg-sources-title,
+.lg-title-main,
+.lg-header-title {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* ==========================================================================
+   LeadGER Global Modal & Backdrop Stacking Fix
+   Ensures all Bootstrap modals sit elevated above the backdrop with crisp white background
+   ========================================================================== */
+.modal:not(.show):not(.in) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body > .modal-backdrop.show,
+body > .modal-backdrop.in,
+.modal-backdrop.show,
+.modal-backdrop.in {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99990 !important;
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  opacity: 1 !important;
+  display: block !important;
+  pointer-events: auto !important;
+}
+
+.modal.show,
+.modal.in,
+body > .modal.show,
+body > .modal.in {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 100000 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+}
+
+.modal.show .modal-dialog,
+.modal.in .modal-dialog,
+body > .modal.show .modal-dialog,
+body > .modal.in .modal-dialog {
+  margin: auto !important;
+  z-index: 100001 !important;
+  pointer-events: auto !important;
+}
+
+.modal .modal-content,
+.lg-modal .modal-content {
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+  overflow: hidden !important;
+  position: relative !important;
+  z-index: 100002 !important;
+}
+
+/* ==========================================================================
+   GLOBAL FROZEN / STICKY TABLE HEADERS (Enterprise Universal Fix)
+   Applies to every table on every page, tab, drawer and modal across LeadGER admin
+   ========================================================================== */
+
+:root {
+  --topbar-height: 60px;
+}
+
+/* 1. Universal Table Layout Consistency:
+   Ensure border-collapse: separate and border-spacing: 0 on all tables
+   so sticky positioning and cell borders function seamlessly without clipping */
+table,
+.table,
+table.table,
+table.dataTable,
+.dataTables_wrapper table,
+.table-responsive table,
+.lg-table-wrapper table,
+.lg-table,
+.lg-modal-table,
+.lg-groups-table,
+.lg-floor-table,
+.lg-subs-table,
+.responsive-table,
+table[id],
+table[class*="table"],
+table[class*="display"],
+[class*="-table-wrapper"] table,
+[class*="-table-responsive"] table,
+[class*="-table-wrap"] table,
+.table-card-container table,
+.modal table,
+.modal-body table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* 2. Global Sticky Header Cells (thead th)
+   - Sticky top: 0
+   - Solid opaque background (#F8FAFC) so underlying row text never bleeds through
+   - Subtle bottom shadow / border line (box-shadow) so borders stay crisp during scroll
+   - z-index: 10 so it floats above table rows but stays strictly below dropdowns (1050),
+     tooltips (1070), modals (1050+), top bar (1040), and sidebar (1050) */
+table thead th,
+.table thead th,
+table.table thead th,
+table.dataTable thead th,
+.dataTables_wrapper table thead th,
+.table-responsive thead th,
+.table-responsive table thead th,
+.lg-table-wrapper thead th,
+.lg-table-wrapper table thead th,
+.lg-table thead th,
+table.lg-table thead th,
+.lg-modal-table thead th,
+.lg-groups-table thead th,
+.lg-floor-table thead th,
+.lg-subs-table thead th,
+.responsive-table thead th,
+table[id] thead th,
+table[class*="table"] thead th,
+table[class*="display"] thead th,
+[class*="-table-wrapper"] thead th,
+[class*="-table-wrapper"] table thead th,
+[class*="-table-responsive"] thead th,
+[class*="-table-responsive"] table thead th,
+[class*="-table-wrap"] thead th,
+[class*="-table-wrap"] table thead th,
+.table-card-container thead th,
+.table-card-container table thead th,
+.dataTables_scrollHead thead th,
+.modal table thead th,
+.modal-body table thead th,
+.modal-dialog table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background-color: #F8FAFC !important;
+  box-shadow: inset 0 -1px 0 #E2E8F0, 0 1px 0 #E2E8F0 !important;
+}
+
+/* 3. Legacy "dark" table headings (.dker / .thead-dark / .table-dark) use the ONE standard
+   light heading style (lg-design-system.css tokens) so every table in LeadGER looks the same */
+table.table-dark thead th,
+.table-dark thead th,
+table thead.thead-dark th,
+.thead-dark th,
+table thead.dker th,
+.dker th,
+.table-inverse thead th {
+  background-color: var(--lg-table-head-bg, #F8FAFC) !important;
+  color: var(--lg-table-head-color, #475569) !important;
+  box-shadow: inset 0 -1px 0 var(--lg-border, #E2E8F0), 0 1px 0 var(--lg-border, #E2E8F0) !important;
+}
+
+/* 4. Top-Left / First-Column Header Cell
+   If any table has a horizontally frozen first column (checkbox, ID, etc.),
+   elevate top-left header cell to z-index: 12 so it stays above other header cells */
+table thead th:first-child,
+.table thead th:first-child,
+table.dataTable thead th:first-child,
+table thead th.sticky-col,
+table thead th.freeze-col {
+  z-index: 12 !important;
+}
+
+/* 5. Fallback for un-contained tables where the whole page scrolls:
+   Stick below the fixed top bar (top: var(--topbar-height, 60px)) */
+body:not(.modal-open) #view > table thead th,
+body:not(.modal-open) #content > #view > div:not([class*="-responsive"]):not([class*="-wrapper"]):not([class*="-wrap"]):not(.dataTables_wrapper) > table thead th {
+  top: var(--topbar-height, 60px) !important;
+}
+
+/* 6. Standard Table Scroll Containers across LeadGER Cards & Pages
+   Gives table containers a max-height and auto scroll so headers stick internally
+   while filters and pagination stay visible on screen */
+.table-responsive,
+.lg-table-wrapper,
+.lg-table-responsive,
+.lg-sources-table-responsive,
+.lg-segments-table-responsive,
+.lg-ps-table-responsive,
+.lg-subs-table-wrap,
+.lg-modal-table-wrap,
+.lg-table-wrap,
+.lg-table-card,
+.lg-dt-wrapper,
+.la-table-wrapper,
+.lg-ch-table-wrapper,
+.cr-table-wrap,
+.lg-summary-table-wrap,
+.cw-table-responsive,
+#manage_shifts_table_wrap,
+.dataTables_scrollBody,
+.dataTables_wrapper > .row:has(table),
+.dataTables_wrapper > .row:has(> [class*="col"] > table),
+.table-card-container > .dataTables_wrapper > .row:has(table),
+[class*="-table-wrapper"],
+[class*="-table-responsive"],
+[class*="-table-wrap"],
+div[style*="overflow-x: auto"],
+div[style*="overflow-x:auto"],
+div[style*="overflow-y: auto"],
+div[style*="overflow-y:auto"] {
+  max-height: calc(100vh - 250px);
+  overflow: auto !important;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 7. Modal Table Containers
+   Ensure tables in modals scroll within the modal dialog boundary */
+.modal .table-responsive,
+.modal .lg-table-wrapper,
+.modal .lg-table-responsive,
+.modal .lg-modal-table-wrap,
+.modal .table-card-container,
+.modal .dataTables_wrapper,
+.modal [class*="-table-wrapper"],
+.modal [class*="-table-responsive"],
+.modal [class*="-table-wrap"],
+.modal-body .table-responsive,
+.modal-body .lg-modal-table-wrap,
+.modal-body .dataTables_wrapper,
+.modal-body [class*="-table-wrapper"],
+.modal-body [class*="-table-responsive"],
+.modal-body [class*="-table-wrap"] {
+  max-height: calc(80vh - 160px) !important;
+  overflow: auto !important;
+  position: relative;
+}
+
+/* 8. Sticky Table Bottom Bars & Pagination (when inside scroll container)
+   Keep pagination / bottom info bar anchored if inside the scroll container */
+.table-responsive > .dataTables_wrapper > .lg-table-bottom-bar,
+.lg-table-wrapper > .dataTables_wrapper > .lg-table-bottom-bar,
+.table-responsive > .lg-table-bottom-bar,
+.lg-table-wrapper > .lg-table-bottom-bar,
+.table-responsive > .dataTables_wrapper > .row.margin-top-md,
+.table-responsive > .lg-table-footer,
+.lg-table-wrapper > .lg-table-footer {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  z-index: 5;
+  box-shadow: 0 -1px 0 #E2E8F0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* 9. Print & Export Views Protection
+   Never stick or constrain tables when printing or exporting */
+@media print {
+  table thead th,
+  .table thead th,
+  table.dataTable thead th,
+  .table-responsive thead th,
+  .lg-table-wrapper thead th {
+    position: static !important;
+    box-shadow: none !important;
+  }
+  .table-responsive,
+  .lg-table-wrapper,
+  .lg-table-responsive,
+  [class*="-table-wrapper"],
+  [class*="-table-responsive"],
+  [class*="-table-wrap"],
+  .dataTables_wrapper,
+  .dataTables_scrollBody {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
+
+/* 10. Single scroll box per table + fixed first column  (used by js/scripts/lg-sticky-tables.js)
+   - .lg-sticky-box   : the table's own scroll area (headings stick to its top)
+   - .lg-sticky-outer : cards / wrappers around it that section 6 also made scrollable.
+                        They must not scroll too, or headings scroll away with them and two scrollbars appear.
+                        overflow: clip keeps rounded corners without creating a scroll box.
+   - .lg-sticky-col   : leading column(s) fixed on the left; --lg-sticky-left is set per column */
+.lg-sticky-outer:not(#lg-x):not(#lg-y) {
+  max-height: none !important;
+  overflow: visible !important;
+  overflow: clip !important;
+}
+.lg-sticky-box {
+  overscroll-behavior-x: contain;
+}
+/* ":not(#lg-x):not(#lg-y)" only raises specificity to ID level, so ID-based page rules such as
+   "#leads_table thead th { z-index: 10 !important }" cannot override the fixed-column rules */
+table .lg-sticky-col:not(#lg-x):not(#lg-y) {
+  position: sticky !important;
+  left: var(--lg-sticky-left, 0px) !important;
+}
+table tbody td.lg-sticky-col:not(#lg-x):not(#lg-y),
+table tfoot td.lg-sticky-col:not(#lg-x):not(#lg-y) {
+  z-index: 5 !important;
+  background-color: var(--lg-sticky-bg, #FFFFFF) !important;
+}
+table tbody tr:hover td.lg-sticky-col:not(#lg-x):not(#lg-y) {
+  background-color: #F8FAFC !important;
+}
+/* Fixed heading cell = sticky on top AND left, so it sits above every other cell */
+table thead th.lg-sticky-col:not(#lg-x):not(#lg-y) {
+  top: 0 !important;
+  z-index: 14 !important;
+}
+/* Divider on the right edge of the fixed column, shown once the table is scrolled sideways */
+.lg-scrolled-x table .lg-sticky-col-last:not(#lg-x):not(#lg-y) {
+  box-shadow: inset -1px 0 0 #E2E8F0, 6px 0 8px -6px rgba(15, 23, 42, 0.18) !important;
+}
+.lg-scrolled-x table thead th.lg-sticky-col-last:not(#lg-x):not(#lg-y) {
+  box-shadow: inset -1px 0 0 #E2E8F0, inset 0 -1px 0 #E2E8F0, 6px 0 8px -6px rgba(15, 23, 42, 0.18) !important;
+}
+@media print {
+  .lg-sticky-outer:not(#lg-x):not(#lg-y), .lg-sticky-box:not(#lg-x):not(#lg-y) { overflow: visible !important; max-height: none !important; }
+  table .lg-sticky-col:not(#lg-x):not(#lg-y):not(#lg-z) { position: static !important; box-shadow: none !important; }
+}
+/* Tables / wrappers between a table and its scroll area that had overflow:hidden (rounded corners).
+   hidden turns them into scroll boxes for sticky cells and silently disables sticky headings/columns;
+   clip keeps the same clipping without that side effect. Doubled class beats page-level !important rules. */
+.lg-sticky-clip:not(#lg-x):not(#lg-y),
+table.lg-sticky-clip.lg-sticky-clip.lg-sticky-clip,
+body .lg-sticky-clip.lg-sticky-clip.lg-sticky-clip {
+  overflow: clip !important;
+}

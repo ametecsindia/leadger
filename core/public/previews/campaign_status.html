@@ -1,0 +1,2050 @@
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8"/>
+<title>Campaign Status</title>
+<meta name="description" content="Website description and some little information about it"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimal-ui"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-barstyle" content="black-translucent">
+<link rel="apple-touch-icon" href="http://192.168.0.127:8000/assets/dashboard/images/logo.png">
+<meta name="apple-mobile-web-app-title" content="LeadGER">
+<base href="http://192.168.0.127:8000/admin">
+<meta name="csrf-token" content="dkHtzm8mLei57KWJmPdjVw2dXTyVkXs36E5e9R98">
+
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="shortcut icon" sizes="196x196" href="http://192.168.0.127:8000/assets/dashboard/images/logo.png">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/animate.css/animate.min.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/animate.css/animate.min.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/glyphicons/glyphicons.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/font-awesome/css/font-awesome.min.css"
+      type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/fonts/material-design-icons/material-design-icons.css"
+      type="text/css"/>
+      <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"> -->
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/bootstrap/dist/css/bootstrap.min.css"
+      type="text/css"/>
+      <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/js/select2/dist/css/select2.min.css"
+      type="text/css"/>
+      <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/toastr/toastr.min.css"
+      type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/app.css" type="text/css"/>
+
+<!-- <link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/font.css" type="text/css"/> -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/topic.css" type="text/css"/>
+
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/custom.css" type="text/css"/>
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/css/leadger-theme.css?v=1.2" type="text/css"/>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/js/datatables/datatables.min.css">
+<link rel="stylesheet" href="http://192.168.0.127:8000/assets/dashboard/js/datatables/fixedColumns.dataTables.min.css">
+
+<style>
+/* Page Canvas */
+.lg-campaigns-dashboard {
+    padding: 20px 24px 40px 24px;
+    background-color: #F8FAFD;
+    min-height: calc(100vh - 60px);
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Page Header */
+.lg-page-header {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 16px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.lg-page-title {
+    margin: 0;
+    font-weight: 700;
+    color: #0F172A;
+    font-size: 20px;
+    line-height: 1.25;
+}
+.lg-breadcrumb {
+    font-size: 13px;
+    color: #64748B;
+    margin-top: 2px;
+}
+.lg-breadcrumb a {
+    color: #1769FF;
+    text-decoration: none;
+    font-weight: 500;
+}
+.lg-breadcrumb a:hover {
+    text-decoration: underline;
+}
+.lg-breadcrumb .sep {
+    margin: 0 6px;
+    color: #CBD5E1;
+}
+
+.lg-page-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lg-btn-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.lg-btn-icon:hover {
+    background: #F1F5F9;
+    color: #0F172A;
+    border-color: #94A3B8;
+}
+.lg-btn-icon.secondary {
+    color: #475569;
+}
+.lg-btn-icon.success {
+    color: #059669;
+    border-color: #A7F3D0;
+    background: #ECFDF5;
+}
+.lg-btn-icon.success:hover {
+    background: #D1FAE5;
+    border-color: #059669;
+}
+
+/* Card Container */
+.lg-table-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+/* Top Toolbar: Left Title + Right Aligned Controls (Show -> 30 -> Search -> Search Box) */
+.lg-table-top-bar {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #F1F5F9;
+    background: #FFFFFF;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.lg-table-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0;
+}
+.lg-dt-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.lg-dt-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+.lg-dt-select {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0F172A;
+    background: #FFFFFF;
+    outline: none;
+    cursor: pointer;
+}
+.lg-dt-select:focus {
+    border-color: #1769FF;
+}
+.lg-dt-input {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #0F172A;
+    background: #FFFFFF;
+    outline: none;
+    width: 180px;
+    transition: all 0.15s ease;
+}
+.lg-dt-input:focus {
+    border-color: #1769FF;
+    box-shadow: 0 0 0 2px rgba(23,105,255,0.15);
+}
+
+/* Table Styling */
+.lg-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 0 !important;
+}
+.lg-table thead th {
+    background: #F8FAFD !important;
+    color: #0F172A !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    padding: 14px 16px !important;
+    border-top: none !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+    position: relative;
+}
+
+/* Header Sorting Arrows */
+table.dataTable thead th.sorting:before,
+table.dataTable thead th.sorting_asc:before,
+table.dataTable thead th.sorting_desc:before {
+    display: none !important;
+}
+table.dataTable thead th.sorting:after,
+table.dataTable thead th.sorting_asc:after,
+table.dataTable thead th.sorting_desc:after {
+    position: static !important;
+    display: inline-block !important;
+    margin-left: 6px !important;
+    opacity: 0.5 !important;
+    font-size: 11px !important;
+    content: "↕" !important;
+}
+table.dataTable thead th.sorting_asc:after {
+    content: "↑" !important;
+    opacity: 1 !important;
+    color: #1769FF !important;
+}
+table.dataTable thead th.sorting_desc:after {
+    content: "↓" !important;
+    opacity: 1 !important;
+    color: #1769FF !important;
+}
+
+.lg-table tbody td {
+    padding: 14px 16px !important;
+    font-size: 13px !important;
+    color: #1E293B !important;
+    border-bottom: 1px solid #F1F5F9 !important;
+    vertical-align: middle !important;
+    background: #FFFFFF !important;
+}
+.lg-table tbody tr:hover td {
+    background-color: #F8FAFC !important;
+}
+
+.lg-campaign-name-link a {
+    color: #1769FF !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    text-decoration: none !important;
+}
+.lg-campaign-name-link a:hover {
+    text-decoration: underline !important;
+    color: #0F52CC !important;
+}
+
+.lg-num-cell {
+    font-weight: 600;
+    color: #334155;
+}
+
+.lg-pct-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+.lg-pct-tag.has-val {
+    background: #EFF6FF;
+    color: #1769FF;
+    border: 1px solid #DBEAFE;
+}
+.lg-pct-tag.muted {
+    color: #94A3B8;
+}
+
+div.dataTables_wrapper div.dataTables_info {
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #64748B;
+}
+div.dataTables_wrapper div.dataTables_paginate {
+    padding: 16px 20px;
+}
+</style>
+
+    <!-- Firebase SDKs -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-messaging-compat.js"></script> -->
+</head>
+<body>
+<div class="app" id="app">
+        <style>
+/* ==========================================================================
+   LeadGER Dark Blue Sidebar Navigation System
+   Exact visual hierarchy matching the reference style across EVERY menu & submenu
+   ========================================================================== */
+.sidebar,
+#aside.app-aside,
+.app-aside .navside,
+.app-aside .left.navside {
+  background-color: #0A1426 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  width: 240px !important;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25) !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.lg-sidebar-inner {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  background: #0A1426 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+/* 1. FIXED TOP: Branding Header (LeadGER) */
+.sidebar-header,
+.sidebar-brand,
+.lg-sidebar-brand {
+  flex-shrink: 0 !important;
+  height: 72px !important;
+  min-height: 72px !important;
+  max-height: 72px !important;
+  padding: 0 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-decoration: none !important;
+  background: #0A1426 !important;
+  box-sizing: border-box !important;
+}
+
+.lg-brand-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lg-brand-title .lg-text-lead {
+  color: #FFFFFF;
+}
+
+.lg-brand-title .lg-text-ger {
+  background: linear-gradient(180deg, #00A3FF 0%, #0066FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #0088FF;
+}
+
+/* 2. SCROLLABLE AREA: Navigation List */
+.sidebar-nav,
+.sidebar-navigation,
+.lg-sidebar-navigation {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+  background: #0A1426 !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar,
+.sidebar-navigation::-webkit-scrollbar,
+.lg-sidebar-navigation::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track,
+.sidebar-navigation::-webkit-scrollbar-track,
+.lg-sidebar-navigation::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb,
+.sidebar-navigation::-webkit-scrollbar-thumb,
+.lg-sidebar-navigation::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover,
+.sidebar-navigation::-webkit-scrollbar-thumb:hover,
+.lg-sidebar-navigation::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* Reset external pseudo elements & rogue icon fonts */
+.sidebar .lg-nav-list li::before,
+.sidebar .lg-nav-list li::after,
+.sidebar .lg-nav-list a::before,
+.sidebar .lg-nav-list a::after,
+.sidebar .lg-nav-list div::before,
+.sidebar .lg-nav-list div::after,
+.lg-sub-link::before,
+.lg-sub-link::after,
+.lg-menu-row::before,
+.lg-menu-row::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Main Navigation List */
+.sidebar-nav .lg-nav-list,
+.sidebar-navigation .lg-nav-list,
+.lg-nav-list {
+  list-style: none !important;
+  padding: 10px 10px 48px 10px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.lg-nav-item {
+  margin-bottom: 4px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Main Menu Row (Consistent across all 8 menus) */
+.lg-menu-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #DBEAFE !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.lg-menu-row:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #FFFFFF !important;
+}
+
+.lg-menu-row:hover .lg-menu-icon {
+  color: #FFFFFF !important;
+}
+
+/* Active Main Menu State */
+.lg-menu-row.active {
+  background: #1464F4 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(20, 100, 244, 0.35) !important;
+}
+
+.lg-menu-icon {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  color: #93C5FD;
+  transition: color 0.15s ease;
+}
+
+.lg-menu-icon svg {
+  width: 19px !important;
+  height: 19px !important;
+  display: block !important;
+}
+
+.lg-menu-row.active .lg-menu-icon,
+.lg-nav-item.open > .lg-menu-row .lg-menu-icon {
+  color: #FFFFFF !important;
+}
+
+.lg-menu-label {
+  flex-grow: 1 !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+/* Caret / Dropdown Arrow */
+.lg-arrow {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #94A3B8;
+  flex-shrink: 0 !important;
+}
+
+.lg-arrow svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+}
+
+.lg-nav-item.open .lg-arrow {
+  transform: rotate(180deg) !important;
+  color: #FFFFFF !important;
+}
+
+.lg-menu-row.active .lg-arrow {
+  color: #FFFFFF !important;
+}
+
+/* Submenu Container: Exact rounded dark card style applied to EVERY submenu */
+.lg-submenu {
+  display: none;
+  background: #081224 !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  margin: 4px 0 8px 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  animation: lgFadeInDown 0.2s ease forwards;
+}
+
+@keyframes lgFadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lg-nav-item.open .lg-submenu {
+  display: flex !important;
+}
+
+/* Submenu Items: Identical across ALL submenus */
+.lg-sub-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #94A3B8 !important;
+  text-decoration: none !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  user-select: none !important;
+  border: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.lg-sub-link:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+}
+
+.lg-sub-link:hover .lg-sub-icon {
+  color: #FFFFFF !important;
+}
+
+/* Active Submenu Item (Blue highlighted rounded background matching reference) */
+.lg-sub-link.active {
+  background: #143265 !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+}
+
+.lg-sub-link.active .lg-sub-icon {
+  color: #FFFFFF !important;
+}
+
+.lg-sub-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.lg-sub-icon {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94A3B8;
+  flex-shrink: 0 !important;
+  transition: color 0.15s ease !important;
+}
+
+.lg-sub-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+  display: block !important;
+}
+
+.lg-sub-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1 !important;
+}
+
+/* iOS-style toggle switch for AI Analysis (matching reference screenshot) */
+.lg-ai-toggle-wrap {
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.lg-ai-toggle {
+  width: 32px;
+  height: 18px;
+  background: #253349;
+  border-radius: 20px;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.lg-ai-toggle.on {
+  background: #334155;
+}
+
+.lg-ai-toggle-knob {
+  width: 14px;
+  height: 14px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+.lg-ai-toggle.on .lg-ai-toggle-knob {
+  transform: translateX(14px);
+}
+
+/* 3. FIXED FOOTER */
+.sidebar-footer,
+.lg-sidebar-footer {
+  position: static !important;
+  flex-shrink: 0 !important;
+  margin-top: auto !important;
+  padding: 14px 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-align: center !important;
+  background: #0A1426 !important;
+  z-index: 10 !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 992px) {
+  .app-content {
+    margin-left: 240px !important;
+  }
+}
+</style>
+
+<div id="aside" class="app-aside nav-expand sidebar" style="position: fixed; top: 0; left: 0; bottom: 0; width: 240px; height: 100vh; z-index: 1050; background: #0A1426; overflow: hidden; display: flex; flex-direction: column;">
+    <div class="left navside lg-sidebar-inner" layout="column" style="height: 100%; flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: #0A1426; box-sizing: border-box; width: 100%;">
+        
+        <!-- FIXED TOP: Branding Header -->
+        <a href="http://192.168.0.127:8000/admin" class="sidebar-header sidebar-brand lg-sidebar-brand" style="display: flex; align-items: center; gap: 11px; padding: 0 16px !important; text-decoration: none !important;">
+            <img src="http://192.168.0.127:8000/assets/dashboard/images/leadger-logo.png" alt="LeadGER" style="height: 44px; width: auto; max-height: 48px; display: block; object-fit: contain; flex-shrink: 0;">
+            <div style="display: flex; flex-direction: column; justify-content: center; line-height: 1;">
+                <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; display: inline-flex; align-items: center;">
+                    <span style="color: #FFFFFF;">Lead</span><span style="background: linear-gradient(180deg, #00A3FF 0%, #0066FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #0088FF;">GER</span>
+                </div>
+                <div style="font-size: 9px; font-weight: 600; color: #8A99AD; letter-spacing: 0.15px; margin-top: 4px; white-space: nowrap;">
+                    Generate, Engage &amp; Retain
+                </div>
+            </div>
+        </a>
+
+        <!-- SCROLLABLE AREA: Navigation List -->
+        <div class="sidebar-nav sidebar-navigation lg-sidebar-navigation">
+            <ul class="lg-nav-list">
+            
+            <!-- 1. DASHBOARD (No submenu, no arrow) -->
+            <li class="lg-nav-item">
+                <a href="http://192.168.0.127:8000/admin" class="lg-menu-row ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Dashboard</span>
+                </a>
+            </li>
+
+            <!-- 2. LEADS -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Leads</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/leads/create" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Upload Leads</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/leads" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Lead List</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/leads?status=14" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Follow-ups</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 3. CAMPAIGNS -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Campaigns</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/campaigns" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Campaign List</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/campaigns/create" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Create Campaign</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 4. CALLING -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Calling</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/dialer" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Dialing</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/call-history" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Dailer Logs</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 5. REPORTS -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Reports</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/reports/call-report" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Calls</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/reports/agentPerformance" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><path d="M19 11l1.5 1.5L23 9"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Agents</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/reports/campaignStatus" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Campaigns</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 6. RECORDINGS -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Recordings</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/reports/recordings" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </span>
+                            <span class="lg-sub-text">All Recordings</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/reports/call-transcripts" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Transcripts</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/reports/ai-analysis" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                            </span>
+                            <span class="lg-sub-text">AI Analysis</span>
+                        </div>
+                        <div class="lg-ai-toggle-wrap" onclick="event.preventDefault(); event.stopPropagation(); toggleSidebarAi(this);">
+                            <span class="lg-ai-toggle on">
+                                <span class="lg-ai-toggle-knob"></span>
+                            </span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 7. CONFIGURATION -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Configuration</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/calling-settings" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Call setup</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/disposition-settings" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Dispositions</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/webmaster" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                            </span>
+                            <span class="lg-sub-text">General</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 8. MASTER DATA -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </span>
+                    <span class="lg-menu-label">Master data</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/sources" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Source</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/productServices" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Products and services</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/statuses" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Status</span>
+                        </div>
+                    </a>
+                </div>
+            </li>
+
+            <!-- 9. PEOPLE -->
+            <li class="lg-nav-item has-sub ">
+                <div class="lg-menu-row lg-menu-toggle ">
+                    <span class="lg-menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </span>
+                    <span class="lg-menu-label">People</span>
+                    <span class="lg-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                </div>
+                <div class="lg-submenu">
+                    <a href="http://192.168.0.127:8000/admin/users" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Staff</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/teams" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Teams</span>
+                        </div>
+                    </a>
+                    <a href="http://192.168.0.127:8000/admin/call-channels" class="lg-sub-link ">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Call channels</span>
+                        </div>
+                    </a>
+                                                            <a href="http://192.168.0.127:8000/admin/webrtc" class="lg-sub-link " style="padding-left: 36px !important;">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon" style="color: #00A3FF;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                            </span>
+                            <span class="lg-sub-text" style="font-size: 12.5px;">WebRTC</span>
+                        </div>
+                    </a>
+                                    </div>
+            </li>
+
+            </ul>
+        </div>
+
+        <!-- FIXED FOOTER -->
+        <div class="sidebar-footer lg-sidebar-footer">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em;"><span style="color: #FFFFFF;">Lead</span><span style="color: #00A3FF;">GER</span></div>
+            <div style="font-size: 9px; color: #64748B; margin-top: 2px;">Version 1.0.0</div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Interactive Expand/Collapse Logic -->
+<script>
+function initSidebarNav() {
+    const navToggles = document.querySelectorAll('.lg-menu-toggle');
+    const navContainer = document.querySelector('.sidebar-nav') || document.querySelector('.sidebar-navigation');
+
+    navToggles.forEach(toggle => {
+        if (toggle.getAttribute('data-nav-inited') === 'true') return;
+        toggle.setAttribute('data-nav-inited', 'true');
+        
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const parentItem = this.closest('.lg-nav-item');
+            if (parentItem) {
+                const isOpening = !parentItem.classList.contains('open');
+                parentItem.classList.toggle('open');
+
+                if (isOpening && navContainer) {
+                    setTimeout(() => {
+                        const submenu = parentItem.querySelector('.lg-submenu');
+                        if (submenu) {
+                            const containerRect = navContainer.getBoundingClientRect();
+                            const submenuRect = submenu.getBoundingClientRect();
+
+                            if (submenuRect.bottom > containerRect.bottom) {
+                                const scrollDistance = submenuRect.bottom - containerRect.bottom + 16;
+                                navContainer.scrollBy({
+                                    top: scrollDistance,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        }
+                    }, 120);
+                }
+            }
+        });
+    });
+}
+
+function toggleSidebarAi(btn) {
+    const toggle = btn.querySelector('.lg-ai-toggle');
+    if (toggle) {
+        toggle.classList.toggle('on');
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarNav);
+} else {
+    initSidebarNav();
+}
+</script>
+
+    <div id="content" class="app-content box-shadow-z0" role="main">
+        <!-- ================= LEADGER COMMAND CENTER TOP HEADER ================= -->
+<header class="top-header app-header" style="background: #0A1426; height: 72px; min-height: 72px; max-height: 72px; display: flex; align-items: center; justify-content: flex-end; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; right: 0; left: 240px; width: calc(100% - 240px); z-index: 1040; box-sizing: border-box; overflow: visible;">
+    <!-- Top Subtle Accent Line -->
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #1464F4 0%, #2563EB 50%, #3B82F6 100%); z-index: 10;"></div>
+
+    <!-- Header Actions Container: Exact Order ([ Active Call Workspace ] [ Notification ] [ AM ] Ametecs (Command Center View) ▼) -->
+    <div class="header-actions" style="display: flex; align-items: center; gap: 14px; height: 100%; flex-wrap: nowrap; flex-shrink: 0;">
+        
+
+        <!-- 1. Active Call Workspace CTA Button -->
+        <a href="http://192.168.0.127:8000/admin/dialer" class="header-active-call-btn" style="height: 40px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; border-radius: 8px; background: #1464F4; border: 1px solid #1464F4; padding: 0 16px; font-size: 13.5px; font-weight: 700; color: #FFFFFF; text-decoration: none; box-shadow: 0 2px 10px rgba(20,100,244,0.35); transition: all 0.15s ease; flex-shrink: 0; box-sizing: border-box;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+            <span>Active Call Workspace</span>
+        </a>
+
+        <!-- WebRTC Telephony Authentication Controls (if configured) -->
+        
+        <!-- 2. Standalone Notification Bell Button -->
+        <div class="dropdown" style="position: relative; display: flex; align-items: center; height: 100%; flex-shrink: 0;">
+            <a href="javascript:void(0)" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="headerNotificationBell" aria-label="Notifications" style="height: 40px; width: 40px; min-width: 40px; min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #FFFFFF; position: relative; text-decoration: none; cursor: pointer; transition: background 0.15s ease; flex-shrink: 0; box-sizing: border-box;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                <span style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: #F59E0B; border: 2px solid #0A1426;"></span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right animated fadeInUp" aria-labelledby="headerNotificationBell" style="right: 0; left: auto; top: calc(100% + 8px); width: 320px; z-index: 1060; padding: 0; border: none; background: transparent; box-shadow: none;">
+                <div style="background: #0B1E40; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 12px 30px rgba(0,0,0,0.5); overflow: hidden;">
+                    <div class="p-2 border-bottom d-flex justify-content-between align-items-center" style="border-color: rgba(255,255,255,0.08) !important; padding: 12px 16px;">
+                        <span class="font-weight-bold text-white" style="font-size: 13px;">Notifications</span>
+                        <span class="badge" style="font-size: 11px; background-color: #1464F4; color: #fff; border-radius: 100px; padding: 3px 8px;">0 New</span>
+                    </div>
+                    <ul class="list-group list-group-gap m-a-0" style="padding: 6px 12px; max-height: 280px; overflow-y: auto;">
+                                                    <li class="p-3 text-center text-muted" style="font-size: 12px; color: rgba(255,255,255,0.6) !important;">No new notifications</li>
+                                            </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Admin Profile Badge: [ AM ] Ametecs Command Center View [ ▼ ] -->
+        <div class="dropdown" style="position: relative; display: flex; align-items: center; height: 100%; flex-shrink: 0;" id="userProfileDropdownWrap">
+            <a href="javascript:void(0)" id="headerUserProfile" style="display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; cursor: pointer; color: #FFFFFF; text-decoration: none; background: transparent; transition: background 0.15s ease; flex-shrink: 0; box-sizing: border-box; white-space: nowrap;">
+                <span style="width: 38px; height: 38px; min-width: 38px; min-height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #1464F4; font-size: 13.5px; font-weight: 700; color: #FFFFFF; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,0.15);">
+                    EH
+                </span>
+                <div style="display: flex; flex-direction: column; justify-content: center; text-align: left; line-height: 1.2; flex-shrink: 0;">
+                    <span style="font-size: 13.5px; font-weight: 700; color: #FFFFFF; white-space: nowrap;">Ejaz Hussain</span>
+                    <span style="font-size: 11.5px; color: #60A5FA; font-weight: 500; white-space: nowrap;">Command Center View</span>
+                </div>
+                <!-- Visible downward chevron "▼" -->
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #94A3B8; margin-left: 2px; flex-shrink: 0; transition: transform 0.2s ease;"><path d="m6 9 6 6 6-6"/></svg>
+            </a>
+
+            <!-- Clean White Dropdown Menu positioned directly below the Admin profile -->
+            <div class="dropdown-menu dropdown-menu-right animated fadeInDown lg-dropdown-menu" id="headerUserProfileMenu" aria-labelledby="headerUserProfile" style="right: 0; left: auto; top: calc(100% + 8px); min-width: 200px; z-index: 1060; display: none;">
+                
+                <!-- Profile -->
+                <a class="dropdown-item lg-dropdown-item" href="http://192.168.0.127:8000/admin/users/1/edit">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; color: #64748B;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>Profile</span>
+                </a>
+
+                <!-- Inbox -->
+                <a class="dropdown-item lg-dropdown-item" href="http://192.168.0.127:8000/admin/webmails">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; color: #64748B;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span>Inbox</span>
+                                    </a>
+
+                <div class="dropdown-divider" style="border-color: #F1F5F9; margin: 4px 0;"></div>
+
+                <!-- Logout -->
+                <a class="dropdown-item lg-dropdown-item-danger" id="logout-link" href="http://192.168.0.127:8000/logout">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; color: #EF4444;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</header>
+
+<!-- Hidden Logout Form -->
+<form id="auto-logout-form" action="http://192.168.0.127:8000/admin/logout" method="GET" style="display: none;">
+    <input type="hidden" name="_token" value="dkHtzm8mLei57KWJmPdjVw2dXTyVkXs36E5e9R98" autocomplete="off"></form>
+
+<div id="webrtc-container" style="margin-top:15px; display:none;">
+    <iframe id="webrtc-frame" width="100%" height="600px" frameborder="0"></iframe>
+</div>
+
+<div id="sso-container" 
+     style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+            width:400px; height:300px; background:#fff; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:9999;">
+    <iframe id="sso-iframe" allow="microphone; camera" sandbox="allow-scripts allow-same-origin"
+            style="width:100%; height:100%; border:none;"></iframe>
+</div>
+
+<script>
+    let sessionTimeout = 7200000; // milliseconds
+    let timer;
+
+    function resetTimer() {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            document.getElementById('auto-logout-form').submit();
+        }, sessionTimeout);
+    }
+
+    ['click', 'mousemove', 'keypress', 'scroll'].forEach(event => {
+        window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    // User Profile Dropdown Toggle Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileBtn = document.getElementById('headerUserProfile');
+        const profileMenu = document.getElementById('headerUserProfileMenu');
+
+        if (profileBtn && profileMenu) {
+            profileBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const isHidden = (profileMenu.style.display === 'none' || !profileMenu.classList.contains('show'));
+                if (isHidden) {
+                    profileMenu.style.display = 'block';
+                    profileMenu.classList.add('show');
+                } else {
+                    profileMenu.style.display = 'none';
+                    profileMenu.classList.remove('show');
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                    profileMenu.style.display = 'none';
+                    profileMenu.classList.remove('show');
+                }
+            });
+        }
+    });
+</script>
+        <div ui-view class="app-body" id="view">
+            <div class="padding p-b-0">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="alert alert-danger m-b-0">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    Click2Call is currently deactivated. Please enable Click2Call in Call Channels to access this page.
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+            <div class="lg-campaigns-dashboard">
+
+    <!-- Header Card -->
+    <div class="lg-page-header">
+        <div class="lg-page-header-left">
+            <h1 class="lg-page-title">Campaign Status</h1>
+            <div class="lg-breadcrumb">
+                <a href="http://192.168.0.127:8000/admin">Home</a>
+                <span class="sep">/</span>
+                <span class="current">Campaign Status</span>
+            </div>
+        </div>
+        <div class="lg-page-header-right">
+            <button type="button" class="lg-btn-icon" id="filter_btn" title="Search Filters">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button type="button" class="lg-btn-icon secondary" id="print_btn" title="Print" onclick="print_as('print')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </button>
+            <button type="button" class="lg-btn-icon success" id="excel_btn" title="Excel" onclick="print_as('excel')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Card Container -->
+    <div class="lg-table-card">
+        <!-- Filter Drawer -->
+        <div class="dker b-b displayNone" id="filter_div" style="margin-bottom: 16px;">
+            <div class="p-a-sm" style="background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; padding: 12px; margin-bottom: 16px;">
+                <form method="GET" action="http://192.168.0.127:8000/admin/reports/callLogsData" accept-charset="UTF-8" id="filter_form" target="">
+                <input type="hidden" name="stat" id="search_submit_stat" value="">
+                <div class="filter_div">
+                    <div class="row">
+                        <div class="col-md-4"></div>
+                        <div class="col-md-4 col-xs-6 m-b-5p">
+                            <select name="find_campaign" id="find_campaign" class="form-control">
+                                <option value="">All Campaigns</option>
+                                                                <option value="137">Testing One</option>
+                                                                <option value="136">flexi test</option>
+                                                                <option value="135">test 1234</option>
+                                                                <option value="132">test 123</option>
+                                                                <option value="131">test 12</option>
+                                                                <option value="128">test 1</option>
+                                                                <option value="127">test 1</option>
+                                                                <option value="126">test 1</option>
+                                                                <option value="125">test 1</option>
+                                                                <option value="123">test 1</option>
+                                                                <option value="122">test campaign</option>
+                                                                <option value="121">test_sp</option>
+                                                                <option value="120">test</option>
+                                                                <option value="119">May_12_SmartDCM</option>
+                                                                <option value="118">May_09_SmartDCM</option>
+                                                                <option value="117">May_08_SmartDCM</option>
+                                                                <option value="116">May_07_SmartDCM</option>
+                                                                <option value="115">May_06_SmartDCM</option>
+                                                                <option value="114">26-04-2025_Bgl_HR</option>
+                                                                <option value="113">26-04-2025 Responded</option>
+                                                                <option value="112">Jewelry Stores</option>
+                                                                <option value="110">Charted Accountants</option>
+                                                                <option value="109">Wealthybiz Pune</option>
+                                                                <option value="108">April_22_SmartDCM</option>
+                                                                <option value="107">April_21_SmartDCM</option>
+                                                                <option value="106">April_18_SmartDCM</option>
+                                                                <option value="105">Apr_17_SmartDCM</option>
+                                                                <option value="104">Kotak_SmartDCM</option>
+                                                                <option value="103">April_15_SmartDCM</option>
+                                                                <option value="102">bangalore_hr</option>
+                                                                <option value="100">April_12_SmartDCM</option>
+                                                                <option value="99">April_11_SmartDCM</option>
+                                                                <option value="98">April_10_SmartDCM</option>
+                                                                <option value="97">April_08_SmartDCM</option>
+                                                                <option value="95">April_03_SmartDCM</option>
+                                                                <option value="94">Transfer Test</option>
+                                                                <option value="83">March_18</option>
+                                                                <option value="84">March_19</option>
+                                                                <option value="85">March_20</option>
+                                                                <option value="86">March_21</option>
+                                                                <option value="87">April_02_SmartDCM</option>
+                                                                <option value="88">Telecalling_Pune_MFS</option>
+                                                                <option value="93">100_166_svu_navimumb</option>
+                                                                <option value="90">5_737_BAS CS_Tarnaka</option>
+                                                                <option value="89">Envinity Technologie</option>
+                                                                <option value="82">SmartDCM_March 17</option>
+                                                                <option value="81">SmartDCM Read List 3</option>
+                                                                <option value="80">SmartDCM_March 13</option>
+                                                                <option value="79">Whatsapp Camaign Read Clients</option>
+                                                                <option value="78">Swetha_SmartDCM_March 10</option>
+                                                                <option value="77">Krishnaveni_SmartDCM_March 10</option>
+                                                                <option value="76">Krishnaveni_SmartDCM_March 05</option>
+                                                                <option value="75">Swetha_SmartDCM_March 3rd</option>
+                                                                <option value="74">Shwetha_Calling_27Feb</option>
+                                                                <option value="73">Swetha_Delhi_Feb 25_LE</option>
+                                                                <option value="72">Swetha SmartDCM Mar_04</option>
+                                                                <option value="71">Akshita Delhi Feb 20 LE</option>
+                                                                <option value="70">Delhi _Swetha_Feb19_LE</option>
+                                                                <option value="67">SmartDCM_Feb 18</option>
+                                                                <option value="66">Akshita_Delhi_Feb18_LE</option>
+                                                                <option value="65">Swetha_Delhi_Feb18_LE</option>
+                                                                <option value="64">Swetha Pune LE Feb 17</option>
+                                                                <option value="63">Swetha _Pune_LE_Feb13</option>
+                                                                <option value="62">Akshita Pune LE Feb 13</option>
+                                                                <option value="60">Swetha_Pune_LE_Feb12</option>
+                                                                <option value="59">Akshita Delhi LE Feb 11</option>
+                                                                <option value="58">Akshita AP LE Feb 11</option>
+                                                                <option value="57">Akshita_Mangaluru_LE_Feb10</option>
+                                                                <option value="56">Swetha _Bhubaneswar_LE_Feb10</option>
+                                                                <option value="53">Akshita_Nagpur_Feb06_LE</option>
+                                                                <option value="52">Swetha_Nagpur_Feb06_LE</option>
+                                                                <option value="51">Website Development_ Existing Clients</option>
+                                                                <option value="50">Swetha_SmartDCM_Feb 4th</option>
+                                                                <option value="49">Akshita_LeadGER_Feb 4th</option>
+                                                                <option value="48">Bengaluru_Swetha_Feb03</option>
+                                                                <option value="47">Akshita_Feb03_Mumbai_LE</option>
+                                                                <option value="46">Bengaluru_Swetha_Jan30</option>
+                                                                <option value="45">Mumbai_Akshita_Jan30</option>
+                                                                <option value="44">Swetha_Bgl_Jan 28_LE</option>
+                                                                <option value="39">Akshita_Jan 28_Mumbai_LE</option>
+                                                                <option value="38">L E and LeadGER Akshita Jan 27</option>
+                                                                <option value="36">LE and LeadGER Swetha Jan 27</option>
+                                                                <option value="35">Lucknow_L E and LeadGER_Jan 22</option>
+                                                                <option value="34">Mumbai_RealEstate_Website Design</option>
+                                                                <option value="33">LE and LeadGER Swetha Jan 18</option>
+                                                                <option value="31">LE and LeadGER Swetha Jan 16</option>
+                                                                <option value="30">Bengaluru_Loan_1</option>
+                                                                <option value="28">Bengaluru_Loan</option>
+                                                                <option value="27">Swetha_ Jan 11</option>
+                                                                <option value="26">Akshitha_Jan 11</option>
+                                                                <option value="25">LeadGER_Swetha_Jan 10</option>
+                                                                <option value="23">LeadGER_Akshitha_Jan 10</option>
+                                                                <option value="22">Lead_Extractor_Swetha_Jan9</option>
+                                                                <option value="21">LeadGER_Akshitha_Jan9</option>
+                                                                <option value="20">LedGER_Akshitha</option>
+                                                                <option value="19">Bengaluru Loan Providers</option>
+                                                                <option value="16">SmartDCM_Swetha</option>
+                                                                <option value="15">SmartDCM_Krishnaveni</option>
+                                                                <option value="14">SmartDCM_Akshitha</option>
+                                                                <option value="12">Lead_Extractor_Swetha</option>
+                                                                <option value="11">AU Small Finance Bank Swetha</option>
+                                                                <option value="10">Shwetha_Calling_Axis and SBI</option>
+                                                                <option value="8">Shwetha_Calling_INDUSIND</option>
+                                                                <option value="7">Shwetha_Calling_BandhanBank</option>
+                                                                <option value="6">Shwetha_Calling_SBI</option>
+                                                                <option value="5">Madhav_Calling_Agencies</option>
+                                                                <option value="2">Madhav_Kotak_File1</option>
+                                                                <option value="1">Madhav_Calling_YesBank</option>
+                                                            </select>
+                        </div>
+                        <div class="col-md-3 col-xs-6 m-b-5p">
+                            <input placeholder="Search For" class="form-control" id="find_q" autocomplete="off" name="find_q" type="text">
+                        </div>
+                        <div class="col-md-1 col-xs-6 m-b-5p">
+                            <button class="btn btn-primary w-full" id="search-btn" type="button">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Top Controls Toolbar: Exact order Show -> 30 -> Search -> Search Box -->
+        <div class="lg-table-top-bar">
+            <h2 class="lg-table-title">Campaign Performance Summary</h2>
+            <div class="lg-dt-controls">
+                <span class="lg-dt-label">Show</span>
+                <select id="dtLengthSelect" class="lg-dt-select" onchange="changePageLength(this.value)">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="30" selected>30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="lg-dt-label" style="margin-left: 12px;">Search</span>
+                <input type="text" id="dtSearchInput" class="lg-dt-input" placeholder="" onkeyup="handleSearchInput(this.value)">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table lg-table mb-0 display nowrap" id="leads_table" style="width: 100%">
+                <thead>
+                    <tr>
+                        <th>CAMPAIGN NAME</th>
+                        <th>COUNT</th>
+                        <th>CALL COUNT</th>
+                        <th>VISIT COUNT</th>
+                        <th>LEADS</th>
+                        <th>DEALS</th>
+                                                    <th>NEW LEAD</th>
+                                                    <th>FOLLOW UP</th>
+                                                    <th>NOT IN RECOVERY</th>
+                                                    <th>CANCELLED APPOINTMENT</th>
+                                                    <th>DEMO</th>
+                                                    <th>NOT CONTACTABLE</th>
+                                                    <th>COLLECT PAYMENT</th>
+                                                    <th>TEST</th>
+                                                    <th>DND</th>
+                                                    <th>NOT INTERESTED</th>
+                                                    <th>LEAD</th>
+                                                    <th>REJECTED THE CALL</th>
+                                                    <th>CALL BACK</th>
+                                                    <th>RINGING NO RESPONSE</th>
+                                                    <th>EXISTING CLIENT</th>
+                                                    <th>CALLED NUMBER</th>
+                                                    <th>WHAT'S APP</th>
+                                                    <th>INVALID NUMBER</th>
+                                                    <th>INTERVIEW</th>
+                                                    <th>INTERESTED</th>
+                                            </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal -->
+<div id="lead-detail" class="modal fade lead-details-modal" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" id="animate">
+        <div class="modal-content lead-content"></div>
+    </div>
+</div>
+        </div>
+        <div class="app-footer">
+    <div class="p-a text-xs">
+        <div class="pull-right text-muted">
+            &copy;2026 Copyright
+            <strong>LeadGER 1.0.0</strong>
+            <a ui-scroll-to="content"><i class="fa fa-long-arrow-up p-x-sm"></i></a>
+        </div>
+        <div class="nav">
+            &nbsp;
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!--<div id="switcher">
+    <div class="switcher box-color dark-white text-color" id="sw-theme">
+        <a href ui-toggle-class="active" target="#sw-theme" class="box-color dark-white text-color sw-btn">
+            <i class="fa fa-gear"></i>
+        </a>
+        <div class="box-header">
+            <h2>Theme Switcher</h2>
+        </div>
+        <div class="box-divider"></div>
+        <div class="box-body p-t-xs">
+            <p class="hidden-md-down">
+                <label class="md-check m-y-xs" data-target="folded">
+                    <input type="checkbox">
+                    <i class="green"></i>
+                    <span class="hidden-folded">Folded Aside</span>
+                </label>
+                <label class="md-check m-y-xs" data-target="boxed">
+                    <input type="checkbox">
+                    <i class="green"></i>
+                    <span class="hidden-folded">Boxed Layout</span>
+                </label>
+            </p>
+
+
+            <p class="m-b-xs">Themes:</p>
+            <div data-target="bg" class="text-u-c text-center _600 clearfix">
+                <label class="p-a col-xs-6 light pointer m-a-0">
+                    <input type="radio" name="theme" value="" hidden>
+                    LIGHT
+                </label>
+                <label class="p-a col-xs-6 grey pointer m-a-0">
+                    <input type="radio" name="theme" value="grey" hidden>
+                    GREY
+                </label>
+                <label class="p-a col-xs-6 dark pointer m-a-0">
+                    <input type="radio" name="theme" value="dark" hidden>
+                    Dark
+                </label>
+                <label class="p-a col-xs-6 black pointer m-a-0">
+                    <input type="radio" name="theme" value="black" hidden>
+                    Black
+                </label>
+            </div>
+            <br>
+                            <p class="m-b-xs">Languages:</p>
+                <div style="max-height: 200px;overflow-y: scroll">
+                                    <div>
+                        <a href="http://192.168.0.127:8000/locale/en"
+                           class="btn btn-xs light btn-block m-b-xs text-left p-x-1">
+                                                            <img
+                                    src="http://192.168.0.127:8000/assets/dashboard/images/flags/us.svg"
+                                    alt="" class="w-20">
+                                                        English
+                        </a>
+                    </div>
+                                </div>
+                        <div class="m-t-1">
+                <a href="http://192.168.0.127:8000/admin/cache-clear" class="btn btn-sm dark btn-block"
+                   onclick="return confirm('Are you sure to clear cache &amp; temp files?')"><small>Clear cache & temp files?</small></a>
+
+            </div>
+        </div>
+    </div>
+
+</div>-->
+</div>
+<script type="text/javascript">
+    var public_lang = "en";
+    var public_folder_path = "http://192.168.0.127:8000/";
+    var first_day_of_week = "0";
+
+</script>
+<!-- jQuery -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/jquery/dist/jquery.js"></script>
+<!-- Bootstrap -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/tether/dist/js/tether.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/bootstrap/dist/js/bootstrap.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/moment/moment.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/moment/locale/en.js" defer></script>
+<!-- core -->
+<script src="http://192.168.0.127:8000/assets/dashboard/js/underscore/underscore-min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/jQuery-Storage-API/jquery.storageapi.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/pace/pace.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/config.lazyload.js" defer></script>
+
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/palette.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-load.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-jp.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-include.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-device.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-form.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-nav.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-screenfull.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-scroll-to.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/ui-toggle-class.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/select2/dist/js/select2.min.js" defer></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/toastr/toastr.min.js" defer></script>
+
+
+<script src="http://192.168.0.127:8000/assets/dashboard/js/scripts/app.js" defer></script>
+
+
+
+
+<script src="http://192.168.0.127:8000/assets/dashboard/js/datatables/datatables.min.js"></script>
+<script src="http://192.168.0.127:8000/assets/dashboard/js/datatables/dataTables.fixedColumns.min.js"></script>
+<script type="text/javascript">
+
+function changePageLength(val) {
+    if (window.statusDataTable) {
+        window.statusDataTable.page.len(parseInt(val, 10)).draw();
+    }
+}
+
+function handleSearchInput(val) {
+    if (window.statusDataTable) {
+        window.statusDataTable.search(val).draw();
+    }
+}
+
+function formatPctCell(data) {
+    if (!data) return '<span class="lg-num-cell">0</span>';
+    var str = String(data).trim();
+    var match = str.match(/^(\d+)\s*\(([\d\.]+%)\)$/);
+    if (match) {
+        var count = match[1];
+        var pct = match[2];
+        var isPos = parseFloat(pct) > 0;
+        return '<span class="lg-num-cell">' + count + '</span>' +
+               '<span class="lg-pct-tag ' + (isPos ? 'has-val' : 'muted') + '">' + pct + '</span>';
+    }
+    return '<span class="lg-num-cell">' + str + '</span>';
+}
+
+$(document).ready(function () {
+    var table_name = "#leads_table";
+    window.statusDataTable = $(table_name).DataTable({
+        "processing": true,
+        "serverSide": true,
+        "searching": true,
+        "responsive": false,
+        "scrollX": true,
+        "pageLength": 30,
+        "lengthMenu": [[10, 25, 30, 50, 75, 100, 200], [10, 25, 30, 50, 75, 100, 200]],
+        "ajax": {
+            "url": "http://192.168.0.127:8000/admin/reports/campaignStatusData",
+            "dataType": "json",
+            "type": "POST",
+            "data": function (data) {
+                data._token = "dkHtzm8mLei57KWJmPdjVw2dXTyVkXs36E5e9R98";
+                data.find_q = $('#find_q').val();
+                data.find_campaign = $('#find_campaign').val();
+            }
+        },
+        "dom": '<"row"<"col-sm-12"tr>><"row align-items-center p-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7 text-end"p>>',
+        "fnDrawCallback": function () {
+            if ($(table_name + '_paginate .paginate_button').length > 3) {
+                $(table_name + '_paginate').show();
+            } else {
+                $(table_name + '_paginate').hide();
+            }
+            if ($.fn.tooltip) {
+                $('[data-toggle="tooltip"]').tooltip({html: true});
+            }
+        },
+        "language": {"sEmptyTable":"No data available in table","sInfo":"Showing _START_ to _END_ of _TOTAL_ entries","sInfoEmpty":"Showing 0 to 0 of 0 entries","sInfoFiltered":"(filtered from _MAX_ total entries)","sInfoPostFix":"","sInfoThousands":",","sLengthMenu":"Show _MENU_","sLoadingRecords":"Loading...","sProcessing":"Processing...","sSearch":"Search:","sZeroRecords":"No matching records found","oPaginate":{"sFirst":"First","sLast":"Last","sNext":"Next","sPrevious":"Previous"},"oAria":{"sSortAscending":": activate to sort column ascending","sSortDescending":": activate to sort column descending"}},
+        "columns": [
+            {
+                "data": "campaign_name",
+                "orderable": true,
+                "className": "lg-campaign-name-link"
+            },
+            {
+                "data": "total",
+                "orderable": true,
+                "render": function(data) { return '<span class="lg-num-cell">' + (data || 0) + '</span>'; }
+            },
+            {
+                "data": "call_count",
+                "orderable": true,
+                "render": function(data) { return '<span class="lg-num-cell">' + (data || 0) + '</span>'; }
+            },
+            {
+                "data": "visit_count",
+                "orderable": true,
+                "render": function(data) { return '<span class="lg-num-cell">' + (data || 0) + '</span>'; }
+            },
+            {
+                "data": "leads",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+            {
+                "data": "deal",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status1",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status2",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status3",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status4",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status5",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status7",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status8",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status9",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status10",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status11",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status12",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status13",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status14",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status15",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status16",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status17",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status18",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status19",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status20",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                        {
+                "data": "status21",
+                "orderable": true,
+                "render": function(data) { return formatPctCell(data); }
+            },
+                    ],
+        "order": [[0, "asc"]]
+    });
+
+    $("#search-btn").on('click', function () {
+        window.statusDataTable.draw();
+    });
+
+    $.fn.dataTable.ext.errMode = 'none';
+});
+
+$("#filter_btn").click(function () {
+    $("#filter_div").slideToggle();
+});
+
+function print_as(stat){
+    $("#search_submit_stat").val(stat);
+    $("#filter_form").attr('action', '');
+    $("#filter_form").attr('target', '_blank');
+    $("#filter_form").submit();
+    $("#filter_form").attr('action', '');
+    $("#search_submit_stat").val("");
+    $("#filter_form").attr('target', '');
+}
+</script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-messaging-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTPQJM6INqNY0qNw5p4N8MOjf4kr-lXi8",
+    authDomain: "test-872b3.firebaseapp.com",
+    projectId: "test-872b3",
+    storageBucket: "test-872b3.appspot.com",
+    messagingSenderId: "509693146027",
+    appId: "1:509693146027:web:a786b1fb7a569b2aed58ee",
+    measurementId: "G-TX9YBYZV5Y"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+
+  function sendTokenToServer(token) {
+    fetch('/save-fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': 'dkHtzm8mLei57KWJmPdjVw2dXTyVkXs36E5e9R98'
+      },
+      body: JSON.stringify({ token })
+    })
+    .then(res => res.json())
+    .then(data => console.log('Token saved:', data))
+    .catch(err => console.error('Error saving token:', err));
+  }
+
+  function initFirebaseMessagingRegistration() {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications.');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      registerServiceWorkerAndGetToken();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+        if (permission === 'granted') {
+          registerServiceWorkerAndGetToken();
+        } else {
+          console.warn('Notification permission not granted');
+        }
+      });
+    }
+  }
+
+  function registerServiceWorkerAndGetToken() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+
+          messaging.getToken({
+            vapidKey:  "BBmZ4PIVumuQmN_jL6JTWIjLMLAMonhb7vR8x78nQ9Ztt2r9hUm2rI7hJ6gLAxQqvEP0l8_jS0B7Z1l4t0bK8Us",
+            serviceWorkerRegistration: registration
+          }).then(token => {
+            console.log('FCM Token:', token);
+            sendTokenToServer(token);
+          }).catch(err => {
+            console.error('Error getting token:', err);
+          });
+        })
+        .catch(err => {
+          console.error('Service Worker registration failed:', err);
+        });
+    } else {
+      console.warn('Service workers are not supported in this browser.');
+    }
+  }
+
+  initFirebaseMessagingRegistration();
+
+messaging.onMessage(payload => {
+  console.log('FCM payload:', payload); // ADD THIS LINE
+
+  // Check if payload.notification exists
+  if (payload.notification) {
+    const { title, body } = payload.notification;
+    const { cli, duration } = payload.data || {};
+
+    if (Notification.permission === 'granted') {
+      console.log('granted');
+      const notification = new Notification(title || 'New VMN Call Received', {
+        body: body || `CLI: ${cli}, Duration: ${duration}s`,
+        icon: '/logo.png'
+      });
+
+      notification.onclick = event => {
+        event.preventDefault();
+        window.focus();
+      };
+    } else {
+      console.warn('Notification permission not granted.');
+    }
+  } else {
+    console.warn('No payload.notification received.');
+  }
+});
+
+
+  
+</script>
+
+<!-- <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTPQJM6INqNY0qNw5p4N8MOjf4kr-lXi8",
+    authDomain: "test-872b3.firebaseapp.com",
+    projectId: "test-872b3",
+    storageBucket: "test-872b3.appspot.com",
+    messagingSenderId: "509693146027",
+    appId: "1:509693146027:web:a786b1fb7a569b2aed58ee",
+    measurementId: "G-TX9YBYZV5Y"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+
+  function sendTokenToServer(token) {
+    fetch('/save-fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': 'dkHtzm8mLei57KWJmPdjVw2dXTyVkXs36E5e9R98'
+      },
+      body: JSON.stringify({ token })
+    })
+    .then(res => res.json())
+    .then(data => console.log('Token saved:', data))
+    .catch(err => console.error('Error saving token:', err));
+  }
+
+  function initFirebaseMessagingRegistration() {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications.');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      registerServiceWorkerAndGetToken();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+        if (permission === 'granted') {
+          registerServiceWorkerAndGetToken();
+        } else {
+          console.warn('Notification permission not granted');
+        }
+      });
+    }
+  }
+
+  function registerServiceWorkerAndGetToken() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+
+          messaging.getToken({
+            vapidKey: 'BBmZ4PIVumuQmN_jL6JTWIjLMLAMonhb7vR8x78nQ9Ztt2r9hUm2rI7hJ6gLAxQqvEP0l8_jS0B7Z1l4t0bK8Us',
+            serviceWorkerRegistration: registration
+          }).then(token => {
+            console.log('FCM Token:', token);
+            sendTokenToServer(token);
+          }).catch(err => {
+            console.error('Error getting token:', err);
+          });
+        })
+        .catch(err => {
+          console.error('Service Worker registration failed:', err);
+        });
+    } else {
+      console.warn('Service workers are not supported in this browser.');
+    }
+  }
+
+  initFirebaseMessagingRegistration();
+
+messaging.onMessage(payload => {
+  console.log('FCM payload:', payload); // ADD THIS LINE
+
+  // Check if payload.notification exists
+  if (payload.notification) {
+    const { title, body } = payload.notification;
+    const { cli, duration } = payload.data || {};
+
+    if (Notification.permission === 'granted') {
+      console.log('granted');
+      const notification = new Notification(title || 'New VMN Call Received', {
+        body: body || `CLI: ${cli}, Duration: ${duration}s`,
+        icon: '/logo.png'
+      });
+
+      notification.onclick = event => {
+        event.preventDefault();
+        window.focus();
+      };
+    } else {
+      console.warn('Notification permission not granted.');
+    }
+  } else {
+    console.warn('No payload.notification received.');
+  }
+});
+
+
+  
+</script> -->
+
+</body>
+</html>

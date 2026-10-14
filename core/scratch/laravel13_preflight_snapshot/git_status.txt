@@ -1,0 +1,99 @@
+﻿On branch laravel-upgrade
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   core/app/Http/Controllers/Auth/LoginController.php
+	modified:   core/app/Http/Controllers/Dashboard/CampaignsController.php
+	modified:   core/app/Http/Controllers/Dashboard/Click2CallController.php
+	modified:   core/app/Http/Controllers/Dashboard/LeadsController.php
+	modified:   core/app/Http/Controllers/Dashboard/ReportsController.php
+	modified:   core/app/Http/Controllers/Dashboard/StatusesController.php
+	modified:   core/app/Http/Controllers/Dashboard/UsersController.php
+	modified:   core/app/Models/Status.php
+	modified:   core/phpunit.xml
+	modified:   core/public/assets/dashboard/css/custom.css
+	modified:   core/resources/views/auth/login.blade.php
+	modified:   core/resources/views/dashboard/campaigns/leads.blade.php
+	modified:   core/resources/views/dashboard/campaigns/list.blade.php
+	modified:   core/resources/views/dashboard/campaigns/view.blade.php
+	modified:   core/resources/views/dashboard/click2call/list.blade.php
+	modified:   core/resources/views/dashboard/dialer/dialer.blade.php
+	modified:   core/resources/views/dashboard/home.blade.php
+	modified:   core/resources/views/dashboard/layouts/head.blade.php
+	modified:   core/resources/views/dashboard/layouts/header.blade.php
+	modified:   core/resources/views/dashboard/layouts/menu.blade.php
+	modified:   core/resources/views/dashboard/leads/create.blade.php
+	modified:   core/resources/views/dashboard/leads/leads.blade.php
+	modified:   core/resources/views/dashboard/leads/view.blade.php
+	modified:   core/resources/views/dashboard/productservices/create.blade.php
+	modified:   core/resources/views/dashboard/productservices/edit.blade.php
+	modified:   core/resources/views/dashboard/productservices/list.blade.php
+	modified:   core/resources/views/dashboard/reports/callLogs.blade.php
+	modified:   core/resources/views/dashboard/reports/dialerLog.blade.php
+	deleted:    core/resources/views/dashboard/reports/notSaved.blade.php.mine
+	deleted:    core/resources/views/dashboard/reports/notSaved.blade.php.r498
+	deleted:    core/resources/views/dashboard/reports/notSaved.blade.php.r509
+	modified:   core/resources/views/dashboard/reports/userLogs.blade.php
+	modified:   core/resources/views/dashboard/reports/userStatus.blade.php
+	modified:   core/resources/views/dashboard/sources/create.blade.php
+	modified:   core/resources/views/dashboard/sources/edit.blade.php
+	modified:   core/resources/views/dashboard/sources/list.blade.php
+	modified:   core/resources/views/dashboard/statuses/create.blade.php
+	modified:   core/resources/views/dashboard/statuses/edit.blade.php
+	modified:   core/resources/views/dashboard/statuses/list.blade.php
+	modified:   core/resources/views/dashboard/users/edit.blade.php
+	modified:   core/resources/views/dashboard/users/list.blade.php
+	modified:   core/resources/views/dashboard/webmaster/settings/home.blade.php
+	modified:   core/resources/views/dashboard/webrtc/list.blade.php
+	modified:   core/routes/dashboard.php
+	deleted:    core/scratch/test_routes.php
+	deleted:    preview_dashboard.html
+	deleted:    preview_login.html
+	deleted:    scratch/check_admin_pass.php
+	deleted:    scratch/check_campaign_data.php
+	deleted:    scratch/check_campaign_schema.php
+	deleted:    scratch/check_schema.php
+	deleted:    scratch/render_webrtc.php
+	deleted:    scratch/test_agent_performance.php
+	deleted:    scratch/test_agent_search.php
+	deleted:    scratch/test_agent_search2.php
+	deleted:    scratch/test_campaign_performance_flow.php
+	deleted:    scratch/test_campaigns_data.php
+	deleted:    scratch/test_create_campaign.php
+	deleted:    scratch/test_leads_data.php
+	deleted:    scratch/test_leads_view.php
+	deleted:    scratch/test_upload_view.php
+	deleted:    scratch/verify_single_card_redesign.php
+	deleted:    scratch/webrtc_rendered.html
+	modified:   start_background_server.vbs
+	modified:   start_server.bat
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	core/scratch/composer_current_backup.json
+	core/scratch/composer_s2.json
+	core/scratch/composer_stage2_dryrun.json
+	core/scratch/debug_http_request.php
+	core/scratch/inspect_lead.php
+	core/scratch/laravel12_phase6_remote_push_report.md
+	core/scratch/laravel12_pre_commit_verification.md
+	core/scratch/laravel12_pre_upgrade_snapshot/
+	core/scratch/laravel12_preflight_audit_report.md
+	core/scratch/laravel12_upgrade_final_verification_report.md
+	core/scratch/laravel13_preflight_snapshot/
+	core/scratch/packagist_framework.json
+	core/scratch/prabowosd_packagist.json
+	core/scratch/prabowosd_src/
+	core/scratch/routes.json
+	core/scratch/safety_snapshot_stage2_post_upgrade/
+	core/scratch/safety_snapshot_stage2_pre_upgrade/
+	core/scratch/stage2_final_verification_report.md
+	core/scratch/test_acting_as.php
+	core/scratch/test_auth_flow.py
+	core/scratch/test_dialer_modules.php
+	core/scratch/test_http_endpoints.py
+	core/scratch/test_laravel11_verification.php
+	core/scratch/test_render_views.php
+	core/scratch/verify_phase1.php
+
+no changes added to commit (use "git add" and/or "git commit -a")

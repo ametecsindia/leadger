@@ -1,0 +1,256 @@
+/* ==========================================================================
+   LeadGER Design System - ONE source of truth for the admin UI
+   --------------------------------------------------------------------------
+   Loaded after custom.css and leadger-theme.css (layouts/head.blade.php).
+   Values are LeadGER's existing reference design (leadger-theme.css "Master"
+   rules + what most pages already render); nothing here is a new look.
+
+   Use the tokens in page CSS instead of hard-coded values, e.g.
+       color: var(--lg-text); font-size: var(--lg-fs-body);
+   Rules below only normalise elements that many pages render differently.
+   "html body" / ":not(#lg-x)" raise specificity so per-page <style> blocks
+   (which load later) cannot drift away from the standard.
+   ========================================================================== */
+
+:root {
+  /* Brand & neutrals */
+  --lg-navy: #071426;            /* sidebar / dark navigation */
+  --lg-accent: #1464F4;          /* royal blue: primary buttons, links, active states */
+  --lg-accent-hover: #0F52D6;
+  --lg-accent-soft: #EFF6FF;
+  --lg-accent-border: #BFDBFE;
+  --lg-bg: #F7F8FA;              /* page background */
+  --lg-surface: #FFFFFF;         /* cards, tables, modals */
+  --lg-surface-alt: #F8FAFC;     /* table headings, card headers, footers */
+  --lg-border: #E2E8F0;
+  --lg-border-strong: #CBD5E1;   /* inputs, secondary buttons */
+
+  /* Text */
+  --lg-text: #0F172A;            /* headings */
+  --lg-text-body: #334155;       /* body / table cells */
+  --lg-text-label: #475569;      /* labels, table headings */
+  --lg-text-muted: #64748B;      /* helper text, subtitles */
+
+  /* Status */
+  --lg-success: #059669;  --lg-success-bg: #ECFDF5;  --lg-success-border: #A7F3D0;
+  --lg-warning: #D97706;  --lg-warning-bg: #FFFBEB;  --lg-warning-border: #FCD34D;
+  --lg-danger:  #DC2626;  --lg-danger-bg:  #FEF2F2;  --lg-danger-border:  #FECACA;
+  --lg-danger-solid: #EF4444;
+
+  /* Typography */
+  --lg-font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --lg-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --lg-fs-page-title: 22px;  --lg-fw-page-title: 700;
+  --lg-fs-subtitle: 13.5px;
+  --lg-fs-section: 16px;     --lg-fw-section: 700;
+  --lg-fs-body: 13.5px;
+  --lg-fs-small: 12.5px;
+  --lg-fs-label: 12.5px;     --lg-fw-label: 600;
+  --lg-fs-th: 11.5px;        --lg-fw-th: 700;
+  --lg-fs-badge: 11.5px;
+  --lg-fs-button: 13.5px;    --lg-fw-button: 600;
+
+  /* Sizes */
+  --lg-control-h: 40px;
+  --lg-control-h-sm: 34px;
+  --lg-radius-control: 8px;
+  --lg-radius-card: 12px;
+  --lg-radius-pill: 999px;
+  --lg-card-pad: 20px;
+  --lg-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 12px rgba(15, 23, 42, 0.02);
+  --lg-shadow-focus: 0 0 0 3px rgba(20, 100, 244, 0.15);
+
+  /* Tables */
+  --lg-table-head-bg: var(--lg-surface-alt);
+  --lg-table-head-color: var(--lg-text-label);
+  --lg-table-head-pad-y: 13px;
+  --lg-table-cell-pad-y: 14px;
+  --lg-table-pad-x: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   1. One font family everywhere (icon fonts keep their own)
+   -------------------------------------------------------------------------- */
+html body,
+html body :is(button, input, select, textarea, table, th, td, label, .select2-container, .modal, .tooltip, .popover, .toast) {
+  font-family: var(--lg-font-sans) !important;
+}
+html body :is(code, pre, kbd, samp, .font-monospace, .text-monospace) {
+  font-family: var(--lg-font-mono) !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Legacy "box" pages: the box header title is the page title
+      (99 templates use <div class="box-header"><h3>Title</h3>)
+   -------------------------------------------------------------------------- */
+html body #content .box > .box-header :is(h2, h3) {
+  font-size: var(--lg-fs-page-title) !important;
+  font-weight: var(--lg-fw-page-title) !important;
+  color: var(--lg-text) !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.02em !important;
+}
+html body #content .box > .box-header {
+  padding: 18px var(--lg-card-pad) !important;
+  display: flow-root !important;   /* the legacy <h3> is floated; contain it so the header gets its height */
+  min-height: 64px;
+}
+/* legacy header tools (search / filter buttons): inside the header, vertically centred */
+html body #content .box > .box-tool {
+  top: 12px !important;
+  right: 16px !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Tables: one heading + cell style for every data table
+      (calendar / date-picker grids are not data tables and keep their look)
+   -------------------------------------------------------------------------- */
+html body table:is(.table, .dataTable, [id], [class$="-table"], [class*="-table "]):not(#lg-x):not(.table-condensed):not(.ui-datepicker-calendar):not(.fc table, .datepicker table, .flatpickr-calendar table, .daterangepicker table) thead th {
+  background-color: var(--lg-table-head-bg) !important;
+  color: var(--lg-table-head-color) !important;
+  font-size: var(--lg-fs-th) !important;
+  font-weight: var(--lg-fw-th) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding-top: var(--lg-table-head-pad-y) !important;
+  padding-bottom: var(--lg-table-head-pad-y) !important;
+  padding-left: var(--lg-table-pad-x) !important;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+html body table:is(.table, .dataTable, [id], [class$="-table"], [class*="-table "]):not(#lg-x):not(.table-condensed):not(.ui-datepicker-calendar):not(.fc table, .datepicker table, .flatpickr-calendar table, .daterangepicker table) tbody td:not([class*="text-"]) {
+  font-size: var(--lg-fs-body) !important;
+  color: var(--lg-text-body) !important;
+  padding-top: var(--lg-table-cell-pad-y) !important;
+  padding-bottom: var(--lg-table-cell-pad-y) !important;
+  padding-left: var(--lg-table-pad-x) !important;
+  vertical-align: middle !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Page titles & subtitles: one size / weight / colour on every page
+      (each page header family below used its own 16-28px, 700-800 weight)
+   -------------------------------------------------------------------------- */
+html body #content :is(.lg-page-title, .lg-title-main, .lg-header-title, .lg-header-h1, .la-page-title,
+  .lg-ch-title, .rmi-header-title, .lg-settings-title, .cw-header-title, .cr-header-title,
+  .lg-disp-page-title, .lg-ps-title, .lg-segments-title, .lg-sources-title, .lg-subs-title,
+  .dl-title-text > h1, .lg-page-header h1) {
+  font-size: var(--lg-fs-page-title) !important;
+  font-weight: var(--lg-fw-page-title) !important;
+  color: var(--lg-text) !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 !important;
+}
+html body #content :is(.lg-page-subtitle, .lg-header-sub, .lg-header-subtitle, .lg-title-sub, .la-page-subtitle,
+  .lg-ch-subtitle, .rmi-header-sub, .lg-settings-subtitle, .cr-header-sub, .lg-disp-page-subtitle,
+  .lg-ps-subtitle, .lg-segments-subtitle, .lg-sources-subtitle, .lg-subs-subtitle, .ul-page-subtitle,
+  .dl-title-text > p) {
+  font-size: var(--lg-fs-subtitle) !important;
+  font-weight: 400 !important;
+  color: var(--lg-text-muted) !important;
+  line-height: 1.45 !important;
+  margin: 3px 0 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Cards & panels: one corner radius, border and shadow
+   -------------------------------------------------------------------------- */
+html body #content :is(.box, .card, .panel, .card-box-shadow, .lg-table-card, .lg-main-card, .lg-settings-card,
+  .lg-settings-container, .filter-card, .lg-filter-card, .lg-ch-card, .la-header-card, .la-filters-card, .la-table-card,
+  .rmi-card, .cw-card, .lg-header-card, .lg-disposition-card, .lg-panel,
+  .lg-ps-card, .cr-filter-card, .cr-table-card, .lg-report-card, .lg-user-breakdown-card,
+  .lg-segments-card, .lg-sources-card, .lg-status-card, .lg-subs-card) {
+  border-radius: var(--lg-radius-card) !important;
+  border-color: var(--lg-border) !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Inputs, selects, select2: one height, radius and text size
+      (focus / error colours stay with each component; table cell editors keep their size)
+   -------------------------------------------------------------------------- */
+html body #content :is(input:not([type=checkbox], [type=radio], [type=file], [type=range], [type=color], [type=hidden], [type=submit], [type=button], [type=image], [type=reset]),
+  select:not([multiple]):not([size])):not(table *):not(.select2-search__field) {
+  height: var(--lg-control-h) !important;
+  min-height: var(--lg-control-h) !important;
+  border-radius: var(--lg-radius-control) !important;
+  font-size: var(--lg-fs-body) !important;
+}
+html body #content .select2-container--default:not(table *) .select2-selection--single {
+  height: var(--lg-control-h) !important;
+  min-height: var(--lg-control-h) !important;
+  border-radius: var(--lg-radius-control) !important;
+  font-size: var(--lg-fs-body) !important;
+}
+html body #content .select2-container--default:not(table *) .select2-selection--single .select2-selection__rendered {
+  line-height: calc(var(--lg-control-h) - 2px) !important;
+}
+html body #content .select2-container--default:not(table *) .select2-selection--single .select2-selection__arrow {
+  height: calc(var(--lg-control-h) - 2px) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Buttons: one size, radius and type; colour by meaning
+      primary = royal blue, secondary = white, success = green, warning = amber, danger = red
+   -------------------------------------------------------------------------- */
+html body #content :is(.btn, .lg-btn, .lg-btn-primary, .lg-btn-secondary, .lg-btn-danger):not(.btn-link):not(.close):not(table *):not(.dropdown-menu *):not(.pagination *):not(.dataTables_paginate *) {
+  height: var(--lg-control-h);
+  min-height: var(--lg-control-h);
+  border-radius: var(--lg-radius-control) !important;
+  font-size: var(--lg-fs-button) !important;
+  font-weight: var(--lg-fw-button) !important;
+}
+html body #content :is(.btn-sm, .btn-xs, .lg-btn-sm):not(table *) {
+  height: var(--lg-control-h-sm);
+  min-height: var(--lg-control-h-sm);
+  font-size: var(--lg-fs-small) !important;
+}
+html body #content :is(.btn, .lg-btn):not(.btn-block):not(table *):not(.dropdown-menu *) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+/* colour roles (legacy theme classes .primary/.info/.success/... included) */
+html body :is(.btn-primary, .btn.primary, .btn-info, .btn.info, .lg-btn-primary):not(.btn-outline-primary):not(:disabled) {
+  background-color: var(--lg-accent) !important;
+  border-color: var(--lg-accent) !important;
+  color: #FFFFFF !important;
+}
+html body :is(.btn-primary, .btn.primary, .btn-info, .btn.info, .lg-btn-primary):not(.btn-outline-primary):not(:disabled):hover {
+  background-color: var(--lg-accent-hover) !important;
+  border-color: var(--lg-accent-hover) !important;
+}
+html body :is(.btn-success, .btn.success):not(.btn-outline-success) {
+  background-color: var(--lg-success) !important;
+  border-color: var(--lg-success) !important;
+  color: #FFFFFF !important;
+}
+html body :is(.btn-warning, .btn.warning):not(.btn-outline-warning) {
+  background-color: var(--lg-warning) !important;
+  border-color: var(--lg-warning) !important;
+  color: #FFFFFF !important;
+}
+html body :is(.btn-danger, .btn.danger, .lg-btn-danger):not(.btn-outline-danger) {
+  background-color: var(--lg-danger) !important;
+  border-color: var(--lg-danger) !important;
+  color: #FFFFFF !important;
+}
+html body :is(.btn-secondary, .btn-default, .btn-light, .btn.white, .lg-btn-secondary) {
+  background-color: var(--lg-surface) !important;
+  border: 1px solid var(--lg-border-strong) !important;
+  color: var(--lg-text) !important;
+}
+html body :is(.btn-secondary, .btn-default, .btn-light, .btn.white, .lg-btn-secondary):hover {
+  background-color: var(--lg-surface-alt) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. select2 keeps the width of the field it replaces
+      (app.js turns every <select> into select2, which sized full-width fields to their text)
+   -------------------------------------------------------------------------- */
+html body :is(select.form-control, select.cw-select, select.lg-form-select, select.lg-select-input,
+  select[style*="width: 100%"], select[style*="width:100%"]) + .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}

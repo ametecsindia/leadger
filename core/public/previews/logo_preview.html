@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LeadGER Logo Sidebar Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body {
+    background: #0F172A;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: #F8FAFC;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .card {
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 600px;
+  }
+  .sidebar-box {
+    background: #0A1426;
+    border: 1px solid #1E293B;
+    border-radius: 8px;
+    padding: 16px;
+    display: inline-block;
+  }
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+  .brand-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .brand-title .lead { color: #FFFFFF; }
+  .brand-title .ger {
+    background: linear-gradient(180deg, #00A3FF 0%, #0066FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #0088FF;
+  }
+  .brand-sub {
+    font-size: 9px;
+    font-weight: 600;
+    color: #8A99AD;
+    letter-spacing: 0.15px;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>LeadGER Logo Verification on Dark Sidebar (#0A1426)</h1>
+
+<div class="card">
+  <h3>Option A: Original Logo with Solid Background</h3>
+  <p style="color: #94A3B8; font-size: 13px;">Exact file uploaded: <code>core/public/assets/dashboard/images/leadger-logo.png</code></p>
+  <div class="sidebar-box">
+    <div class="sidebar-brand">
+      <img src="/assets/dashboard/images/leadger-logo.png" alt="LeadGER" style="height: 44px; width: auto; max-height: 48px; display: block; object-fit: contain; border-radius: 6px;">
+      <div>
+        <div class="brand-title"><span class="lead">Lead</span><span class="ger">GER</span></div>
+        <div class="brand-sub">Generate, Engage &amp; Retain</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Option B: Clean Badge Container (Rounded Soft White/Glass Backdrop)</h3>
+  <p style="color: #94A3B8; font-size: 13px;">Enhances contrast on dark background with subtle rounded padding:</p>
+  <div class="sidebar-box">
+    <div class="sidebar-brand">
+      <div style="background: #FFFFFF; border-radius: 8px; padding: 3px 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+        <img src="/assets/dashboard/images/leadger-logo.png" alt="LeadGER" style="height: 38px; width: auto; display: block; object-fit: contain;">
+      </div>
+      <div>
+        <div class="brand-title"><span class="lead">Lead</span><span class="ger">GER</span></div>
+        <div class="brand-sub">Generate, Engage &amp; Retain</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Option C: Transparent Cutout</h3>
+  <p style="color: #94A3B8; font-size: 13px;">File: <code>core/public/assets/dashboard/images/leadger-logo-transparent.png</code></p>
+  <div class="sidebar-box">
+    <div class="sidebar-brand">
+      <img src="/assets/dashboard/images/leadger-logo-transparent.png" alt="LeadGER" style="height: 44px; width: auto; max-height: 48px; display: block; object-fit: contain;">
+      <div>
+        <div class="brand-title"><span class="lead">Lead</span><span class="ger">GER</span></div>
+        <div class="brand-sub">Generate, Engage &amp; Retain</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,480 @@
+/* ==========================================================================
+   LeadGER Cinematic Blue Tele-Sales Login Theme (Matching Reference Image)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --lg-primary: #0066FF;
+  --lg-primary-hover: #0052D9;
+  --lg-primary-light: #eff6ff;
+  --lg-primary-ring: rgba(0, 102, 255, 0.22);
+  --lg-navy-950: #040915;
+  --lg-navy-900: #071B3A;
+  --lg-navy-800: #0E244D;
+  --lg-slate-700: #334155;
+  --lg-slate-500: #64748B;
+  --lg-slate-400: #94A3B8;
+  --lg-slate-200: #E2E8F0;
+  --lg-slate-100: #F1F5F9;
+  --lg-slate-50: #F8FAFC;
+  --lg-white: #FFFFFF;
+  --lg-danger: #EF4444;
+  --lg-danger-light: #FEF2F2;
+  --lg-success: #10B981;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--lg-navy-950);
+  overflow-x: hidden;
+}
+
+.auth_app {
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative;
+  background: transparent !important;
+}
+
+/* ==========================================================================
+   Full Viewport Cinematic Background with Soft Office Atmosphere
+   ========================================================================== */
+.lg-cinematic-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background-image: url('../images/leadger_login_bg.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+/* Balanced ambient overlay: lets the headset on left & laptop on right shine */
+.lg-cinematic-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(7, 27, 58, 0.2) 0%, rgba(4, 9, 21, 0.55) 100%),
+    linear-gradient(180deg, rgba(7, 27, 58, 0.15) 0%, rgba(4, 9, 21, 0.45) 100%);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Centered Login Wrapper & Card
+   ========================================================================== */
+.lg-login-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.lg-login-card {
+  width: 100%;
+  max-width: 480px;
+  background: #FFFFFF;
+  border-radius: 20px;
+  box-shadow: 
+    0 25px 60px -10px rgba(0, 15, 45, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  padding: 36px 36px 28px;
+  position: relative;
+  overflow: hidden;
+  animation: lgCardFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Soft decorative corner shapes matching reference image */
+.lg-login-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(219, 234, 254, 0.75) 0%, rgba(219, 234, 254, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lg-login-card::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: -50px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(219, 234, 254, 0.65) 0%, rgba(219, 234, 254, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes lgCardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   Header & Branding (Matching Reference Image)
+   ========================================================================== */
+.lg-login-brand-header {
+  display: block;
+  text-align: center;
+  margin-bottom: 22px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.lg-logo-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 16px !important;
+  width: 100% !important;
+}
+
+.lg-brand-logo-img {
+  max-height: 56px !important;
+  height: 52px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+.lg-welcome-heading {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.lg-welcome-desc {
+  display: block;
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Form Controls & Input Icons Alignment (Unified Consistent System)
+   ========================================================================== */
+.lg-form-group {
+  margin-bottom: 16px;
+  position: relative;
+  text-align: left;
+  z-index: 1;
+}
+
+.lg-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  margin-bottom: 6px;
+}
+
+.lg-input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.lg-input-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #0066FF !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  z-index: 10 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.lg-input-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+  stroke: #0066FF !important;
+  stroke-width: 2 !important;
+  fill: none !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  display: block !important;
+}
+
+.lg-input {
+  width: 100% !important;
+  height: 52px !important;
+  background: #F8FAFC !important;
+  border: 1.5px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  padding-left: 48px !important;
+  padding-right: 48px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  font-weight: 500 !important;
+  color: #0F172A !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  line-height: normal !important;
+}
+
+.lg-input::placeholder {
+  color: #94A3B8 !important;
+  font-weight: 400 !important;
+}
+
+.lg-input:hover {
+  border-color: #CBD5E1 !important;
+  background: #FFFFFF !important;
+}
+
+.lg-input:focus {
+  outline: none !important;
+  background: #FFFFFF !important;
+  border-color: #0066FF !important;
+  box-shadow: 0 0 0 3.5px rgba(0, 102, 255, 0.15) !important;
+}
+
+.lg-pwd-toggle {
+  position: absolute !important;
+  right: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  color: #94A3B8 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  transition: color 0.15s ease !important;
+  z-index: 10 !important;
+  margin: 0 !important;
+  height: 28px !important;
+  width: 28px !important;
+}
+
+.lg-pwd-toggle:hover {
+  color: #475569 !important;
+}
+
+.lg-pwd-toggle svg {
+  width: 20px !important;
+  height: 20px !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+  fill: none !important;
+  display: block !important;
+}
+
+/* Validation messages */
+.lg-error-text {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #EF4444;
+  margin-top: 4px;
+}
+
+.lg-alert-danger {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  text-align: left;
+  position: relative;
+  z-index: 1;
+}
+
+.lg-alert-success {
+  background: #ECFDF5;
+  border: 1px solid #6EE7B7;
+  color: #047857;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  text-align: left;
+  position: relative;
+  z-index: 1;
+}
+
+/* Options Row: Remember Me & Forgot Password */
+.lg-form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  position: relative;
+  z-index: 1;
+}
+
+.lg-remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lg-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #CBD5E1;
+  accent-color: #0066FF;
+  cursor: pointer;
+}
+
+.lg-forgot-link {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0066FF;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.lg-forgot-link:hover {
+  color: #0052D9;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Sign In Button
+   ========================================================================== */
+.lg-submit-btn {
+  width: 100%;
+  height: 52px;
+  background: #0066FF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 102, 255, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.lg-submit-btn svg {
+  width: 19px;
+  height: 19px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.lg-submit-btn:hover {
+  background: #0052D9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 102, 255, 0.45);
+}
+
+.lg-submit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+}
+
+.lg-copyright {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 11.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
+/* OTP Block */
+.lg-otp-box {
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 540px) {
+  .lg-login-wrapper {
+    padding: 16px 12px;
+  }
+  .lg-login-card {
+    padding: 30px 22px 24px;
+    border-radius: 18px;
+  }
+}

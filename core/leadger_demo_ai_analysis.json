@@ -1,0 +1,37 @@
+{
+  "recording_id": "leadger_demo_call.mp3",
+  "source": "Campaign",
+  "campaign_name": "September Home Loan",
+  "employee_name": "Akshitha",
+  "customer_name": "Rahul",
+  "duration": 52,
+  "file_name": "leadger_demo_call.mp3",
+  "call_status": "Connected",
+  "analysis_status": "Completed",
+  "summary": "Customer Rahul inquired about home loan options. Agent Akshitha explained competitive interest rates and required documents (ID proof, address proof, income documents, bank statements). Customer expressed positive interest and scheduled a follow-up call for tomorrow at 3:00 PM.",
+  "sentiment": "Positive",
+  "intent": "Interested",
+  "disposition": "Follow-up",
+  "follow_up_required": "Yes",
+  "follow_up_time": "Tomorrow 3:00 PM",
+  "interest_level": "High",
+  "key_points": [
+    "Customer Rahul confirmed interest in home loan options.",
+    "Discussed competitive interest rate and flexible repayment period.",
+    "Document checklist provided: ID proof, address proof, income documents, and recent bank statements.",
+    "Follow-up call agreed and scheduled for tomorrow at 3:00 PM."
+  ],
+  "emotion_analysis": {
+    "customer_emotion": "Interested & Receptive",
+    "agent_tone": "Professional, Courteous & Helpful",
+    "engagement_level": "High",
+    "confidence_score": "96%"
+  },
+  "quality_flags": {
+    "greeting_proper": "Passed - Verified customer name & stated company name",
+    "clear_articulation": "Passed - Clear, polite and well-paced delivery",
+    "objection_handling": "Passed - Direct interest handled smoothly",
+    "compliance_adherence": "Passed - Standard verification followed",
+    "call_outcome": "Passed - Follow-up confirmed for 3:00 PM"
+  }
+}

@@ -1,0 +1,340 @@
+﻿{
+    "package":  {
+                    "name":  "prabowosd/laravel-collective-html",
+                    "description":  "HTML and Form Builders for the Laravel Framework (Laravel 10-13 compatible).",
+                    "time":  "2025-10-28T19:54:54+00:00",
+                    "maintainers":  [
+                                        {
+                                            "name":  "prabowosd",
+                                            "avatar_url":  "https://www.gravatar.com/avatar/01a1a8078c3e4fd8de7f9c2e3a63166d117d44e14367b84bb60a93b060ff2e1a?d=identicon"
+                                        }
+                                    ],
+                    "versions":  {
+                                     "dev-main":  {
+                                                      "name":  "prabowosd/laravel-collective-html",
+                                                      "description":  "HTML and Form Builders for the Laravel Framework (Laravel 10-13 compatible).",
+                                                      "keywords":  [
+
+                                                                   ],
+                                                      "homepage":  "https://github.com/prabowosd/laravel-collective-html",
+                                                      "version":  "dev-main",
+                                                      "version_normalized":  "dev-main",
+                                                      "license":  [
+                                                                      "MIT"
+                                                                  ],
+                                                      "authors":  [
+                                                                      {
+                                                                          "name":  "Satrio Dwi Prabowo",
+                                                                          "email":  "sdp@starset.id"
+                                                                      }
+                                                                  ],
+                                                      "source":  {
+                                                                     "url":  "https://github.com/prabowosd/laravel-collective-html.git",
+                                                                     "type":  "git",
+                                                                     "reference":  "92def20f99d2274827c2560e9c42e4caffb22859"
+                                                                 },
+                                                      "dist":  {
+                                                                   "url":  "https://api.github.com/repos/prabowosd/laravel-collective-html/zipball/92def20f99d2274827c2560e9c42e4caffb22859",
+                                                                   "type":  "zip",
+                                                                   "shasum":  "",
+                                                                   "reference":  "92def20f99d2274827c2560e9c42e4caffb22859"
+                                                               },
+                                                      "type":  "library",
+                                                      "support":  {
+                                                                      "issues":  "https://github.com/prabowosd/laravel-collective-html/issues",
+                                                                      "source":  "https://github.com/prabowosd/laravel-collective-html"
+                                                                  },
+                                                      "funding":  [
+
+                                                                  ],
+                                                      "time":  "2026-05-27T05:13:22+00:00",
+                                                      "published-time":  "2026-05-27T05:25:56+00:00",
+                                                      "autoload":  {
+                                                                       "files":  [
+                                                                                     "src/helpers.php"
+                                                                                 ],
+                                                                       "psr-4":  {
+                                                                                     "Collective\\Html\\":  "src/"
+                                                                                 }
+                                                                   },
+                                                      "extra":  {
+                                                                    "laravel":  {
+                                                                                    "aliases":  {
+                                                                                                    "Form":  "Collective\\Html\\FormFacade",
+                                                                                                    "Html":  "Collective\\Html\\HtmlFacade"
+                                                                                                },
+                                                                                    "providers":  [
+                                                                                                      "Collective\\Html\\HtmlServiceProvider"
+                                                                                                  ]
+                                                                                },
+                                                                    "branch-alias":  {
+                                                                                         "dev-main":  "1.1.x-dev"
+                                                                                     }
+                                                                },
+                                                      "default-branch":  true,
+                                                      "require":  {
+                                                                      "php":  "^8.2",
+                                                                      "illuminate/http":  "^10.0|^11.0|^12.0|^13.0",
+                                                                      "illuminate/routing":  "^10.0|^11.0|^12.0|^13.0",
+                                                                      "illuminate/session":  "^10.0|^11.0|^12.0|^13.0",
+                                                                      "illuminate/support":  "^10.0|^11.0|^12.0|^13.0",
+                                                                      "illuminate/view":  "^10.0|^11.0|^12.0|^13.0"
+                                                                  },
+                                                      "require-dev":  {
+                                                                          "mockery/mockery":  "^1.6",
+                                                                          "phpunit/phpunit":  "^10.0|^11.0",
+                                                                          "illuminate/database":  "^10.0|^11.0|^12.0|^13.0",
+                                                                          "laravel/pint":  "^1.0"
+                                                                      }
+                                                  },
+                                     "v1.1.2":  {
+                                                    "name":  "prabowosd/laravel-collective-html",
+                                                    "description":  "HTML and Form Builders for the Laravel Framework (Laravel 10-13 compatible).",
+                                                    "keywords":  [
+
+                                                                 ],
+                                                    "homepage":  "https://github.com/prabowosd/laravel-collective-html",
+                                                    "version":  "v1.1.2",
+                                                    "version_normalized":  "1.1.2.0",
+                                                    "license":  [
+                                                                    "MIT"
+                                                                ],
+                                                    "authors":  [
+                                                                    {
+                                                                        "name":  "Satrio Dwi Prabowo",
+                                                                        "email":  "sdp@starset.id"
+                                                                    }
+                                                                ],
+                                                    "source":  {
+                                                                   "url":  "https://github.com/prabowosd/laravel-collective-html.git",
+                                                                   "type":  "git",
+                                                                   "reference":  "cfc4d3e5c10c47dc4040debd0b510eee5949d1cb"
+                                                               },
+                                                    "dist":  {
+                                                                 "url":  "https://api.github.com/repos/prabowosd/laravel-collective-html/zipball/cfc4d3e5c10c47dc4040debd0b510eee5949d1cb",
+                                                                 "type":  "zip",
+                                                                 "shasum":  "",
+                                                                 "reference":  "cfc4d3e5c10c47dc4040debd0b510eee5949d1cb"
+                                                             },
+                                                    "type":  "library",
+                                                    "support":  {
+                                                                    "issues":  "https://github.com/prabowosd/laravel-collective-html/issues",
+                                                                    "source":  "https://github.com/prabowosd/laravel-collective-html"
+                                                                },
+                                                    "funding":  [
+
+                                                                ],
+                                                    "time":  "2026-05-27T04:30:46+00:00",
+                                                    "published-time":  "2026-05-27T05:14:58+00:00",
+                                                    "autoload":  {
+                                                                     "files":  [
+                                                                                   "src/helpers.php"
+                                                                               ],
+                                                                     "psr-4":  {
+                                                                                   "Collective\\Html\\":  "src/"
+                                                                               }
+                                                                 },
+                                                    "extra":  {
+                                                                  "laravel":  {
+                                                                                  "aliases":  {
+                                                                                                  "Form":  "Collective\\Html\\FormFacade",
+                                                                                                  "Html":  "Collective\\Html\\HtmlFacade"
+                                                                                              },
+                                                                                  "providers":  [
+                                                                                                    "Collective\\Html\\HtmlServiceProvider"
+                                                                                                ]
+                                                                              },
+                                                                  "branch-alias":  {
+                                                                                       "dev-main":  "1.1.x-dev"
+                                                                                   }
+                                                              },
+                                                    "require":  {
+                                                                    "php":  "^8.2",
+                                                                    "illuminate/http":  "^10.0|^11.0|^12.0|^13.0",
+                                                                    "illuminate/routing":  "^10.0|^11.0|^12.0|^13.0",
+                                                                    "illuminate/session":  "^10.0|^11.0|^12.0|^13.0",
+                                                                    "illuminate/support":  "^10.0|^11.0|^12.0|^13.0",
+                                                                    "illuminate/view":  "^10.0|^11.0|^12.0|^13.0"
+                                                                },
+                                                    "require-dev":  {
+                                                                        "illuminate/database":  "^10.0|^11.0|^12.0|^13.0",
+                                                                        "mockery/mockery":  "^1.6",
+                                                                        "phpunit/phpunit":  "^10.0|^11.0"
+                                                                    }
+                                                },
+                                     "1.1.1":  {
+                                                   "name":  "prabowosd/laravel-collective-html",
+                                                   "description":  "Laravel 11-13 compatible fork of LaravelCollective/html. Namespaces kept as original for compatibility. HTML and Form Builders for the Laravel Framework",
+                                                   "keywords":  [
+
+                                                                ],
+                                                   "homepage":  "https://laravelcollective.com",
+                                                   "version":  "1.1.1",
+                                                   "version_normalized":  "1.1.1.0",
+                                                   "license":  [
+                                                                   "MIT"
+                                                               ],
+                                                   "authors":  [
+                                                                   {
+                                                                       "name":  "Adam Engebretson",
+                                                                       "email":  "adam@laravelcollective.com"
+                                                                   },
+                                                                   {
+                                                                       "name":  "Taylor Otwell",
+                                                                       "email":  "taylorotwell@gmail.com"
+                                                                   }
+                                                               ],
+                                                   "source":  {
+                                                                  "url":  "https://github.com/prabowosd/laravel-collective-html.git",
+                                                                  "type":  "git",
+                                                                  "reference":  "0210481b153fb1cd9f81ff8efee3105ac3086868"
+                                                              },
+                                                   "dist":  {
+                                                                "url":  "https://api.github.com/repos/prabowosd/laravel-collective-html/zipball/0210481b153fb1cd9f81ff8efee3105ac3086868",
+                                                                "type":  "zip",
+                                                                "shasum":  "",
+                                                                "reference":  "0210481b153fb1cd9f81ff8efee3105ac3086868"
+                                                            },
+                                                   "type":  "library",
+                                                   "support":  {
+                                                                   "issues":  "https://github.com/LaravelCollective/html/issues",
+                                                                   "source":  "https://github.com/LaravelCollective/html"
+                                                               },
+                                                   "funding":  [
+
+                                                               ],
+                                                   "time":  "2026-03-21T01:21:56+00:00",
+                                                   "published-time":  "2026-03-21T01:22:41+00:00",
+                                                   "autoload":  {
+                                                                    "files":  [
+                                                                                  "src/helpers.php"
+                                                                              ],
+                                                                    "psr-4":  {
+                                                                                  "Collective\\Html\\":  "src/"
+                                                                              }
+                                                                },
+                                                   "extra":  {
+                                                                 "laravel":  {
+                                                                                 "aliases":  {
+                                                                                                 "Form":  "Collective\\Html\\FormFacade",
+                                                                                                 "Html":  "Collective\\Html\\HtmlFacade"
+                                                                                             },
+                                                                                 "providers":  [
+                                                                                                   "Collective\\Html\\HtmlServiceProvider"
+                                                                                               ]
+                                                                             },
+                                                                 "branch-alias":  {
+                                                                                      "dev-master":  "6.x-dev"
+                                                                                  }
+                                                             },
+                                                   "require":  {
+                                                                   "php":  "^8.2",
+                                                                   "illuminate/http":  "^10.0|^11.0|^12.0|^13.0",
+                                                                   "illuminate/routing":  "^10.0|^11.0|^12.0|^13.0",
+                                                                   "illuminate/session":  "^10.0|^11.0|^12.0|^13.0",
+                                                                   "illuminate/support":  "^10.0|^11.0|^12.0|^13.0",
+                                                                   "illuminate/view":  "^10.0|^11.0|^12.0|^13.0"
+                                                               },
+                                                   "require-dev":  {
+                                                                       "illuminate/database":  "^10.0|^11.0|^12.0|^13.0",
+                                                                       "mockery/mockery":  "^1.6",
+                                                                       "phpunit/phpunit":  "^10.0|^11.0"
+                                                                   }
+                                               },
+                                     "1.1.0":  {
+                                                   "name":  "prabowosd/laravel-collective-html",
+                                                   "description":  "Laravel 11-12 compatible fork of LaravelCollective/html. Namespaces kept as original for compatibility. HTML and Form Builders for the Laravel Framework",
+                                                   "keywords":  [
+
+                                                                ],
+                                                   "homepage":  "https://laravelcollective.com",
+                                                   "version":  "1.1.0",
+                                                   "version_normalized":  "1.1.0.0",
+                                                   "license":  [
+                                                                   "MIT"
+                                                               ],
+                                                   "authors":  [
+                                                                   {
+                                                                       "name":  "Adam Engebretson",
+                                                                       "email":  "adam@laravelcollective.com"
+                                                                   },
+                                                                   {
+                                                                       "name":  "Taylor Otwell",
+                                                                       "email":  "taylorotwell@gmail.com"
+                                                                   }
+                                                               ],
+                                                   "source":  {
+                                                                  "url":  "https://github.com/prabowosd/laravel-collective-html.git",
+                                                                  "type":  "git",
+                                                                  "reference":  "7cefb2bcec22cb6977668e4b70be06b55bc8e496"
+                                                              },
+                                                   "dist":  {
+                                                                "url":  "https://api.github.com/repos/prabowosd/laravel-collective-html/zipball/7cefb2bcec22cb6977668e4b70be06b55bc8e496",
+                                                                "type":  "zip",
+                                                                "shasum":  "",
+                                                                "reference":  "7cefb2bcec22cb6977668e4b70be06b55bc8e496"
+                                                            },
+                                                   "type":  "library",
+                                                   "support":  {
+                                                                   "issues":  "https://github.com/LaravelCollective/html/issues",
+                                                                   "source":  "https://github.com/LaravelCollective/html"
+                                                               },
+                                                   "funding":  [
+
+                                                               ],
+                                                   "time":  "2025-10-28T19:53:39+00:00",
+                                                   "published-time":  "2025-10-28T20:22:00+00:00",
+                                                   "autoload":  {
+                                                                    "files":  [
+                                                                                  "src/helpers.php"
+                                                                              ],
+                                                                    "psr-4":  {
+                                                                                  "Collective\\Html\\":  "src/"
+                                                                              }
+                                                                },
+                                                   "extra":  {
+                                                                 "laravel":  {
+                                                                                 "aliases":  {
+                                                                                                 "Form":  "Collective\\Html\\FormFacade",
+                                                                                                 "Html":  "Collective\\Html\\HtmlFacade"
+                                                                                             },
+                                                                                 "providers":  [
+                                                                                                   "Collective\\Html\\HtmlServiceProvider"
+                                                                                               ]
+                                                                             },
+                                                                 "branch-alias":  {
+                                                                                      "dev-master":  "6.x-dev"
+                                                                                  }
+                                                             },
+                                                   "require":  {
+                                                                   "php":  "^8.2",
+                                                                   "illuminate/http":  "^10.0|^11.0|^12.0",
+                                                                   "illuminate/routing":  "^10.0|^11.0|^12.0",
+                                                                   "illuminate/session":  "^10.0|^11.0|^12.0",
+                                                                   "illuminate/support":  "^10.0|^11.0|^12.0",
+                                                                   "illuminate/view":  "^10.0|^11.0|^12.0"
+                                                               },
+                                                   "require-dev":  {
+                                                                       "illuminate/database":  "^10.0|^11.0|^12.0",
+                                                                       "mockery/mockery":  "^1.6",
+                                                                       "phpunit/phpunit":  "^10.0|^11.0"
+                                                                   }
+                                               }
+                                 },
+                    "type":  "library",
+                    "repository":  "https://github.com/prabowosd/laravel-collective-html",
+                    "github_stars":  2,
+                    "github_watchers":  0,
+                    "github_forks":  4,
+                    "github_open_issues":  0,
+                    "language":  "PHP",
+                    "dependents":  2,
+                    "suggesters":  0,
+                    "downloads":  {
+                                      "total":  23986,
+                                      "monthly":  7197,
+                                      "daily":  251
+                                  },
+                    "favers":  2
+                }
+}

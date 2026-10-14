@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadGER · Tele Sales Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          mono: ['"IBM Plex Mono"', 'monospace'],
+        },
+        colors: {
+          navy: {
+            950: '#0B0F19',
+            900: '#0B132B',
+            800: '#1E293B',
+          },
+          side: {
+            bg: '#1740B6',
+            hover: 'rgba(255,255,255,0.08)',
+            active: '#2563EB',
+            subtext: '#DDE7FF',
+          }
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { background-color: #F8FAFC; color: #0F172A; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  
+  /* Sidebar Specifics */
+  .sidebar-royal-bg {
+    background: #1740B6;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.12);
+  }
+  .sidebar-menu-btn-active {
+    background: #2563EB;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  }
+  .status-dot-pulse {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block; position: relative;
+  }
+  .status-dot-pulse::before {
+    content: ''; position: absolute; inset: -3px; border-radius: 50%; background: currentColor; opacity: 0.45; animation: statusPulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes statusPulse { 70%, 100% { transform: scale(2.3); opacity: 0; } }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+</style>
+</head>
+<body class="font-sans antialiased flex min-h-screen bg-[#F8FAFC]">
+
+  <!-- ================= 1. SIDEBAR (Matching Reference Image) ================= -->
+  <aside id="sidebar" class="w-[235px] sidebar-royal-bg text-white flex flex-col shrink-0 min-h-screen z-40 transition-all duration-200">
+    
+    <!-- Top Brand Header (Dark Navy) -->
+    <div class="h-14 bg-[#0B132B] flex items-center px-4 border-b border-white/10 shrink-0">
+      <a href="http://localhost:8001/admin" class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-[#2563EB] text-white flex items-center justify-center font-bold text-base shadow-[0_2px_6px_rgba(37,99,235,0.4)]">
+          <i class="material-icons text-[19px]">flash_on</i>
+        </span>
+        <div class="leading-tight">
+          <span class="block text-[15px] font-extrabold tracking-wide text-white">LeadGER</span>
+          <span class="block text-[8.5px] font-bold tracking-[1.2px] text-blue-300 uppercase">TELE SALES COMMAND</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Scrollable Menu Section -->
+    <div class="flex-1 flex flex-col overflow-y-auto">
+      
+      <!-- Start Calling Queue Button -->
+      <div class="p-3.5 pb-2">
+        <a href="http://localhost:8001/admin/dialer" class="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-[13px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition">
+          <i class="material-icons text-[17px]">phone</i>
+          <span>Start Calling Queue</span>
+        </a>
+      </div>
+
+      <!-- Navigation Items ONLY -->
+      <nav class="px-3 py-1 space-y-1">
+        
+        <!-- 1. Dashboard (Active) -->
+        <a href="http://localhost:8001/admin" class="flex items-center gap-3 px-3 py-2 rounded-lg sidebar-menu-btn-active text-white font-semibold text-[13.5px]">
+          <i class="material-icons text-[19px]">home</i>
+          <span>Dashboard</span>
+        </a>
+
+        <!-- 2. Leads (Expandable) -->
+        <div class="menu-group">
+          <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+            <div class="flex items-center gap-3">
+              <i class="material-icons text-[19px]">person_add</i>
+              <span>Leads</span>
+            </div>
+            <i class="material-icons text-[18px] text-white/70 arrow-icon transition-transform duration-200">keyboard_arrow_down</i>
+          </button>
+          <div class="pl-8 pr-1 py-1 space-y-0.5">
+            <a href="http://localhost:8001/admin/leads" class="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Lead List</span>
+              <span class="text-[11px] font-semibold text-white/75">12,480</span>
+            </a>
+            <a href="http://localhost:8001/admin/leads" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Upload Leads</span>
+            </a>
+            <a href="http://localhost:8001/admin/leads" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Lead Details</span>
+            </a>
+            <a href="http://localhost:8001/admin/leads" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Lead History</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 3. Campaigns (Expandable) -->
+        <div class="menu-group">
+          <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+            <div class="flex items-center gap-3">
+              <i class="material-icons text-[19px]">campaign</i>
+              <span>Campaigns</span>
+            </div>
+            <i class="material-icons text-[18px] text-white/70 arrow-icon transition-transform duration-200">keyboard_arrow_down</i>
+          </button>
+          <div class="pl-8 pr-1 py-1 space-y-0.5 hidden">
+            <a href="http://localhost:8001/admin/campaigns" class="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Campaign List</span>
+              <span class="text-[11px] font-semibold text-white/75">4 active</span>
+            </a>
+            <a href="http://localhost:8001/admin/campaigns/create" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Create Campaign</span>
+            </a>
+            <a href="http://localhost:8001/admin/campaigns" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Campaign Performance</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4. Calling (Expandable with amber badge) -->
+        <div class="menu-group">
+          <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+            <div class="flex items-center gap-3">
+              <i class="material-icons text-[19px]">headset</i>
+              <span>Calling</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-500/40 text-[11px] font-bold">12</span>
+              <i class="material-icons text-[18px] text-white/70 arrow-icon transition-transform duration-200">keyboard_arrow_down</i>
+            </div>
+          </button>
+          <div class="pl-8 pr-1 py-1 space-y-0.5 hidden">
+            <a href="http://localhost:8001/admin/dialer" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Dialer</span>
+            </a>
+            <a href="http://localhost:8001/admin/dialer" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Calling Queue</span>
+            </a>
+            <a href="http://localhost:8001/admin/dialer" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Call Disposition</span>
+            </a>
+            <a href="http://localhost:8001/admin/leads" class="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Follow-up</span>
+              <span class="text-[11px] font-semibold text-white/75">12</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 5. Reports (Expandable) -->
+        <div class="menu-group">
+          <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+            <div class="flex items-center gap-3">
+              <i class="material-icons text-[19px]">bar_chart</i>
+              <span>Reports</span>
+            </div>
+            <i class="material-icons text-[18px] text-white/70 arrow-icon transition-transform duration-200">keyboard_arrow_down</i>
+          </button>
+          <div class="pl-8 pr-1 py-1 space-y-0.5 hidden">
+            <a href="http://localhost:8001/admin/reports/callLogs" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Call Report</span>
+            </a>
+            <a href="http://localhost:8001/admin/analytics/date" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Agent Performance</span>
+            </a>
+            <a href="http://localhost:8001/admin/analytics/date" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Productivity Report</span>
+            </a>
+            <a href="http://localhost:8001/admin/reports/responsed-calls" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Disposition Report</span>
+            </a>
+            <a href="http://localhost:8001/admin/analytics/date" class="block py-1.5 px-2 rounded-md hover:bg-white/10 text-[12.5px] text-[#DDE7FF] hover:text-white font-medium">
+              <span>Campaign Report</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 6. Recordings -->
+        <a href="http://localhost:8001/admin/reports/recordings" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+          <i class="material-icons text-[19px]">mic</i>
+          <span>Recordings</span>
+        </a>
+
+        <!-- 7. Telecallers -->
+        <a href="http://localhost:8001/admin/users" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-white font-semibold text-[13.5px] transition">
+          <i class="material-icons text-[19px]">people</i>
+          <span>Telecallers</span>
+        </a>
+
+      </nav>
+    </div>
+  </aside>
+
+  <!-- ================= 2. MAIN APP CONTENT ================= -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- FLOATING TOP HEADER -->
+    <header class="h-14 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+      <!-- Left: Breadcrumb / Title -->
+      <div class="flex items-center gap-2 text-[13px]">
+        <span class="font-extrabold text-[#0F172A] text-[15px]">Dashboard</span>
+        <span class="text-slate-400">/</span>
+        <span class="text-slate-500 font-medium">Command Center</span>
+      </div>
+
+      <!-- Center: Campaign Selector pill from reference -->
+      <div class="hidden md:flex items-center gap-2 text-[12px]">
+        <span class="text-slate-500 font-medium">Campaign:</span>
+        <div class="px-3 py-1 rounded-md bg-slate-900 text-white font-semibold text-[12px] flex items-center gap-2 shadow-sm">
+          <span>All Active Campaigns (4)</span>
+          <i class="material-icons text-[14px]">expand_more</i>
+        </div>
+      </div>
+
+      <!-- Right: Actions & User -->
+      <div class="flex items-center gap-3.5">
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11.5px] font-bold">
+          <span class="status-dot-pulse text-emerald-500 bg-emerald-500"></span> SIP Active
+        </span>
+        <a href="http://localhost:8001/admin/dialer" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[12px] font-semibold shadow-sm transition">
+          <i class="material-icons text-[15px]">phone_forwarded</i> Dialer
+        </a>
+        <button class="text-slate-400 hover:text-slate-600 p-1 transition">
+          <i class="material-icons text-[20px]">notifications_none</i>
+        </button>
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-800 to-slate-950 text-white font-bold text-[11px] flex items-center justify-center shadow-sm">
+            AD
+          </div>
+          <span class="hidden lg:inline text-[13px] font-semibold text-slate-700">Administrator</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN VIEW CONTENT -->
+    <main class="p-6 max-w-[1500px] w-full mx-auto space-y-5">
+
+      <!-- HERO SECTION -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div>
+          <h1 class="text-[20px] font-extrabold text-[#0F172A] tracking-tight">Real-Time Tele Sales Command Center</h1>
+          <p class="text-[13px] text-[#64748B] mt-0.5">Sophisticated live operations & lead conversion monitoring</p>
+          <div class="flex flex-wrap items-center gap-2.5 mt-2.5 text-[12px] text-slate-600">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 shadow-sm font-semibold">
+              <span class="status-dot-pulse text-emerald-500 bg-emerald-500"></span> Trunk SIP Active
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 shadow-sm font-semibold">
+              <span class="status-dot-pulse text-blue-600 bg-blue-600"></span> <strong class="text-slate-900">12</strong> Telecallers Online
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 shadow-sm font-semibold">
+              Last Sync: <span class="font-mono font-bold text-slate-900">11:12:30</span>
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <a href="http://localhost:8001/admin/leads" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-[13px] font-semibold transition">
+            <i class="material-icons text-[16px] text-slate-500">filter_list</i> View Leads
+          </a>
+          <a href="http://localhost:8001/admin/dialer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[13px] font-semibold shadow-sm transition">
+            <i class="material-icons text-[16px]">phone_forwarded</i> Start Calling Queue
+          </a>
+        </div>
+      </div>
+
+      <!-- 7 KPI CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+        <!-- 1. Online Agents -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Online Agents</span>
+            <span class="status-dot-pulse text-emerald-500 bg-emerald-500"></span>
+          </div>
+          <div class="text-[22px] font-extrabold text-slate-900 tnum mt-1">12</div>
+          <div class="text-[11px] text-slate-400">Logged in shift</div>
+        </div>
+
+        <!-- 2. On Call Now -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>On Call Now</span>
+            <span class="status-dot-pulse text-blue-600 bg-blue-600"></span>
+          </div>
+          <div class="text-[22px] font-extrabold text-[#2563EB] tnum mt-1">4</div>
+          <div class="text-[11px] text-slate-400">Active calls now</div>
+        </div>
+
+        <!-- 3. Calls Today -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Calls Today</span>
+            <i class="material-icons text-[14px] text-slate-400">phone</i>
+          </div>
+          <div class="text-[22px] font-extrabold text-slate-900 tnum mt-1">1,142</div>
+          <div class="text-[11px] text-emerald-600 font-semibold">↑ 14% vs yesterday</div>
+        </div>
+
+        <!-- 4. Connected -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Connected</span>
+            <i class="material-icons text-[14px] text-slate-400">phone_callback</i>
+          </div>
+          <div class="text-[22px] font-extrabold text-slate-900 tnum mt-1">485</div>
+          <div class="text-[11px] text-slate-400">42.5% connect rate</div>
+        </div>
+
+        <!-- 5. Leads Worked -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Leads Worked</span>
+            <i class="material-icons text-[14px] text-slate-400">assignment_ind</i>
+          </div>
+          <div class="text-[22px] font-extrabold text-slate-900 tnum mt-1">685</div>
+          <div class="text-[11px] text-slate-400">Unique prospects</div>
+        </div>
+
+        <!-- 6. Follow-Ups Due -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Follow-Ups Due</span>
+            <span class="status-dot-pulse text-amber-500 bg-amber-500"></span>
+          </div>
+          <div class="text-[22px] font-extrabold text-slate-900 tnum mt-1">22,764</div>
+          <div class="text-[11px] text-slate-400">Callbacks scheduled</div>
+        </div>
+
+        <!-- 7. Conversions Won -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between min-h-[86px] shadow-sm">
+          <div class="flex justify-between items-center text-[12px] font-semibold text-slate-500">
+            <span>Conversions Won</span>
+            <i class="material-icons text-[14px] text-emerald-500">check_circle</i>
+          </div>
+          <div class="text-[22px] font-extrabold text-emerald-700 tnum mt-1">77</div>
+          <div class="text-[11px] text-slate-400">15.9% of connected</div>
+        </div>
+      </div>
+
+      <!-- 2-COLUMN SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- LEFT: Sales Conversion Funnel (6 cols) -->
+        <div class="lg:col-span-6 bg-white border border-slate-200 rounded-xl flex flex-col shadow-sm">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 class="text-[15px] font-bold text-slate-900">Daily Tele Sales Conversion Funnel</h2>
+              <p class="text-[12px] text-slate-500 mt-0.5">Pipeline progression across all queues</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold">Shift Summary</span>
+          </div>
+          <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
+            <!-- 1. New Leads -->
+            <div class="p-2.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-semibold text-slate-700">1. New Leads</span>
+                <span class="font-mono font-bold text-slate-900">59,419 <span class="text-[11px] font-normal text-slate-400">(100%)</span></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-600 rounded-full w-full"></div>
+              </div>
+            </div>
+            <!-- 2. Assigned -->
+            <div class="p-2.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-semibold text-slate-700">2. Assigned</span>
+                <span class="font-mono font-bold text-slate-900">41,913 <span class="text-[11px] font-normal text-slate-400">(70.5%)</span></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 rounded-full w-[70.5%]"></div>
+              </div>
+            </div>
+            <!-- 3. Contacted -->
+            <div class="p-2.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-semibold text-slate-700">3. Contacted</span>
+                <span class="font-mono font-bold text-slate-900">22,858 <span class="text-[11px] font-normal text-slate-400">(54.5%)</span></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-600 rounded-full w-[54.5%]"></div>
+              </div>
+            </div>
+            <!-- 4. Interested -->
+            <div class="p-2.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-semibold text-slate-700">4. Interested</span>
+                <span class="font-mono font-bold text-slate-900">95 <span class="text-[11px] font-normal text-slate-400">(0.4%)</span></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-500 rounded-full w-[25%]"></div>
+              </div>
+            </div>
+            <!-- 5. Follow-Up -->
+            <div class="p-2.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-semibold text-slate-700">5. Follow-Up</span>
+                <span class="font-mono font-bold text-slate-900">22,764 <span class="text-[11px] font-normal text-slate-400">(Callbacks)</span></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-amber-500 rounded-full w-[45%]"></div>
+              </div>
+            </div>
+            <!-- 6. Converted -->
+            <div class="p-2.5 bg-emerald-50/50 border border-emerald-200 rounded-lg shadow-sm">
+              <div class="flex justify-between text-[13px] mb-1">
+                <span class="font-bold text-emerald-700">6. Converted</span>
+                <span class="font-mono font-bold text-emerald-700">77 <span class="text-[11px] font-normal text-slate-500">(Won Deals)</span></span>
+              </div>
+              <div class="h-2 bg-emerald-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-600 rounded-full w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Active Campaigns (6 cols) -->
+        <div class="lg:col-span-6 bg-white border border-slate-200 rounded-xl flex flex-col shadow-sm">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 class="text-[15px] font-bold text-slate-900">Active Campaigns</h2>
+              <p class="text-[12px] text-slate-500 mt-0.5">Progress towards dial targets</p>
+            </div>
+            <a href="http://localhost:8001/admin/campaigns" class="text-[12px] font-semibold text-[#2563EB] hover:underline">View All →</a>
+          </div>
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-[13px] text-left">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[12px] font-semibold text-slate-600">
+                  <th class="py-2.5 px-3">Campaign</th>
+                  <th class="py-2.5 px-3">Progress</th>
+                  <th class="py-2.5 px-3">Target</th>
+                  <th class="py-2.5 px-3">Done</th>
+                  <th class="py-2.5 px-3">Left</th>
+                  <th class="py-2.5 px-3">Agents</th>
+                  <th class="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                <tr class="hover:bg-slate-50/75">
+                  <td class="py-3 px-3 font-semibold text-slate-900 max-w-[130px] truncate">HNI Wealth Q3</td>
+                  <td class="py-3 px-3 min-w-[90px]">
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-blue-600 h-full rounded-full" style="width: 82%"></div>
+                      </div>
+                      <span class="text-[11px] font-mono text-slate-500">82%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 font-mono">1,500</td>
+                  <td class="py-3 px-3 font-mono font-bold text-slate-900">1,230</td>
+                  <td class="py-3 px-3 font-mono text-slate-400">270</td>
+                  <td class="py-3 px-3">5</td>
+                  <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-50/75">
+                  <td class="py-3 px-3 font-semibold text-slate-900 max-w-[130px] truncate">SME Loan Express</td>
+                  <td class="py-3 px-3 min-w-[90px]">
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-blue-600 h-full rounded-full" style="width: 64%"></div>
+                      </div>
+                      <span class="text-[11px] font-mono text-slate-500">64%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 font-mono">2,000</td>
+                  <td class="py-3 px-3 font-mono font-bold text-slate-900">1,280</td>
+                  <td class="py-3 px-3 font-mono text-slate-400">720</td>
+                  <td class="py-3 px-3">4</td>
+                  <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-50/75">
+                  <td class="py-3 px-3 font-semibold text-slate-900 max-w-[130px] truncate">Enterprise Renewal</td>
+                  <td class="py-3 px-3 min-w-[90px]">
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-blue-600 h-full rounded-full" style="width: 45%"></div>
+                      </div>
+                      <span class="text-[11px] font-mono text-slate-500">45%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 font-mono">800</td>
+                  <td class="py-3 px-3 font-mono font-bold text-slate-900">360</td>
+                  <td class="py-3 px-3 font-mono text-slate-400">440</td>
+                  <td class="py-3 px-3">3</td>
+                  <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ANALYTICS: SALES PERFORMANCE -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-[15px] font-bold text-slate-900">Sales Performance</h2>
+            <p class="text-[12px] text-slate-500 mt-0.5">Pipeline throughput: Leads created, Contacted prospects, and Converted deals</p>
+          </div>
+          <div class="flex items-center gap-4 text-[12px] font-semibold">
+            <span class="inline-flex items-center gap-1.5"><span class="status-dot-pulse" style="background-color: #2563EB; color: #2563EB;"></span> Leads</span>
+            <span class="inline-flex items-center gap-1.5"><span class="status-dot-pulse" style="background-color: #3B82F6; color: #3B82F6;"></span> Contacted</span>
+            <span class="inline-flex items-center gap-1.5"><span class="status-dot-pulse" style="background-color: #10B981; color: #10B981;"></span> Converted</span>
+          </div>
+        </div>
+        <div class="p-5">
+          <div class="h-[220px] w-full relative">
+            <canvas id="previewSalesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT CALL ACTIVITY -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 class="text-[15px] font-bold text-slate-900">Recent Call Activity</h2>
+            <p class="text-[12px] text-slate-500 mt-0.5">Live log of telecalling conversations</p>
+          </div>
+          <input type="text" id="liveCallSearch" placeholder="Search calls / agents..." class="h-8 w-48 text-[12px] px-3 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-[13px] text-left">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[12px] font-semibold text-slate-600">
+                <th class="py-2.5 px-4">Time</th>
+                <th class="py-2.5 px-4">Agent</th>
+                <th class="py-2.5 px-4">Phone Number</th>
+                <th class="py-2.5 px-4">Duration</th>
+                <th class="py-2.5 px-4">Status</th>
+                <th class="py-2.5 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="liveCallTable" class="divide-y divide-slate-100 text-slate-700">
+              <tr class="hover:bg-slate-50/75">
+                <td class="py-3 px-4 font-mono text-slate-400 text-[12px]">11:12:04</td>
+                <td class="py-3 px-4 font-semibold text-slate-900">Priya Sharma</td>
+                <td class="py-3 px-4 font-mono">+91 98765 43210</td>
+                <td class="py-3 px-4 font-mono font-semibold">03:42</td>
+                <td class="py-3 px-4"><span class="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200">Connected</span></td>
+                <td class="py-3 px-4 text-right"><a href="http://localhost:8001/admin/dialer" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 font-semibold text-[11px] text-slate-700">View</a></td>
+              </tr>
+              <tr class="hover:bg-slate-50/75">
+                <td class="py-3 px-4 font-mono text-slate-400 text-[12px]">11:09:45</td>
+                <td class="py-3 px-4 font-semibold text-slate-900">Rahul Verma</td>
+                <td class="py-3 px-4 font-mono">+91 98112 34567</td>
+                <td class="py-3 px-4 font-mono font-semibold">01:15</td>
+                <td class="py-3 px-4"><span class="px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold text-[11px] border border-blue-200">Completed</span></td>
+                <td class="py-3 px-4 text-right"><a href="http://localhost:8001/admin/dialer" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 font-semibold text-[11px] text-slate-700">View</a></td>
+              </tr>
+              <tr class="hover:bg-slate-50/75">
+                <td class="py-3 px-4 font-mono text-slate-400 text-[12px]">11:06:18</td>
+                <td class="py-3 px-4 font-semibold text-slate-900">Amit Kumar</td>
+                <td class="py-3 px-4 font-mono">+91 99887 76655</td>
+                <td class="py-3 px-4 font-mono font-semibold">00:00</td>
+                <td class="py-3 px-4"><span class="px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold text-[11px] border border-amber-200">Missed</span></td>
+                <td class="py-3 px-4 text-right"><a href="http://localhost:8001/admin/dialer" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 font-semibold text-[11px] text-slate-700">View</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <a href="http://localhost:8001/admin/leads" class="bg-white border border-slate-200 rounded-xl p-3.5 flex items-center gap-3 hover:border-slate-300 transition shadow-sm">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center shrink-0 border border-blue-200">
+            <i class="material-icons text-[18px]">people</i>
+          </div>
+          <div>
+            <div class="text-[13px] font-bold text-slate-900">View Leads</div>
+            <div class="text-[11px] text-slate-400">Manage prospect queue</div>
+          </div>
+        </a>
+        <a href="http://localhost:8001/admin/dialer" class="bg-white border border-slate-200 rounded-xl p-3.5 flex items-center gap-3 hover:border-slate-300 transition shadow-sm">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center shrink-0 border border-blue-200">
+            <i class="material-icons text-[18px]">phone_forwarded</i>
+          </div>
+          <div>
+            <div class="text-[13px] font-bold text-slate-900">Start Calling</div>
+            <div class="text-[11px] text-slate-400">Open telephony dialer</div>
+          </div>
+        </a>
+        <a href="http://localhost:8001/admin/campaigns" class="bg-white border border-slate-200 rounded-xl p-3.5 flex items-center gap-3 hover:border-slate-300 transition shadow-sm">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center shrink-0 border border-blue-200">
+            <i class="material-icons text-[18px]">campaign</i>
+          </div>
+          <div>
+            <div class="text-[13px] font-bold text-slate-900">Add Campaign</div>
+            <div class="text-[11px] text-slate-400">Configure dial batches</div>
+          </div>
+        </a>
+        <a href="http://localhost:8001/admin/analytics/date" class="bg-white border border-slate-200 rounded-xl p-3.5 flex items-center gap-3 hover:border-slate-300 transition shadow-sm">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center shrink-0 border border-blue-200">
+            <i class="material-icons text-[18px]">insert_chart</i>
+          </div>
+          <div>
+            <div class="text-[13px] font-bold text-slate-900">Reports</div>
+            <div class="text-[11px] text-slate-400">Shift analytics & export</div>
+          </div>
+        </a>
+      </div>
+
+    </main>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 3D Sales Chart
+    const ctx = document.getElementById('previewSalesChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
+                datasets: [
+                    {
+                        label: 'Leads',
+                        data: [42, 68, 95, 110, 85, 130, 145, 120, 98, 62],
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#FFFFFF',
+                        pointBorderColor: '#2563EB',
+                        pointBorderWidth: 2,
+                        fill: true,
+                    },
+                    {
+                        label: 'Contacted',
+                        data: [28, 45, 72, 80, 60, 95, 110, 90, 75, 48],
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [4, 4],
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    },
+                    {
+                        label: 'Converted',
+                        data: [4, 6, 11, 14, 8, 16, 18, 15, 12, 7],
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.04)',
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#FFFFFF',
+                        pointBorderColor: '#10B981',
+                        pointBorderWidth: 2,
+                        fill: true,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0F172A',
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 11 },
+                        padding: 10,
+                        cornerRadius: 7,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 11 }, color: '#64748B' }
+                    },
+                    y: {
+                        border: { dash: [4, 4] },
+                        grid: { color: '#F1F5F9' },
+                        ticks: { font: { family: 'Inter', size: 11 }, color: '#64748B' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Search filter
+    const search = document.getElementById('liveCallSearch');
+    const tbody = document.getElementById('liveCallTable');
+    if (search && tbody) {
+        search.addEventListener('input', function() {
+            const q = (this.value || '').toLowerCase();
+            tbody.querySelectorAll('tr').forEach(tr => {
+                tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+</body>
+</html>
