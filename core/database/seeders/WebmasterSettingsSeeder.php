@@ -87,7 +87,7 @@ class WebmasterSettingsSeeder extends Seeder
         $settings->login_bitbucket_client_secret = "";
 
         $settings->dashboard_link_status = true;
-        $settings->timezone = "UTC";
+        $settings->timezone = "Asia/Kolkata";
 
         $settings->version = "8.6.0";
 
