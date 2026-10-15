@@ -19,7 +19,6 @@ class WebmasterSettingsSeeder extends Seeder
         $settings->analytics_status = true;
         $settings->banners_status = true;
         $settings->inbox_status = true;
-        $settings->payout=true;
         $settings->calendar_status = true;
         $settings->settings_status = true;
         $settings->newsletter_status = true;
