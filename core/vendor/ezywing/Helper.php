@@ -7,7 +7,9 @@ class Helper
 {
     public static function LicenseValidate($key, $store = false)
     {
-        if(empty($key))
+        // A key is needed only to fetch a license from the server; the stored license is checked without it
+        // (env('license') is empty when .env could not be written or the config is cached)
+        if($store && empty($key))
         {
             return false;
         }

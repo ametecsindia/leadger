@@ -1573,7 +1573,7 @@ class Helper
     public static function dailyValidations()
     {
         require_once(base_path().'/vendor/ezywing/Helper.php');
-        $response = \License\Helpers\Helper::LicenseValidate(env('license'));
+        $licenseValid = \License\Helpers\Helper::LicenseValidate(env('license'));
         $settings = DB::table('settings')->select(DB::raw("FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response"))->first();
         $full_response = json_decode($settings->full_response, true);
         $did = \App\Models\ObdDID::first();
@@ -1656,7 +1656,7 @@ class Helper
         $setting->daily_check = date('Y-m-d');
         $setting->save();
         
-        return $response;
+        return $licenseValid;
     }
 
     /**
