@@ -1,6 +1,11 @@
 @extends('dashboard.layouts.master')
 @section('title', Helper::GeneralSiteSettings("site_title_".@Helper::currentLanguage()->code))
 @section('content')
+    @php
+        // Opening search without a search word passes no results
+        $Topics = $Topics ?? []; $Sections = $Sections ?? []; $Contacts = $Contacts ?? [];
+        $Events = $Events ?? []; $Webmails = $Webmails ?? []; $search_word = $search_word ?? '';
+    @endphp
     <div class="padding">
         {{Form::open(['route'=>['adminFind'],'method'=>'POST', 'class' => "m-b-md" ])}}
 
