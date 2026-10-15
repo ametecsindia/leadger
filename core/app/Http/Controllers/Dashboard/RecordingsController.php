@@ -416,16 +416,22 @@ class RecordingsController extends Controller
                 // Real audio available? (never a placeholder; "awaiting" rows have no file yet)
                 $fileName = (string)($row->file_name ?? '');
                 $isPlaceholder = $fileName === '' || stripos($fileName, 'leadger_demo_call') !== false || str_starts_with(ltrim($fileName), '{');
-                $isProcessing = in_array($recStatus, ['awaiting', 'pending', 'downloading'], true);
+                // While the local copy downloads, the provider's recording link already plays and downloads
+                // (downloadRecordings redirects to it), so only a call with no recording link yet is still waiting
+                $isDownloading = in_array($recStatus, ['pending', 'downloading'], true);
+                $hasProviderUrl = (bool)filter_var($fileName, FILTER_VALIDATE_URL);
+                $isProcessing = $recStatus === 'awaiting' || ($isDownloading && !$hasProviderUrl);
                 $isUnavailable = $recStatus === 'unavailable';
                 $hasAudio = !$isPlaceholder && !$isProcessing && !$isUnavailable;
-                $canTranscribeRow = $canTranscribe && $hasAudio && $durationSec > 0;
+                // Transcription sends the local audio file to Sarvam, so it waits for the download to finish
+                $isPreparingAudio = $hasAudio && $isDownloading;
+                $canTranscribeRow = $canTranscribe && $hasAudio && !$isPreparingAudio && $durationSec > 0;
 
                 // 0. Row Checkbox (bulk "Transcribe selected")
                 $nestedData['log_id'] = $row->log_id;
                 $nestedData['source_code'] = $row->source_code;
                 $nestedData['checkbox'] = "<div class='text-center' style='padding-top:2px;'>
-                    <input type='checkbox' class='lg-recording-row-cb' value='{$cbKey}' data-key='{$cbKey}' data-id='{$row->log_id}' data-source='{$row->source_code}' data-duration='{$durationSec}' data-status='{$st}' data-caller='" . e($row->called_by) . "' " . (!$canTranscribeRow ? 'disabled title="' . ($hasAudio ? 'Transcript not available for your role' : 'No recording audio yet') . '"' : '') . " onchange='lgOnRowSelectChange()'>
+                    <input type='checkbox' class='lg-recording-row-cb' value='{$cbKey}' data-key='{$cbKey}' data-id='{$row->log_id}' data-source='{$row->source_code}' data-duration='{$durationSec}' data-status='{$st}' data-caller='" . e($row->called_by) . "' " . (!$canTranscribeRow ? 'disabled title="' . ($isPreparingAudio ? 'Audio is being saved to the server; try again in a few seconds' : ($hasAudio ? 'Transcript not available for your role' : 'No recording audio yet')) . '"' : '') . " onchange='lgOnRowSelectChange()'>
                 </div>";
 
                 // 1. Lead ID (the call's lead; calls without a lead show a dash, never the recording's own id)
@@ -496,6 +502,8 @@ class RecordingsController extends Controller
                         $ai .= "<button type='button' class='lg-transcribe-btn retry' onclick='lgTranscribeOne({$rowArgs}, this)' title='Run the transcript again'><i class='fas fa-redo-alt'></i> Retry</button>";
                     }
                     $ai .= "</div>";
+                } elseif ($isPreparingAudio && $canTranscribe) {
+                    $ai = "<span class='lg-status-badge blue' title='The recording is being saved to the server; Transcribe is available in a few seconds'><i class='fas fa-spinner fa-spin' style='font-size:10px;'></i> Preparing audio</span>";
                 } elseif ($canTranscribeRow && !$sttReady) {
                     $ai = "<span class='lg-status-badge gray' title='" . e(\App\Services\SarvamKeyService::notSetUpMessage()) . "'><span class='dot'></span>Not set up</span>";
                 } elseif ($canTranscribeRow) {
