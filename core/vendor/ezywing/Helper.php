@@ -42,7 +42,7 @@ class Helper
         else
         {
             $settings = DB::select("select FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response from leadger_settings");
-            $response = json_decode($settings[0]->full_response);
+            $response = !empty($settings[0]->full_response) ? json_decode($settings[0]->full_response) : null;
             //dd($response);
         }
         if(empty($response))
@@ -106,6 +106,9 @@ class Helper
     }
     
     private static function GetMAC(){
+        if (!function_exists('system') || PHP_OS_FAMILY !== 'Windows') {
+            return '';   // getmac only exists on Windows, and system() is often disabled on servers
+        }
         ob_start();
         system('getmac');
         $Content = ob_get_contents();
