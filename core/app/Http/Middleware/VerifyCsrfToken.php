@@ -26,6 +26,7 @@ class VerifyCsrfToken extends Middleware
         'api/recording/callback',
         'api/dialer/callback',
         'api/vi_pingback_api',
+        'api/telephony/inbound-call',
         'register-leads/submit'
     ];
 }

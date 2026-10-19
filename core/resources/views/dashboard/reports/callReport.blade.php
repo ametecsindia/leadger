@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="{{ asset('assets/dashboard/js/datatables/datatables.min.css') }}">
 {{-- Report page design (header, filter card, KPI cards, table card), shared with Campaign Status --}}
-<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-report-page.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-report-page.css') }}?v=4">
 @endpush
 
 @section('content')

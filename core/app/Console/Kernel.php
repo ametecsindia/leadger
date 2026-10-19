@@ -21,6 +21,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('recordings:fetch-pending --sweep')->everyFiveMinutes()->withoutOverlapping();
         // Nightly: anything from the last 24 hours that still has no recording
         $schedule->command('recordings:fetch-pending --sweep --sweep-minutes=1440')->dailyAt('23:30')->withoutOverlapping();
+        // Inbound Calls report: pull the provider's inbound call logs, and nightly link calls to leads / agents added later
+        $schedule->command('inbound-calls:pull --hours=3')->everyFiveMinutes()->withoutOverlapping();
+        $schedule->command('inbound-calls:rematch')->dailyAt('02:15')->withoutOverlapping();
     }
 
     /**

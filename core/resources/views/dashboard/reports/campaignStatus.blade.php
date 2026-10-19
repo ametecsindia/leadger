@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ asset('assets/dashboard/js/datatables/datatables.min.css') }}">
 {{-- Same page design as the Call Report (header, filter card, KPI cards, table card) --}}
-<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-report-page.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-report-page.css') }}?v=4">
 @endpush
 
 @section('content')

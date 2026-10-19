@@ -74,4 +74,11 @@ return [
         // saaras:v3 output: translit = spoken words in English letters (Telugu stays Telugu, not translated)
         'stt_mode' => env('SARVAM_STT_MODE', 'translit'),
     ],
+    'telephony' => [
+        // the provider's shared Secret-Key (same value as the recording webhook and the incoming_data pull)
+        'secret' => env('TELEPHONY_WEBHOOK_SECRET', 'ffcab6c009f568588842b54f15de6efb'),
+        // Inbound Calls: optional comma-separated IP allow-list for the webhook (empty = any IP with the secret)
+        'inbound_ips' => env('INBOUND_CALLS_WEBHOOK_IPS', ''),
+        'incoming_url' => env('TELEPHONY_INCOMING_URL', 'http://obd.ametecsindia.com/admin/incoming_data/'),
+    ],
 ];

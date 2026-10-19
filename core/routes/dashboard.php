@@ -651,6 +651,10 @@ Route::post('/reports/userStatusData', [ReportsController::class, 'userStatusDat
 Route::get('/reports/agentPerformance', [ReportsController::class, 'agentPerformance'])->name('agentPerformance');
 Route::post('/reports/agentPerformanceData', [ReportsController::class, 'agentPerformanceData'])->name('agentPerformanceData');
 Route::get('/reports/agentPerformance/export/{format}', [ReportsController::class, 'agentPerformanceExport'])->name('agentPerformanceExport')->whereIn('format', ['xlsx', 'csv']);
+Route::get('/reports/inbound-calls', [\App\Http\Controllers\Dashboard\InboundCallsController::class, 'index'])->name('inboundCalls');
+Route::post('/reports/inbound-calls-data', [\App\Http\Controllers\Dashboard\InboundCallsController::class, 'data'])->name('inboundCallsData');
+Route::get('/reports/inbound-calls/{inboundCall}/call', [\App\Http\Controllers\Dashboard\InboundCallsController::class, 'open'])->name('inboundCallOpen')->whereNumber('inboundCall');
+Route::get('/reports/inbound-calls/export/{format}', [\App\Http\Controllers\Dashboard\InboundCallsController::class, 'export'])->name('inboundCallsExport')->whereIn('format', ['xlsx', 'csv']);
 Route::get('/reports/export-shift-log', [ReportsController::class, 'exportShiftLog'])->name('exportShiftLog');
 Route::get('/payout/payout', [PayoutController::class, 'payout'])->name('payout');
 Route::post('/payout/payoutData', [PayoutController::class, 'payoutData'])->name('payoutData');

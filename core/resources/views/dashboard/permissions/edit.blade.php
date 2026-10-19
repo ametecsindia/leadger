@@ -142,6 +142,16 @@
                                     <div class="col-sm-4">
                                         <div class="checkbox">
                                             <label class="ui-check">
+                                                {!! Form::checkbox('inbound_calls_status','1',($Permissions->inbound_calls_status==1) ? true : false, array('id' => 'inbound_calls_status')) !!}
+                                                <i class="dark-white"></i><label
+                                                    for="inbound_calls_status">Inbound Calls (Reports)</label>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-4">
+                                        <div class="checkbox">
+                                            <label class="ui-check">
                                                 {!! Form::checkbox('settings_status','1',($Permissions->settings_status==1) ? true : false, array('id' => 'settings_status')) !!}
                                                 <i class="dark-white"></i><label
                                                     for="settings_status">{{ __('backend.generalSettings') }}</label>

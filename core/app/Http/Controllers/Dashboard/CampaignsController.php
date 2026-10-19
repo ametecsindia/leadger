@@ -1861,13 +1861,14 @@ WHERE campaign_id = '".$orgCampaign->id."'
      * the same rules as the "Next leads" queue apply: the campaign is one of the user's campaigns (Admin / Webmaster:
      * any), a Telecaller sees leads assigned to them or public, a Sales Person their own or public ones.
      */
-    public static function canOpenCampaignLead($user, $lead, $campaignId): bool
+    public static function canOpenCampaignLead($user, $lead, $campaignId, $allowedCampaigns = null): bool
     {
         if (!$user || !$lead || (int)$lead->campaign_id !== (int)$campaignId) {
             return false;
         }
         $role = $user->permissionsGroup->name ?? '';
-        if (!in_array($role, ['Admin', 'Webmaster'], true) && !self::getAllowedCampaignsForUser($user)->contains('id', (int)$campaignId)) {
+        // $allowedCampaigns: getAllowedCampaignsForUser($user), passed in when checking many leads at once
+        if (!in_array($role, ['Admin', 'Webmaster'], true) && !($allowedCampaigns ?? self::getAllowedCampaignsForUser($user))->contains('id', (int)$campaignId)) {
             return false;
         }
         if ($role === 'Telecaller') {
@@ -1922,6 +1923,17 @@ WHERE campaign_id = '".$orgCampaign->id."'
         // General for all pages
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         $User = Auth::user();
+
+        // Opened from an Inbound Calls customer mobile: a lead that can no longer be opened here (deleted, moved,
+        // not allowed) falls back to Manual Dial with the caller's number instead of another lead
+        if (request()->filled('inbound')) {
+            $inboundLead = Lead::find($leadId);
+            if (!$inboundLead || !self::canOpenCampaignLead($User, $inboundLead, $campaignId)) {
+                $inbound = ctype_digit((string)request('inbound')) ? \App\Models\InboundCall::find((int)request('inbound')) : null;
+                $number = $inbound && \App\Services\InboundCallQuery::userSees($User, $inbound->id) ? (string)$inbound->customer_mobile_normalized : '';
+                return redirect()->to(\App\Services\InboundCallDestination::manualUrl($number))->with('inboundNotice', 'Opened in Manual Dial');
+            }
+        }
 
         session(['selected_campaign_id' => $campaignId]);
         $allowedCampaigns = self::getAllowedCampaignsForUser($User);

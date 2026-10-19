@@ -35,6 +35,16 @@ class DialerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    /**
+     * The ?number= of a link to Manual Dial (e.g. a customer mobile on the Inbound Calls report), to fill into the
+     * phone field: digits, + and spaces only, at most 15 characters; anything else is ignored. Never dialled.
+     */
+    public static function prefillNumber(): ?string
+    {
+        $n = request()->query('number');
+        return is_string($n) && preg_match('/^[0-9+ ]{1,15}$/', $n) && preg_match('/\d/', $n) ? trim($n) : null;
+    }
+
     public function dialer()
     {
         // General for all pages

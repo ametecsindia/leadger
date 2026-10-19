@@ -42,6 +42,9 @@ Route::post('/vi_pingback_api', [TelephonyWebhookController::class, 'handleWebho
 Route::match(['get', 'post'], '/telephony/webhook', [TelephonyWebhookController::class, 'handleWebhook'])->name('api.telephony.webhook');
 Route::match(['get', 'post'], '/recording/callback', [TelephonyWebhookController::class, 'handleWebhook'])->name('api.recording.callback');
 Route::match(['get', 'post'], '/dialer/callback', [TelephonyWebhookController::class, 'handleWebhook'])->name('api.dialer.callback');
+// Inbound Calls report: provider events for calls to the company's VMNs (secret checked in the controller)
+Route::post('/telephony/inbound-call', [\App\Http\Controllers\APIs\InboundCallWebhookController::class, 'handle'])
+    ->middleware('throttle:300,1')->name('api.telephony.inboundCall');
 
 // Dialer API endpoints for workspace widgets & quick actions
 Route::prefix('dialer')->group(function () {

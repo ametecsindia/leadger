@@ -5478,6 +5478,25 @@ $(function() {
     globalThis.sipHasActiveCall = () => sp.hasActiveCall();
 })();
 </script>
+{{-- Opened from a link (Inbound Calls customer mobile): Manual Dial with the number filled in, never dialled --}}
+@php $prefillNumber = ($activeTab ?? '') === 'manual' ? \App\Http\Controllers\Dashboard\DialerController::prefillNumber() : null; @endphp
+<script>
+$(function () {
+    var prefill = @json($prefillNumber);
+    if (prefill) {
+        // as if the agent typed it: channel detection, quick actions and Recent Numbers react to the input event
+        $('#mobile').val(prefill).trigger('input').trigger('focus');
+    }
+    if (new URLSearchParams(window.location.search).has('number')) {
+        var u = new URL(window.location.href);
+        u.searchParams.delete('number');
+        history.replaceState(history.state, '', u.pathname + u.search + u.hash);   // a refresh does not fill it again
+    }
+    @if(session('inboundNotice'))
+    if (typeof toastr !== 'undefined') toastr.info(@json(session('inboundNotice')));
+    @endif
+});
+</script>
 {{-- Auto Dialer: floating button + popup, Campaign Queue tab only --}}
 @include('dashboard.partials.auto-dialer')
 @endpush
