@@ -703,6 +703,23 @@ class RecordingsController extends Controller
 
         $analysis = \App\Models\CallAiAnalysis::findFor($sourceCode, $logId);
 
+        // Still running: queued or processing, and for how long. A job whose queue worker stopped is reported as
+        // failed (with Retry) instead of "processing" forever.
+        $progress = null;
+        if ($analysis && in_array($analysis->status, ['pending', 'processing'], true)) {
+            $job = \App\Models\TranscriptionJob::where('call_id', $logId)->where('source_code', $sourceCode)->latest('id')->first();
+            if ($job && $job->isStalled()) {
+                $analysis->status = 'failed';
+                $analysis->error_message = 'Transcription stopped because the background worker was restarted. Press Retry to run it again.';
+            } elseif ($job) {
+                $progress = [
+                    'state' => $job->status === 'PROCESSING' ? 'processing' : 'queued',
+                    'seconds' => max(0, now()->getTimestamp() - $job->created_at->getTimestamp()),
+                    'duration' => (int)$job->duration_seconds,
+                ];
+            }
+        }
+
         if (!$analysis || $analysis->status !== 'completed') {
             return response()->json([
                 'status' => $analysis ? $analysis->status : 'none',
@@ -712,6 +729,7 @@ class RecordingsController extends Controller
                     : ($analysis ? 'Transcript is being processed.'
                     : ((new \App\Services\SarvamAiService())->isConfigured() ? 'This recording has not been transcribed yet.' : \App\Services\SarvamKeyService::notSetUpMessage()))),
                 'meta' => $meta,
+                'progress' => $progress,
                 'analysis' => [
                     'status' => $analysis ? $analysis->status : 'none',
                     'error_message' => $analysis ? $analysis->error_message : null,

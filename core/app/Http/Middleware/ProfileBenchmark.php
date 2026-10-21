@@ -14,6 +14,12 @@ class ProfileBenchmark
 
     public function handle(Request $request, Closure $next)
     {
+        // A debugging tool: it rewrites storage/logs/profile_benchmark.json on EVERY request (each audio chunk, each
+        // status check), a file that keeps growing. Only when PROFILE_BENCHMARK=true is set in .env.
+        if (!filter_var(env('PROFILE_BENCHMARK', false), FILTER_VALIDATE_BOOLEAN)) {
+            return $next($request);
+        }
+
         self::$capturedQueries = [];
         
         DB::listen(function ($query) {

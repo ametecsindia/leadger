@@ -319,12 +319,22 @@ class TranscriptionBillingService
                 continue;
             }
 
-            // Do not queue twice while a job is already running for this recording
+            // Do not queue twice while a job is already running for this recording. A job whose worker stopped
+            // (stalled) does not count: it is marked failed and a new one may start.
             $active = CallAiAnalysis::findFor($sourceCode, $logId);
-            if ($active && in_array($active->status, ['pending', 'processing', 'waiting_key'], true)
-                && TranscriptionJob::where('call_id', $logId)->where('source_code', $sourceCode)->whereIn('status', ['QUEUED', 'PROCESSING', SarvamKeyService::WAITING_KEY])->exists()) {
-                $skipped[] = ['key' => $key, 'call_id' => $logId, 'reason' => 'A transcript is already being processed for this recording.'];
-                continue;
+            if ($active && in_array($active->status, ['pending', 'processing', 'waiting_key'], true)) {
+                $running = TranscriptionJob::where('call_id', $logId)->where('source_code', $sourceCode)
+                    ->whereIn('status', ['QUEUED', 'PROCESSING', SarvamKeyService::WAITING_KEY])->get();
+                foreach ($running->filter(fn ($j) => $j->isStalled()) as $dead) {
+                    $dead->status = 'FAILED';
+                    $dead->error_message = 'Transcription stopped (the background worker was restarted). It was started again.';
+                    $dead->completed_at = now();
+                    $dead->save();
+                }
+                if ($running->contains(fn ($j) => !$j->isStalled() && $j->status !== 'FAILED')) {
+                    $skipped[] = ['key' => $key, 'call_id' => $logId, 'reason' => 'A transcript is already being processed for this recording.'];
+                    continue;
+                }
             }
 
             $durationSec = (int)$rec['duration'];
@@ -426,8 +436,19 @@ class TranscriptionBillingService
             return ['success' => false, 'waiting_key' => true, 'job_id' => $job->id, 'error' => 'Waiting for a valid Sarvam API key'];
         }
 
+        $queuedSeconds = $job->created_at ? max(0, now()->getTimestamp() - $job->created_at->getTimestamp()) : null;
         $job->status = 'PROCESSING';
         $job->save();
+
+        // Heartbeat: updated_at moves while Sarvam is working, so a job whose worker died is recognised as stalled
+        // (TranscriptionJob::isStalled) instead of showing "processing" forever
+        $lastBeat = time();
+        $service->onProgress = function () use ($job, &$lastBeat) {
+            if (time() - $lastBeat >= 20) {
+                $lastBeat = time();
+                $job->touch();
+            }
+        };
 
         $sourceCode = (int)$job->source_code;
         $logId = $sourceCode == 0 ? (int)$job->call_id : (int)preg_replace('/\D/', '', (string)$job->recording_id);
@@ -520,6 +541,7 @@ class TranscriptionBillingService
                 'actual_cost' => $actualCost,
                 'actual_cost_formatted' => '₹' . number_format($actualCost, 2),
                 'billable_minutes' => $actualBillableMinutes,
+                'timings' => ['queue_wait' => $queuedSeconds] + ($processResult['timings'] ?? []),
             ];
         }
 
@@ -546,6 +568,7 @@ class TranscriptionBillingService
             'agent_name' => $job->agent_name,
             'phonenumber' => $job->phonenumber,
             'error' => $errorMsg,
+            'timings' => ['queue_wait' => $queuedSeconds] + ($processResult['timings'] ?? []),
         ];
     }
 
@@ -633,10 +656,12 @@ class TranscriptionBillingService
             ];
         }
 
+        // A job whose worker stopped (stalled) counts as failed, so the page stops waiting for it and offers Retry
+        $stalledIds = $jobs->filter(fn ($j) => $j->isStalled())->pluck('id')->all();
         $total = $jobs->count();
         $completed = $jobs->where('status', 'COMPLETED')->count();
-        $failed = $jobs->where('status', 'FAILED')->count();
-        $processing = $jobs->where('status', 'PROCESSING')->count();
+        $failed = $jobs->where('status', 'FAILED')->count() + count($stalledIds);
+        $processing = $jobs->where('status', 'PROCESSING')->count() - count($stalledIds);
         $queued = $jobs->whereIn('status', ['QUEUED', 'PENDING_CONFIRMATION'])->count();
         $totalCost = (float)$jobs->where('status', 'COMPLETED')->sum('actual_cost');
         $inProgress = $processing + $queued;
@@ -657,18 +682,19 @@ class TranscriptionBillingService
             'total_actual_cost' => round($totalCost, 2),
             'total_actual_cost_formatted' => '₹' . number_format($totalCost, 2),
             'is_finished' => ($completed + $failed) >= $total,
-            'results' => $jobs->map(function ($j) {
+            'results' => $jobs->map(function ($j) use ($stalledIds) {
                 $sc = (int)$j->source_code;
                 $logId = $sc == 0 ? (int)$j->call_id : (int)preg_replace('/\D/', '', (string)$j->recording_id);
+                $stalled = in_array($j->id, $stalledIds, true);
                 return [
                     'call_id' => $logId,
                     'source_code' => $sc,
                     'customer_name' => $j->customer_name,
                     'agent_name' => $j->agent_name,
                     'phonenumber' => $j->phonenumber,
-                    'status' => $j->status,
+                    'status' => $stalled ? 'FAILED' : $j->status,
                     'success' => ($j->status === 'COMPLETED'),
-                    'error' => $j->error_message,
+                    'error' => $stalled ? 'Transcription stopped because the background worker was restarted. Press Retry to run it again.' : $j->error_message,
                     'actual_cost' => $j->actual_cost,
                     'actual_cost_formatted' => '₹' . number_format($j->actual_cost, 2),
                 ];

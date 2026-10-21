@@ -1457,6 +1457,7 @@
                 <div id="transcript-loading" class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3" style="color: var(--lg-accent) !important;"></i>
                     <p class="font-weight-bold" id="transcript-loading-text" style="color: #475569; font-size: 14px;">Loading call transcript...</p>
+                    <p id="transcript-loading-sub" style="display: none; color: #64748B; font-size: 12.5px; margin-top: -4px;"></p>
                 </div>
 
                 <!-- Error / Processing Failed State -->
@@ -2057,6 +2058,7 @@
             stopModalAudio();
 
             $('#transcript-loading-text').text('Loading call transcript...');
+            $('#transcript-loading-sub').hide();
             $('#transcript-loading').show();
             $('#transcript-error').hide();
             $('#transcript-content').hide();
@@ -2082,16 +2084,34 @@
                     if (res.meta) lgFillTranscriptMeta(res.meta);
 
                     if (res.status === 'pending' || res.status === 'processing') {
-                        // Still running: keep the spinner and refresh until it finishes
-                        $('#transcript-loading-text').text('Transcript is processing... this usually takes under a minute.');
+                        // Still running: Queued / Processing with the time so far; checked again less often the longer
+                        // it runs, and no longer than 20 minutes (the job runs on in the background either way)
+                        var p = res.progress || {};
+                        var secs = p.seconds || 0;
+                        var queued = p.state === 'queued' || (!p.state && res.status === 'pending');
+                        var expect = 20 + (p.duration || 0);   // measured: about 20 s plus the call's length
+                        $('#transcript-loading-text').text(queued
+                            ? 'Queued - waiting for the transcription worker (' + formatAudioTime(secs) + ')'
+                            : 'Transcribing and analysing the call... ' + formatAudioTime(secs) + ' so far');
+                        $('#transcript-loading-sub').text((queued ? '' : 'Usually about ' + formatAudioTime(expect) + ' for this call. ')
+                            + 'You can close this window - the transcript keeps processing in the background.').show();
                         $('#transcript-loading').show();
+                        if (secs > 1200) {
+                            $('#transcript-loading').hide();
+                            $('#transcript-error-title').html('<i class="fas fa-clock me-2"></i> Still Processing');
+                            $('#transcript-error-msg').text('This transcript is taking much longer than usual. It is still running in the background - close this window and check again later.');
+                            $('#transcript-retry-container').hide();
+                            $('#transcript-error').show();
+                            return;
+                        }
                         setTimeout(function () {
                             if ($('#transcript-modal').is(':visible') && activeTranscriptLogId == id && activeTranscriptSourceCode == source_code) {
                                 fetchTranscriptData(id, source_code);
                             }
-                        }, 4000);
+                        }, secs < 60 ? 3000 : (secs < 180 ? 5000 : 10000));
                         return;
                     }
+                    $('#transcript-loading-sub').hide();
 
                     if (res.status === 'failed' || res.status === 'none') {
                         var canRun = res.meta && res.meta.can_transcribe;
@@ -2291,6 +2311,10 @@
             }).done(function (res) {
                 if (res.status === 'success' && res.batch_id) {
                     lgPollTranscript(res.batch_id, id, sc, openWhenDone);
+                    // Retry from the open popup: show its Queued / Processing progress there
+                    if ($('#transcript-modal').is(':visible') && activeTranscriptLogId == id && activeTranscriptSourceCode == sc) {
+                        fetchTranscriptData(id, sc);
+                    }
                 } else {
                     lgTranscribeFailed(id, sc, res.message || 'Could not start the transcript.');
                 }
@@ -2503,7 +2527,8 @@
 
             $('#transcript-error').hide();
             $('#transcript-content').hide();
-            $('#transcript-loading-text').text('Transcript is processing... this usually takes under a minute.');
+            $('#transcript-loading-text').text('Queued - starting the transcript...');
+            $('#transcript-loading-sub').text('You can close this window - the transcript keeps processing in the background.').show();
             $('#transcript-loading').show();
 
             lgTranscribeOne(activeTranscriptLogId, activeTranscriptSourceCode, null, true);

@@ -59,6 +59,16 @@ class TranscriptionJob extends Model
         'billed_at' => 'datetime',
     ];
 
+    /** A PROCESSING job beats every ~20 s (updated_at); this long without a beat means its worker stopped. */
+    public const STALL_SECONDS = 300;
+
+    /** Processing, but its queue worker stopped (restart, crash, out of memory): it will not finish by itself. */
+    public function isStalled(): bool
+    {
+        return $this->status === self::STATUS_PROCESSING && $this->updated_at
+            && $this->updated_at->lt(now()->subSeconds(self::STALL_SECONDS));
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'requested_by');

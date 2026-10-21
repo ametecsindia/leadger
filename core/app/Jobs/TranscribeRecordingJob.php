@@ -28,9 +28,21 @@ class TranscribeRecordingJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private const MAX_PARALLEL = 2;
+    /** Attempts for temporary Sarvam problems (network, rate limit, server error); waiting for a slot is not one. */
+    private const API_TRIES = 3;
 
-    public $tries = 3;
     public $timeout = 900;
+    /** Real errors (exceptions) end the job after this many; waiting for a free slot does not count. */
+    public $maxExceptions = 3;
+
+    /**
+     * Instead of a fixed number of tries: with more than MAX_PARALLEL transcripts queued, the others wait for a free
+     * slot (release) as long as needed. A fixed $tries counted those waits, so they failed after about a minute.
+     */
+    public function retryUntil()
+    {
+        return now()->addHours(6);
+    }
 
     public $transcriptionJobId;
     public $company;
@@ -52,6 +64,11 @@ class TranscribeRecordingJob implements ShouldQueue
         Tenancy::apply($this->company);
 
         $job = TranscriptionJob::find($this->transcriptionJobId);
+        // Handed out again after its worker stopped mid-way (restart, crash): run it again
+        if ($job && $job->isStalled()) {
+            $job->status = 'QUEUED';
+            $job->save();
+        }
         if (!$job || !in_array($job->status, ['QUEUED', 'PENDING_CONFIRMATION'], true)) {
             return;
         }
@@ -67,19 +84,26 @@ class TranscribeRecordingJob implements ShouldQueue
             return;
         }
 
+        // How many times Sarvam has already failed temporarily for this job (kept across releases)
+        $apiTriesKey = 'sarvam-transcribe-tries:' . Tenancy::key() . ':' . $job->id;
+        $apiTries = (int)Cache::get($apiTriesKey, 0);
         try {
-            $result = (new TranscriptionBillingService())->processSingleJob($job, $this->attempts() < $this->tries);
+            $result = (new TranscriptionBillingService())->processSingleJob($job, $apiTries + 1 < self::API_TRIES);
         } finally {
             $lock->release();
         }
 
         if (!empty($result['retry'])) {
-            $this->release($this->backoff()[$this->attempts() - 1] ?? 300);
-            Log::info("[TranscribeRecordingJob] Job #{$job->id} retry in a moment (attempt {$this->attempts()})");
+            Cache::put($apiTriesKey, $apiTries + 1, now()->addHours(6));
+            $this->release($this->backoff()[$apiTries] ?? 300);
+            Log::info("[TranscribeRecordingJob] Job #{$job->id} retry in a moment (Sarvam attempt " . ($apiTries + 1) . ')');
             return;
         }
+        Cache::forget($apiTriesKey);
         $state = $result['success'] ? 'completed' : (!empty($result['waiting_key']) ? 'waiting for a Sarvam key' : 'failed: ' . ($result['error'] ?? ''));
-        Log::info("[TranscribeRecordingJob] Job #{$job->id} {$state}");
+        // Seconds per step: queue_wait, conversation_upload, transcript, conversation_wait, analysis
+        $timings = collect($result['timings'] ?? [])->map(fn ($s, $step) => "{$step} {$s}s")->implode(', ');
+        Log::info("[TranscribeRecordingJob] Job #{$job->id} {$state}" . ($timings !== '' ? " ({$timings})" : ''));
     }
 
     public function failed(\Throwable $e)

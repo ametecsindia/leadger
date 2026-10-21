@@ -23,6 +23,8 @@ class SarvamAiService
     /** Last HTTP status from Sarvam (0 = network error), and whether Sarvam rejected the key (401/403). */
     protected int $lastHttpCode = 200;
     protected bool $authFailed = false;
+    /** Called between steps and while waiting on Sarvam (the queue job's heartbeat: "still working"). */
+    public ?\Closure $onProgress = null;
 
     /**
      * @param string|null $apiKey a key to use (e.g. one being tested); default: the current company's own key
@@ -341,6 +343,7 @@ class SarvamAiService
             $requestIds = [];
             $lang = null;
             foreach ($chunks as $i => $chunk) {
+                $this->progress();
                 $res = $this->transcribeAudioFile($chunk, $languageCode);
                 if (!$res['success']) {
                     return ['success' => false, 'error' => 'Part ' . ($i + 1) . ' of ' . count($chunks) . ': ' . ($res['error'] ?? 'transcription failed')];
@@ -364,6 +367,13 @@ class SarvamAiService
                 @unlink($f);
             }
             @rmdir($tmpDir);
+        }
+    }
+
+    private function progress(): void
+    {
+        if ($this->onProgress) {
+            ($this->onProgress)();
         }
     }
 
@@ -479,6 +489,17 @@ class SarvamAiService
      */
     public function transcribeConversation(string $filePath, int $durationSeconds = 0, string $mode = 'translate'): array
     {
+        $started = $this->startConversationJob($filePath, $mode);
+        return $started['success'] ? $this->finishConversationJob($started['job_id'], $durationSeconds) : $started;
+    }
+
+    /**
+     * Batch job, part 1: create it, upload the audio and start it. Sarvam then works on it on its own, so the caller
+     * can do other work (the original-language transcript) before finishConversationJob() collects the result.
+     * @return array ['success'=>true, 'job_id'=>string] or ['success'=>false, 'error'=>string]
+     */
+    public function startConversationJob(string $filePath, string $mode = 'translate'): array
+    {
         if (!$this->isConfigured()) {
             return ['success' => false, 'error' => self::NOT_CONFIGURED_MESSAGE];
         }
@@ -505,14 +526,21 @@ class SarvamAiService
 
         [, , $err] = $this->sarvamJson('POST', "/speech-to-text/job/v1/{$jobId}/start");
         if ($err) return ['success' => false, 'error' => $err];
+        $this->progress();
+        return ['success' => true, 'job_id' => $jobId];
+    }
 
+    /** Batch job, part 2: wait for the job started by startConversationJob() and read its conversation. */
+    public function finishConversationJob(string $jobId, int $durationSeconds = 0): array
+    {
         // Poll until done: a few seconds for a normal call, longer for long recordings (capped at 20 minutes)
         $deadline = time() + min(1200, 60 + 2 * max(0, $durationSeconds));
         $status = null;
         do {
-            sleep(2);
             [, $status, $err] = $this->sarvamJson('GET', "/speech-to-text/job/v1/{$jobId}/status");
             $state = $status['job_state'] ?? '';
+            $this->progress();
+            if (!$err && !in_array($state, ['Completed', 'Failed'], true)) sleep(2);
         } while (!$err && !in_array($state, ['Completed', 'Failed'], true) && time() < $deadline);
         if ($err) return ['success' => false, 'error' => $err];
         $detail = $status['job_details'][0] ?? [];
@@ -664,6 +692,24 @@ class SarvamAiService
         $companyId = $meta['company_id'] ?? 1;
         $analysis = CallAiAnalysis::firstOrNewFor($sourceCode, $logId);
 
+        // Seconds spent in each step (logged by the queue job, to see where the time goes)
+        $timings = [];
+        $clock = microtime(true);
+        $lap = function (string $step) use (&$timings, &$clock) {
+            $now = microtime(true);
+            $timings[$step] = round($now - $clock, 1);
+            $clock = $now;
+            $this->progress();
+        };
+
+        // The English conversation (Sarvam batch: translate + diarization) is started first: Sarvam works on it
+        // while the original-language transcript is made below, instead of one after the other
+        $convJob = $this->startConversationJob($audioPath);
+        if (!$convJob['success']) {
+            return ['status' => 'failed', 'error' => 'English conversation: ' . ($convJob['error'] ?? 'failed'), 'timings' => $timings];
+        }
+        $lap('conversation_upload');
+
         // 1. Original-language transcript (as spoken). A recording that already has one only needs the English
         //    conversation added, so the same audio is not transcribed (and charged) twice.
         $placeholder = '(No speech was detected in this recording.)';
@@ -673,20 +719,23 @@ class SarvamAiService
         } else {
             $sttResult = $this->transcribeLongAudio($audioPath, $duration);
         }
+        $lap('transcript');
         if (!$sttResult['success']) {
             return [
                 'status' => 'failed',
                 'error' => $sttResult['error'] ?? 'Sarvam AI transcription failed.',
+                'timings' => $timings,
             ];
         }
 
         $transcript = trim((string)($sttResult['transcript'] ?? ''));
         $requestId = $sttResult['request_id'] ?? ('srv_' . uniqid());
 
-        // 2. The conversation in English, speaker by speaker with timestamps (Sarvam batch: translate + diarization)
-        $conv = $this->transcribeConversation($audioPath, $duration);
+        // 2. The conversation in English, speaker by speaker with timestamps (usually ready by now)
+        $conv = $this->finishConversationJob($convJob['job_id'], $duration);
+        $lap('conversation_wait');
         if (!$conv['success']) {
-            return ['status' => 'failed', 'error' => 'English conversation: ' . ($conv['error'] ?? 'failed')];
+            return ['status' => 'failed', 'error' => 'English conversation: ' . ($conv['error'] ?? 'failed'), 'timings' => $timings];
         }
         $roles = is_array($analysis->speaker_roles) ? $analysis->speaker_roles : null;
         $conversationText = self::conversationText($conv['turns'], $roles);
@@ -694,6 +743,7 @@ class SarvamAiService
         // 3. Analysis of the English conversation (Sarvam chat model); the keyword rules only as a fallback
         $analysisData = $this->analyzeConversation($conversationText, $meta + ['duration' => $duration])
             ?: ($this->analyzeTranscript($conv['transcript'] ?: $transcript, $meta + ['duration' => $duration]) + ['analysis_source' => 'keyword rules (fallback)']);
+        $lap('analysis');
 
         // Re-transcribing an older transcript written in an Indic script: keep that text for auditing
         if (self::hasIndicScript($analysis->transcript) && empty($analysis->transcript_original)) {
@@ -724,7 +774,8 @@ class SarvamAiService
         return [
             'status' => 'success',
             'analysis' => $analysis,
-            'stt_result' => $sttResult
+            'stt_result' => $sttResult,
+            'timings' => $timings,
         ];
     }
 }

@@ -75,8 +75,9 @@
         $('#lgDlToggle').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
         $('#lgDlPlayer').addClass('active');
 
-        lgDlCheck(btn.getAttribute('data-url')).then(function (err) {
-            if (err) { lgDlFail(err); return; }
+        // Start streaming at once (the server answers Range requests); the HEAD check that used to come first cost a
+        // full extra request before any sound. It now only runs when playback fails, to say exactly why.
+        {
             const audio = currentDialerAudio = new Audio(url);
             audio.preload = 'metadata';
             audio.addEventListener('loadedmetadata', function () {
@@ -107,8 +108,12 @@
             audio.addEventListener('error', function () {
                 if (audio !== currentDialerAudio) return;
                 const code = audio.error ? audio.error.code : 0;
-                lgDlFail(code === 4 ? 'This recording format cannot be played in this browser. Use Download instead.'
-                                    : 'The recording could not be played.');
+                // missing / not allowed / session expired answer like an unplayable file: ask the server which it is
+                lgDlCheck(btn.getAttribute('data-url')).then(function (err) {
+                    if (audio !== currentDialerAudio) return;
+                    lgDlFail(err || (code === 4 ? 'This recording format cannot be played in this browser. Use Download instead.'
+                                                : 'The recording could not be played.'));
+                });
             });
             audio.play().catch(function (e) {
                 if (audio !== currentDialerAudio) return;
@@ -117,7 +122,7 @@
                     lgDlSetStatus('Press play to start.', false);
                 } // other failures are reported by the 'error' event
             });
-        });
+        }
     }
 
     function lgDlSetStatus(msg, isError) {
