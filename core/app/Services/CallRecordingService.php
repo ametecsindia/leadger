@@ -778,7 +778,8 @@ class CallRecordingService
      */
     public static function ffmpegPath(): ?string
     {
-        foreach (array_filter([env('FFMPEG_PATH'), base_path('ffmpeg.exe'), base_path('ffmpeg')]) as $c) {
+        // FFMPEG_PATH, the copy shipped in core/ (Windows), or one installed on the server (Linux: apt install ffmpeg)
+        foreach (array_filter([env('FFMPEG_PATH'), base_path('ffmpeg.exe'), base_path('ffmpeg'), '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']) as $c) {
             if (is_file($c)) {
                 return $c;
             }

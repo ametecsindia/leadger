@@ -313,8 +313,14 @@ class SarvamAiService
     public function transcribeLongAudio(string $filePath, int $durationSeconds, ?string $languageCode = null): array
     {
         $ffmpeg = CallRecordingService::ffmpegPath();
-        if ($durationSeconds <= self::MAX_CHUNK_SECONDS || !$ffmpeg) {
-            return $this->transcribeAudioFile($filePath, $languageCode);
+        if ($durationSeconds <= self::MAX_CHUNK_SECONDS) {
+            $res = $this->transcribeAudioFile($filePath, $languageCode);
+            // the stored duration was too short (Sarvam measured over 30 s): the batch API takes any length
+            return !$res['success'] && self::tooLongForRest($res['error'] ?? '') ? $this->transcribeBatch($filePath, $durationSeconds) : $res;
+        }
+        if (!$ffmpeg) {
+            // no ffmpeg to split the audio: Sarvam's batch API accepts long recordings as one file
+            return $this->transcribeBatch($filePath, $durationSeconds);
         }
 
         $tmpDir = storage_path('app/transcribe_tmp/' . uniqid('chunk_'));
@@ -359,6 +365,27 @@ class SarvamAiService
             }
             @rmdir($tmpDir);
         }
+    }
+
+    /** Sarvam's REST endpoint refused the clip for being longer than it accepts (30 seconds). */
+    private static function tooLongForRest(string $error): bool
+    {
+        return stripos($error, 'exceeds the maximum') !== false || stripos($error, 'batch API') !== false;
+    }
+
+    /** Original-language transcript of a recording of any length, through the batch API (same mode as the REST call). */
+    private function transcribeBatch(string $filePath, int $durationSeconds): array
+    {
+        $res = $this->transcribeConversation($filePath, $durationSeconds, $this->sttMode ?: 'transcribe');
+        if (!$res['success']) {
+            return $res;
+        }
+        return [
+            'success' => true,
+            'transcript' => $res['transcript'],
+            'language_code' => $res['language_code'] ?: 'en-IN',
+            'request_id' => $res['request_id'] ?? ('srv_req_' . uniqid()),
+        ];
     }
 
     /**
@@ -444,11 +471,13 @@ class SarvamAiService
      * mode "translate" (Telugu / Hindi / English speech -> English text) with speaker diarization and
      * per-turn timestamps. Speakers are numbered S1, S2 ... in the order they first speak; who is the agent
      * is NOT decided here (a mono recording carries no reliable speaker identity).
+     * $mode: "translate" for the English conversation; the original-language transcript of a long recording uses
+     * the REST call's mode (e.g. "translit") when it cannot be split into short parts.
      *
      * @return array ['success'=>true, 'turns'=>[['speaker'=>'S1','start'=>float,'end'=>float,'text'=>string]...],
      *               'transcript'=>string, 'language_code'=>?string, 'request_id'=>?string] or ['success'=>false,'error'=>string]
      */
-    public function transcribeConversation(string $filePath, int $durationSeconds = 0): array
+    public function transcribeConversation(string $filePath, int $durationSeconds = 0, string $mode = 'translate'): array
     {
         if (!$this->isConfigured()) {
             return ['success' => false, 'error' => self::NOT_CONFIGURED_MESSAGE];
@@ -461,7 +490,7 @@ class SarvamAiService
         $name = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($filePath));
 
         [, $job, $err] = $this->sarvamJson('POST', '/speech-to-text/job/v1', ['job_parameters' => [
-            'model' => $model, 'mode' => 'translate', 'language_code' => $this->language ?: 'unknown', 'with_diarization' => true,
+            'model' => $model, 'mode' => $mode, 'language_code' => $this->language ?: 'unknown', 'with_diarization' => true,
         ]]);
         $jobId = $job['job_id'] ?? null;
         if ($err || !$jobId) return ['success' => false, 'error' => $err ?: 'Sarvam AI did not create the transcription job.'];
