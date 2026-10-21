@@ -27,6 +27,7 @@ class SourcesController extends Controller
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
         $this->middleware('lg.permission:add')->only(['create', 'store']);
         $this->middleware('lg.permission:edit')->only(['edit', 'update']);
+        $this->middleware('lg.permission:delete')->only(['destroy']);
     }
 
     /**
@@ -156,6 +157,28 @@ class SourcesController extends Controller
             }
             return redirect()->action('Dashboard\SourcesController@index');
         }
+    }
+
+    /**
+     * Delete a source (Options -> Delete). Same permission as Segments: the role's delete flag (Admin / Webmaster
+     * always). A source still used by campaigns is not deleted: those campaigns would lose their source.
+     */
+    public function destroy($id, Request $request)
+    {
+        if (!\App\Helpers\Helper::canDelete()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
+        }
+        $Source = Source::find($id);
+        if (empty($Source)) {
+            return response()->json(['success' => false, 'message' => 'Source not found. It may already have been deleted.'], 404);
+        }
+        $campaigns = DB::table('campaigns')->where('source_id', $Source->id)->count();
+        if ($campaigns > 0) {
+            return response()->json(['success' => false, 'message' => "This source cannot be deleted: it is used by {$campaigns} campaign"
+                . ($campaigns === 1 ? '' : 's') . '. Change their source first.'], 422);
+        }
+        $Source->delete();
+        return response()->json(['success' => true, 'message' => 'Source deleted successfully.']);
     }
 
 }

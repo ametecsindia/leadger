@@ -928,13 +928,25 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
                                                 </svg>
                                                 <span>Edit</span>
                                             </button>
-                                            <button type="button" class="lg-sources-btn-more" title="More Options">
+                                            <button type="button" class="lg-sources-btn-more" title="More Options" aria-haspopup="true" aria-expanded="false" onclick="lgRowMenu.toggle(event, this)">
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                                                     <circle cx="12" cy="5" r="2"/>
                                                     <circle cx="12" cy="12" r="2"/>
                                                     <circle cx="12" cy="19" r="2"/>
                                                 </svg>
                                             </button>
+                                            <div class="lg-action-dropdown-menu" role="menu">
+                                                <div class="lg-action-dropdown-item" onclick="lgOpenEditSourceModal(document.querySelector('#lgSourceRow_{{ $Source->id }} .lg-sources-btn-edit'))">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                    <span>Edit</span>
+                                                </div>
+                                                @if(Helper::canDelete())
+                                                    <div class="lg-action-dropdown-item danger" data-id="{{ $Source->id }}" data-name="{{ $Source->name }}" onclick="lgDeleteSource(this)">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                        <span>Delete</span>
+                                                    </div>
+                                                @endif
+                                            </div>
                                         </div>
                                     </td>
                                 @endif
@@ -1065,9 +1077,27 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
 @endsection
 
 @push("after-scripts")
+@include('dashboard.partials.row-actions-menu')
 <script type="text/javascript">
 let currentEditId = null;
 let toastTimeout = null;
+
+/* Options -> Delete: confirm, delete on the server (refused while campaigns use it), reload the list */
+function lgDeleteSource(item) {
+    lgRowMenu.confirmDelete({
+        title: 'Delete Source',
+        question: 'Are you sure you want to delete this source?',
+        name: item.getAttribute('data-name'),
+        url: "{{ url('admin/sources') }}/" + item.getAttribute('data-id'),
+        onDone: function () {
+            // the last row of a later page: show the page before it instead of an empty one
+            const url = new URL(window.location.href);
+            const page = parseInt(url.searchParams.get('page') || '1', 10);
+            if (document.querySelectorAll('.lg-source-row').length <= 1 && page > 1) url.searchParams.set('page', page - 1);
+            setTimeout(function () { window.location.href = url.toString(); }, 600);
+        }
+    });
+}
 
 function lgOpenEditSourceModal(elOrId, name, desc) {
     let id = elOrId;

@@ -376,6 +376,7 @@ Route::get('/sources/create/', [SourcesController::class, 'create'])->name('sour
 Route::post('/sources/store', [SourcesController::class, 'store'])->name('sourcesStore');
 Route::get('/sources/{id}/edit', [SourcesController::class, 'edit'])->name('sourcesEdit');
 Route::post('/sources/{id}/update', [SourcesController::class, 'update'])->name('sourcesUpdate');
+Route::delete('/sources/{id}', [SourcesController::class, 'destroy'])->name('sourcesDestroy');
 
 // Segments
 Route::get('/segments', [SegmentsController::class, 'index'])->name('segments');
@@ -441,6 +442,7 @@ Route::get('/productServices/create/', [ProductsServicesController::class, 'crea
 Route::post('/productServices/store', [ProductsServicesController::class, 'store'])->name('productServicesStore');
 Route::get('/productServices/{id}/edit', [ProductsServicesController::class, 'edit'])->name('productServicesEdit');
 Route::post('/productServices/{id}/update', [ProductsServicesController::class, 'update'])->name('productServicesUpdate');
+Route::delete('/productServices/{id}', [ProductsServicesController::class, 'destroy'])->name('productServicesDestroy');
 
 //client-types
 Route::get('/clientTypes', [ClientTypesController::class, 'index'])->name('clientTypes');

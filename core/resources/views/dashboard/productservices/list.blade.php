@@ -711,6 +711,7 @@
 
 @push("after-scripts")
     <script src="{{ asset('assets/dashboard/js/datatables/datatables.min.js') }}"></script>
+    @include('dashboard.partials.row-actions-menu')
     <script type="text/javascript">
         var dataTable;
 
@@ -759,6 +760,26 @@
                     svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>'
                 };
             }
+        }
+
+        var LG_CAN_DELETE = @json(Helper::canDelete());
+
+        /* Options -> Delete: confirm, delete on the server (refused while leads use it), redraw this page of the table */
+        function lgDeleteProduct(item) {
+            lgRowMenu.confirmDelete({
+                title: 'Delete Product',
+                question: 'Are you sure you want to delete this product?',
+                name: item.getAttribute('data-name'),
+                url: "{{ url('admin/productServices') }}/" + item.getAttribute('data-id'),
+                onDone: function () {
+                    // the last row of a later page: show the page before it instead of an empty one
+                    if (dataTable.rows({ page: 'current' }).count() <= 1 && dataTable.page() > 0) {
+                        dataTable.page('previous').draw('page');
+                    } else {
+                        dataTable.draw(false);
+                    }
+                }
+            });
         }
 
         function openAddProductModal() {
@@ -871,6 +892,7 @@
                 },
                 "dom": '<"dataTables_length"l><"row"<"col-12"t>><"lg-dt-bottom"<"dataTables_info"i><"dataTables_paginate"p>>',
                 "fnDrawCallback": function () {
+                    lgRowMenu.close();   // its row was just redrawn
                     if ($(table_name + '_paginate .paginate_button').length > 3) {
                         $(table_name + '_paginate')[0].style.display = "block";
                     } else {
@@ -926,9 +948,20 @@
                                             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
                                             '<span>Edit</span>' +
                                         '</button>' +
-                                        '<button type="button" class="lg-ps-btn-more" title="More Options">' +
+                                        '<button type="button" class="lg-ps-btn-more" title="More Options" aria-haspopup="true" aria-expanded="false" onclick="lgRowMenu.toggle(event, this)">' +
                                             '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>' +
                                         '</button>' +
+                                        '<div class="lg-action-dropdown-menu" role="menu">' +
+                                            '<div class="lg-action-dropdown-item" onclick="openEditProductModal(' + id + ', \'' + nameStr + '\')">' +
+                                                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+                                                '<span>Edit</span>' +
+                                            '</div>' +
+                                            (LG_CAN_DELETE ?
+                                            '<div class="lg-action-dropdown-item danger" data-id="' + id + '" data-name="' + $('<div>').text(row.name || '').html().replace(/"/g, '&quot;') + '" onclick="lgDeleteProduct(this)">' +
+                                                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>' +
+                                                '<span>Delete</span>' +
+                                            '</div>' : '') +
+                                        '</div>' +
                                    '</div>';
                         }
                     }

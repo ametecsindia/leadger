@@ -952,6 +952,7 @@ if (!function_exists('lgGetSegmentBadgeDetails')) {
 @endsection
 
 @push("after-scripts")
+@include('dashboard.partials.row-actions-menu')
 <script type="text/javascript">
 let currentDeleteSegmentId = null;
 
@@ -1028,26 +1029,11 @@ function lgClearErrors() {
     }
 }
 
+// The ⋮ menu: shared with Sources and Products (dashboard.partials.row-actions-menu) - shown above the table card,
+// upward near the bottom of the screen, one at a time
 function lgToggleMoreMenu(event, id) {
-    event.stopPropagation();
-    const dropdowns = document.querySelectorAll('.lg-action-dropdown-menu');
-    dropdowns.forEach(d => {
-        if (d.id !== 'lgActionMenu-' + id) {
-            d.classList.remove('show');
-        }
-    });
-
-    const menu = document.getElementById('lgActionMenu-' + id);
-    if (menu) {
-        menu.classList.toggle('show');
-    }
+    lgRowMenu.toggle(event, event.currentTarget);
 }
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.lg-segments-actions')) {
-        document.querySelectorAll('.lg-action-dropdown-menu').forEach(d => d.classList.remove('show'));
-    }
-});
 
 /* Handle Add / Edit Submit */
 function lgHandleSegmentSubmit(e) {

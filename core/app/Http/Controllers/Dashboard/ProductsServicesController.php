@@ -26,6 +26,7 @@ class ProductsServicesController extends Controller
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
         $this->middleware('lg.permission:add')->only(['create', 'store']);
         $this->middleware('lg.permission:edit')->only(['edit', 'update']);
+        $this->middleware('lg.permission:delete')->only(['destroy']);
     }
 
     /**
@@ -252,6 +253,30 @@ class ProductsServicesController extends Controller
             }
             return redirect()->route('productServices');
         }
+    }
+
+    /**
+     * Delete a product / service (Options -> Delete). Same permission as Segments: the role's delete flag (Admin /
+     * Webmaster always). One still chosen on leads (leads.product_service holds a comma-separated list of ids) is not
+     * deleted: those leads would lose it.
+     */
+    public function destroy($id, Request $request)
+    {
+        if (!\App\Helpers\Helper::canDelete()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
+        }
+        $ProductService = ProductService::find($id);
+        if (empty($ProductService)) {
+            return response()->json(['success' => false, 'message' => 'Product not found. It may already have been deleted.'], 404);
+        }
+        $tp = DB::getTablePrefix();
+        $leads = DB::table('leads')->whereRaw("FIND_IN_SET(?, REPLACE({$tp}leads.product_service, ' ', ''))", [(string)$ProductService->id])->count();
+        if ($leads > 0) {
+            return response()->json(['success' => false, 'message' => "This product cannot be deleted: it is selected on {$leads} lead"
+                . ($leads === 1 ? '' : 's') . '. Remove it from those leads first.'], 422);
+        }
+        $ProductService->delete();
+        return response()->json(['success' => true, 'message' => 'Product deleted successfully.']);
     }
 
 }
