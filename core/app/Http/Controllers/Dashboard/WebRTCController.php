@@ -232,9 +232,9 @@ class WebRTCController extends Controller
        return response()->json(['call_log_id' => $CallLog->id, 
                          'success' => true,
                          'provider_call_id' => $providerCallId,
-                         'sip_id'       => $api_response['response']['agent_id'] ?? '',
-                        'sip_ip'       => $api_response['response']['domain'] ?? '',
-                        'sip_ws'       => $api_response['response']['websocket'] ?? '',
+                         'sip_id'       => $this->sipValue($api_response, 'agent_id', Auth::user()->smartping_user_id),
+                        'sip_ip'       => $this->sipDomain($api_response),
+                        'sip_ws'       => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
                         'sip_port'     => '7443',
                         'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
                         'call_id'      => $providerCallId,
@@ -425,9 +425,9 @@ class WebRTCController extends Controller
                 'provider_call_id' => $providerCallId,
                 'reference_id' => $referenceId,
                 'success' => true,
-                'sip_id' => $api_response['response']['agent_id'] ?? '',
-                'sip_ip' => $api_response['response']['domain'] ?? '',
-                'sip_ws' => $api_response['response']['websocket'] ?? '',
+                'sip_id' => $this->sipValue($api_response, 'agent_id', Auth::user()->smartping_user_id),
+                'sip_ip' => $this->sipDomain($api_response),
+                'sip_ws' => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
                 'sip_port' => '7443',
                 'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
                 'call_id' => $providerCallId,
@@ -438,6 +438,21 @@ class WebRTCController extends Controller
                 'sip_password' => Auth::user()->smartping_password ?? ''
             ]);
         }
+    // The gateway's value, or the fallback when it sends none (an empty SIP domain breaks the softphone: "missing or invalid host")
+    private function sipValue(?array $api_response, string $key, $fallback): string
+    {
+        $value = trim((string) ($api_response['response'][$key] ?? ''));
+        return $value !== '' ? $value : trim((string) $fallback);
+    }
+
+    // SIP host only: the gateway may send "wss://host:7443" or "host:port"
+    private function sipDomain(?array $api_response): string
+    {
+        $domain = $this->sipValue($api_response, 'domain', config('services.sip.domain'));
+        $domain = preg_replace('#^[a-z]+://#i', '', $domain);
+        return preg_replace('#[:/].*$#', '', $domain);
+    }
+
         public function webrtcdialerCall(array $payload, $Log)
     {
         $payload['record'] = 1;

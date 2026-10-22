@@ -5271,10 +5271,10 @@ function startWebRTCCall() {
 
                 window._softphoneReady.then(function(sp) {
                     sp.initSoftphone({
-                        username:  response.sip_id       || '',
-                        password:  response.sip_password || '',
-                        domain:    response.sip_ip       || '',
-                        websocket: response.sip_ws,
+                        username:  response.sip_id       || (window.__SIP_CONFIG__ || {}).username  || '',
+                        password:  response.sip_password || (window.__SIP_CONFIG__ || {}).password  || '',
+                        domain:    response.sip_ip       || (window.__SIP_CONFIG__ || {}).domain    || '',
+                        websocket: response.sip_ws       || (window.__SIP_CONFIG__ || {}).websocket || '',
                     })
                     .then(function() {
                         return sp.makeSoftphoneCall(mobile, {

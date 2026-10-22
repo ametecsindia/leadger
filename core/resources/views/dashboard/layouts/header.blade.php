@@ -40,8 +40,8 @@ $headerCampaignCount = $headerCampaigns->count();
                 window.__SIP_CONFIG__ = {
                     username : @json(auth()->user()->smartping_user_id),
                     password : @json(auth()->user()->smartping_password),
-                    domain   : @json(env('SIP_DOMAIN',    'voip.ametecsindia.com')),
-                    websocket: @json(env('SIP_WEBSOCKET', 'wss://voip.ametecsindia.com:7443')),
+                    domain   : @json(config('services.sip.domain')),
+                    websocket: @json(config('services.sip.websocket')),
                 };
             </script>
             <script type="module" src="{{ asset('js/webrtc-init.js') }}"></script>

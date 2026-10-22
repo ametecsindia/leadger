@@ -81,4 +81,9 @@ return [
         'inbound_ips' => env('INBOUND_CALLS_WEBHOOK_IPS', ''),
         'incoming_url' => env('TELEPHONY_INCOMING_URL', 'http://obd.ametecsindia.com/admin/incoming_data/'),
     ],
+    // WebRTC softphone: used when the call gateway does not send its own SIP domain / websocket
+    'sip' => [
+        'domain' => env('SIP_DOMAIN', 'voip.ametecsindia.com'),
+        'websocket' => env('SIP_WEBSOCKET', 'wss://voip.ametecsindia.com:7443'),
+    ],
 ];
