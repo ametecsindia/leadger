@@ -80,6 +80,13 @@ return [
         // Inbound Calls: optional comma-separated IP allow-list for the webhook (empty = any IP with the secret)
         'inbound_ips' => env('INBOUND_CALLS_WEBHOOK_IPS', ''),
         'incoming_url' => env('TELEPHONY_INCOMING_URL', 'http://obd.ametecsindia.com/admin/incoming_data/'),
+        // Inbound Calls webhook secret (Secret-Key header or ?secret=); empty = the provider's shared secret above
+        'inbound_secret' => env('INBOUND_CALLS_WEBHOOK_SECRET', ''),
+        // An event for a VMN that is not in Add Voucher is still saved when this app has one company (null = automatic:
+        // no tenants table); with several companies it is kept as "ignored" in inbound_webhook_events
+        'inbound_single_company' => env('INBOUND_CALLS_SINGLE_COMPANY'),
+        // the provider's times carry no timezone: they are in this one (the report's "Today" is also this timezone)
+        'timezone' => env('TELEPHONY_TIMEZONE', 'Asia/Kolkata'),
     ],
     // WebRTC softphone: used when the call gateway does not send its own SIP domain / websocket
     'sip' => [

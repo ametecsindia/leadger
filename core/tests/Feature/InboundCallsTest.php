@@ -30,6 +30,7 @@ class InboundCallsTest extends TestCase
         $this->withoutMiddleware(TelecallerMiddleware::class);   // login-hours check is not under test
         // requests to "localhost" are a tenants-table company on its own connection (outside the test transaction)
         \Illuminate\Support\Facades\URL::forceRootUrl('http://127.0.0.1');
+        config(['services.telephony.inbound_single_company' => false]);   // several companies: another company's VMN is ignored
         $this->today = now()->format('Y-m-d');
 
         DB::table('inbound_calls')->delete();   // rolled back after each test

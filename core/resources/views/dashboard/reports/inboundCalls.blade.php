@@ -48,6 +48,14 @@
 .ic-chooser-sub { font-size:12.5px; color:#64748B; margin:0 0 14px; }
 .ic-chooser-opt { display:flex; align-items:center; gap:8px; width:100%; padding:10px 12px; margin-bottom:8px; border:1px solid #E2E8F0; border-radius:8px; color:#0F172A !important; font-size:13.5px; font-weight:600; text-decoration:none !important; }
 .ic-chooser-opt:hover, .ic-chooser-opt:focus-visible { border-color:var(--lg-accent); background:#EFF6FF; color:var(--lg-accent) !important; outline:none; }
+/* Admins: pipeline status line below the table */
+.ic-pipeline { margin:10px 4px 0; font-size:12px; color:#64748B; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; }
+.ic-pipeline code { font-size:11.5px; color:#475569; background:#F1F5F9; padding:1px 6px; border-radius:4px; word-break:break-all; }
+.ic-pipeline-sep { color:#CBD5E1; }
+.ic-pipeline-err { color:#B45309; }
+.ic-copy-btn { height:24px; padding:0 8px; border:1px solid #CBD5E1; border-radius:6px; background:#fff; color:#475569; font-size:11.5px; font-weight:600; display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
+.ic-copy-btn:hover { border-color:var(--lg-accent); color:var(--lg-accent); }
+.ic-copy-btn:focus-visible { outline:2px solid var(--lg-accent); outline-offset:2px; }
 .ic-chooser-close { margin-top:4px; width:100%; height:34px; border:none; background:transparent; color:#64748B; font-size:13px; font-weight:600; cursor:pointer; }
 </style>
 @endpush
@@ -165,6 +173,21 @@
             </button>
         </div>
     </div>
+
+    @if($pipeline)
+    {{-- Admins: are inbound events arriving? (webhook requests and the provider pull) --}}
+    <div class="ic-pipeline" id="icPipeline">
+        <span>{{ $pipeline['last_event'] ? 'Last inbound event received: ' . $pipeline['last_event'] : 'No inbound events received yet' }}</span>
+        <span class="ic-pipeline-sep">&middot;</span>
+        <span>Provider sync: {{ $pipeline['last_pull'] ?? 'never' }}@if($pipeline['pull_error']) <span class="ic-pipeline-err">({{ \Illuminate\Support\Str::limit($pipeline['pull_error'], 80) }})</span>@endif</span>
+        <span class="ic-pipeline-sep">&middot;</span>
+        <span>Webhook URL: <code id="icWebhookUrl">{{ $pipeline['webhook_url'] }}</code></span>
+        <button type="button" class="ic-copy-btn" id="icCopyWebhook" title="Copy webhook URL" aria-label="Copy webhook URL">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy</span>
+        </button>
+    </div>
+    @endif
 
 </div>
 @endsection
@@ -473,4 +496,31 @@
     initTable();
 })();
 </script>
+@if($pipeline)
+<script>
+(function () {
+    'use strict';
+    var btn = document.getElementById('icCopyWebhook');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var text = document.getElementById('icWebhookUrl').textContent.trim(), label = btn.querySelector('span');
+        function done(ok) { label.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(function () { label.textContent = 'Copy'; }, 1600); }
+        function fallback() {
+            var t = document.createElement('textarea');
+            t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+            document.body.appendChild(t); t.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            document.body.removeChild(t);
+            done(ok);
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+        } else {
+            fallback();
+        }
+    });
+})();
+</script>
+@endif
 @endpush

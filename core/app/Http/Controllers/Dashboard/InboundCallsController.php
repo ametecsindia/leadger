@@ -35,7 +35,33 @@ class InboundCallsController extends Controller
     public function index()
     {
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
-        return view('dashboard.reports.inboundCalls', compact('GeneralWebmasterSections'));
+        $pipeline = $this->pipelineStatus();
+        return view('dashboard.reports.inboundCalls', compact('GeneralWebmasterSections', 'pipeline'));
+    }
+
+    /** Admins only: is anything arriving? Last webhook request, last provider pull, and the webhook URL to give the provider. */
+    private function pipelineStatus(): ?array
+    {
+        if (!in_array((string)optional(Auth::user()->permissionsGroup)->name, ['Super Admin', 'Admin', 'Webmaster'], true)) {
+            return null;
+        }
+        $show = fn ($t) => $t ? Carbon::parse($t, config('app.timezone'))
+            ->setTimezone(config('services.telephony.timezone') ?: config('app.timezone'))->format('d M Y, g:i A') : null;
+        $last = null;
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('inbound_webhook_events')) {
+                $last = \App\Models\InboundWebhookEvent::where('source', 'webhook')->max('received_at');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[InboundCalls] Pipeline status unavailable', ['error' => $e->getMessage()]);
+        }
+        $run = \App\Services\InboundCallPuller::lastRun();
+        return [
+            'last_event' => $show($last),
+            'last_pull' => $run ? $show($run['at']) : null,
+            'pull_error' => $run['error'] ?? $run['skipped'] ?? null,
+            'webhook_url' => route('api.telephony.inboundCall'),
+        ];
     }
 
     /** POST: one page of rows, the total and the three KPI numbers, all from the same filtered query. */

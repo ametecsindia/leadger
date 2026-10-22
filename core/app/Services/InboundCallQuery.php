@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -77,7 +78,7 @@ class InboundCallQuery
             'call_id' => $dash($r->call_id),
             'customer_mobile' => $dash($r->customer_mobile),
             'vmn' => $dash($r->vmn),
-            'start_time' => $r->start_time ? date('d M Y, h:i A', strtotime($r->start_time)) : '-',
+            'start_time' => $r->start_time ? Carbon::parse($r->start_time, config('app.timezone'))->setTimezone(self::reportTimezone())->format('d M Y, h:i A') : '-',
             'agent_number' => $dash($r->agent_number),
             // the agent who answered; "-" for a missed call or a number of no known user
             'agent_name' => $r->status === 'answered' ? $dash($r->agent_name) : '-',
@@ -85,6 +86,17 @@ class InboundCallQuery
     }
 
     /* ------------------------------------------------------------------ */
+
+    /** The dates people pick are days in India time (Asia/Kolkata); times are stored in the app timezone. */
+    private static function reportTimezone(): string
+    {
+        return config('services.telephony.timezone') ?: config('app.timezone');
+    }
+
+    private static function stored(string $localTime): string
+    {
+        return Carbon::parse($localTime, self::reportTimezone())->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+    }
 
     private function sorted(string $sort, string $dir)
     {
@@ -102,7 +114,7 @@ class InboundCallQuery
     {
         $q = DB::table('inbound_calls')
             ->leftJoin('users', 'users.id', '=', 'inbound_calls.agent_user_id')
-            ->whereBetween('inbound_calls.start_time', [$this->f['from'] . ' 00:00:00', $this->f['to'] . ' 23:59:59']);
+            ->whereBetween('inbound_calls.start_time', [self::stored($this->f['from'] . ' 00:00:00'), self::stored($this->f['to'] . ' 23:59:59')]);
         $this->scope($q);
 
         $s = $this->f['search'];

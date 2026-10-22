@@ -34,21 +34,63 @@ class InboundCallService
         if ($e['call_id'] === '') {
             return ['result' => 'invalid', 'call' => null, 'message' => 'call_id is required'];
         }
-        // a later event of a saved call may leave out the VMN; a new call must come to a VMN of this company
-        $known = $e['vmn'] === '' && InboundCall::where('call_id', $e['call_id'])->exists();
-        if (!$known && ($e['vmn'] === '' || !$this->isCompanyVmn($e['vmn']))) {
-            Log::info('[InboundCalls] Event ignored: the VMN does not belong to this company', [
-                'call_id' => $e['call_id'], 'vmn' => $e['vmn'], 'source' => $source,
-            ]);
-            return ['result' => 'ignored', 'call' => null, 'message' => 'Unknown VMN'];
+
+        // A new call should come to a VMN of this company (Add Voucher / Smart31 numbers). One that does not is still
+        // saved when it was pulled for this company's CRM id, or when the app has only one company; otherwise it is
+        // refused, and the caller keeps the event as "ignored" so the mapping can be fixed and the event re-processed.
+        $unmapped = null;
+        if (!$this->isCompanyVmn($e['vmn']) && !InboundCall::where('call_id', $e['call_id'])->exists()) {
+            $unmapped = $e['vmn'] !== '' ? $e['vmn'] : '(none)';
+            if ($source !== 'pull' && !self::singleCompany()) {
+                Log::warning('[InboundCalls] Inbound call for an unmapped VMN: ' . $unmapped, ['call_id' => $e['call_id'], 'source' => $source]);
+                return ['result' => 'ignored', 'call' => null, 'message' => 'Unmapped VMN: ' . $unmapped];
+            }
         }
 
         try {
-            return $this->upsert($e, $payload, $source);
+            $r = $this->upsert($e, $payload, $source);
         } catch (UniqueConstraintViolationException $ex) {
             // the same call_id arrived twice at the same moment: the other request created it, update that row
-            return $this->upsert($e, $payload, $source);
+            $r = $this->upsert($e, $payload, $source);
         }
+        if ($unmapped !== null) {
+            if ($r['result'] === 'created') {
+                Log::warning('[InboundCalls] Inbound call for an unmapped VMN: ' . $unmapped . ' (saved; add the number in Add Voucher)',
+                    ['call_id' => $e['call_id'], 'source' => $source]);
+            }
+            $r['message'] = 'Saved; unmapped VMN: ' . $unmapped;
+        }
+        return $r;
+    }
+
+    /** One company in this installation (no tenants table), unless INBOUND_CALLS_SINGLE_COMPANY says otherwise. */
+    public static function singleCompany(): bool
+    {
+        $set = config('services.telephony.inbound_single_company');
+        if ($set !== null && $set !== '') {
+            return filter_var($set, FILTER_VALIDATE_BOOLEAN);
+        }
+        static $single = null;
+        return $single ??= !Schema::connection('mysql')->hasTable('tenants');
+    }
+
+    /** A webhook body as a list of events: one event, a batch, or a batch wrapped in data / events / calls / records. */
+    public static function events($body): array
+    {
+        if (!is_array($body) || !$body) {
+            return [];
+        }
+        if (array_is_list($body)) {
+            return array_values(array_filter($body, 'is_array'));
+        }
+        if (self::extract($body)['call_id'] === '') {
+            foreach (['data', 'events', 'calls', 'records', 'payload'] as $k) {
+                $v = $body[$k] ?? null;
+                if (is_string($v)) $v = json_decode($v, true);
+                if (is_array($v) && $v) return self::events($v);
+            }
+        }
+        return [$body];
     }
 
     private function upsert(array $e, array $payload, string $source): array
@@ -164,6 +206,7 @@ class InboundCallService
     /** VMNs of this company: Add Voucher numbers (obd_did) and the Smart31 / 1600 pool. */
     public function isCompanyVmn(string $vmn): bool
     {
+        if (self::normalizeMobile($vmn) === '') return false;
         if ($this->companyVmns === null) {
             $numbers = DB::table('obd_did')->pluck('virtual_number');
             if (Schema::hasTable('smart31_vmn_numbers')) {
@@ -177,22 +220,30 @@ class InboundCallService
     /** The provider's field names (webhook events and the incoming_data pull) in one shape. */
     public static function extract(array $p): array
     {
-        $get = function (array $keys) use ($p) {
+        $values = [];   // field names in any letter case (CALL_ID, CallId, call_id)
+        foreach ($p as $k => $v) {
+            if (is_string($k) && !is_array($v) && trim((string)$v) !== '') $values[strtolower($k)] ??= trim((string)$v);
+        }
+        $get = function (array $keys) use ($values) {
             foreach ($keys as $k) {
-                if (isset($p[$k]) && !is_array($p[$k]) && trim((string)$p[$k]) !== '') return trim((string)$p[$k]);
+                if (isset($values[$k])) return $values[$k];
             }
             return '';
         };
-        $duration = $get(['duration', 'DURATION', 'talk_time', 'bill_sec', 'billsec', 'call_duration']);
-        $event = strtolower($get(['event', 'EVENT', 'event_type', 'status', 'call_status', 'a_dial_status', 'A_DIAL_STATUS', 'dial_status']));
+        $duration = $get(['duration', 'talk_time', 'talktime', 'bill_sec', 'billsec', 'call_duration', 'conversation_duration']);
+        $event = strtolower($get(['event', 'event_type', 'status', 'call_status', 'callstatus', 'a_dial_status', 'dial_status']));
 
         return [
-            'call_id' => mb_substr($get(['call_id', 'CALL_ID', 'CallId', 'callid', 'uniqueid', 'unique_id', 'uuid']), 0, 100),
-            'customer_mobile' => mb_substr($get(['cli', 'CLI', 'caller', 'caller_number', 'customer_number', 'customer_mobile', 'from']), 0, 30),
-            'vmn' => mb_substr($get(['dni', 'DNI', 'vmn', 'VMN', 'did', 'called_number', 'to']), 0, 30),
-            'agent_number' => mb_substr($get(['a_party_no', 'A_PARTY_NO', 'agent_number', 'answered_by']), 0, 30),
-            'start_time' => self::time($get(['a_start_time', 'A_START_TIME', 'start_time', 'call_start', 'answer_time'])),
-            'end_time' => self::time($get(['a_end_time', 'A_END_TIME', 'end_time', 'call_end'])),
+            'call_id' => mb_substr($get(['call_id', 'callid', 'call_sid', 'callsid', 'uniqueid', 'unique_id', 'unique_call_id', 'call_uuid', 'uuid']), 0, 100),
+            'customer_mobile' => mb_substr($get(['cli', 'caller', 'caller_number', 'caller_id', 'callerid', 'caller_no', 'customer_number',
+                'customer_mobile', 'from', 'from_number', 'callfrom', 'msisdn']), 0, 30),
+            'vmn' => mb_substr($get(['dni', 'dnis', 'vmn', 'did', 'did_number', 'virtual_number', 'called_number', 'called', 'dialed_number',
+                'to', 'to_number', 'callto']), 0, 30),
+            'agent_number' => mb_substr($get(['a_party_no', 'agent_number', 'agent_no', 'answered_by', 'answered_number', 'agent',
+                'destination', 'dialwhomnumber', 'connected_to']), 0, 30),
+            'start_time' => self::time($get(['a_start_time', 'start_time', 'call_start', 'call_start_time', 'starttime', 'call_time',
+                'date_time', 'timestamp', 'answer_time', 'created_at'])),
+            'end_time' => self::time($get(['a_end_time', 'end_time', 'call_end', 'call_end_time', 'endtime', 'hangup_time'])),
             'duration' => $duration === '' ? null : \App\Helpers\Helper::durationToSeconds($duration),
             'status' => self::status($event),
             'ended' => (bool)preg_match('/end|hangup|complete|disconnect/', $event),
@@ -209,14 +260,30 @@ class InboundCallService
         return null;
     }
 
-    /** A provider time (text in the app timezone unless it carries an offset, or a Unix timestamp) in the app timezone. */
-    private static function time(string $v): ?Carbon
+    /**
+     * A provider time in the app timezone. Text without an offset is in the provider's timezone (Asia/Kolkata);
+     * accepted: 2026-10-22 17:12:00, ISO 8601, 22-10-2026 17:12 / 22/10/2026 (day first), 14 digits (YmdHis or the
+     * provider's dmYHis), and Unix seconds / milliseconds.
+     */
+    public static function time(string $v): ?Carbon
     {
         if ($v === '' || str_starts_with($v, '0000')) return null;
+        $tz = config('services.telephony.timezone') ?: config('app.timezone');
         try {
-            $tz = config('app.timezone');
-            $t = ctype_digit($v) ? Carbon::createFromTimestamp((int)(strlen($v) > 10 ? intdiv((int)$v, 1000) : $v)) : Carbon::parse($v, $tz);
-            return $t->setTimezone($tz);
+            if (ctype_digit($v)) {
+                $t = match (strlen($v)) {
+                    10 => Carbon::createFromTimestamp((int)$v),
+                    13 => Carbon::createFromTimestampMs((int)$v),
+                    14 => checkdate((int)substr($v, 4, 2), (int)substr($v, 6, 2), (int)substr($v, 0, 4))
+                        ? Carbon::createFromFormat('!YmdHis', $v, $tz) : Carbon::createFromFormat('!dmYHis', $v, $tz),
+                    default => null,
+                };
+            } elseif (preg_match('#^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(.*)$#', $v, $m)) {
+                $t = Carbon::parse(sprintf('%s-%02d-%02d%s', $m[3], $m[2], $m[1], $m[4]), $tz);
+            } else {
+                $t = Carbon::parse($v, $tz);
+            }
+            return $t ? $t->setTimezone(config('app.timezone')) : null;
         } catch (\Throwable $e) {
             return null;
         }
