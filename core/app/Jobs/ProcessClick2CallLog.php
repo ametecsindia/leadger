@@ -51,7 +51,7 @@ class ProcessClick2CallLog implements ShouldQueue
                 return;
             }
 
-            $response = @file_get_contents("http://obd.ametecsindia.com/admin/click2call_data/{$log->lead_id}_M{$log->id}_{$full_response['data']['crm_id']}_{$log->created_by}_{$log->verified}/{$log->vmn_used}", false, $context);
+            $response = @file_get_contents("https://obd.ametecsindia.com/admin/click2call_data/{$log->lead_id}_M{$log->id}_{$full_response['data']['crm_id']}_{$log->created_by}_{$log->verified}/{$log->vmn_used}", false, $context);
             $response = json_decode($response);
 
             if (empty($response) || $response->status != 200) {

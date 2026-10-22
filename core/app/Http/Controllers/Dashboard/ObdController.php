@@ -694,7 +694,7 @@ where obd_campaign_id = $id
 
         try{
             $context = stream_context_create($opts);
-            $response = @file_get_contents('http://obd.ametecsindia.com/admin/obd_data/'.$id,false,$context);
+            $response = @file_get_contents('https://obd.ametecsindia.com/admin/obd_data/'.$id,false,$context);
             $response = json_decode($response);
         }
         catch(Exception $e)

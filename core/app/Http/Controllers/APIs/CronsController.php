@@ -291,7 +291,7 @@ ORDER BY sales_person_id");
         {
             try{
                 $context = stream_context_create($opts);
-                $response = file_get_contents('http://obd.ametecsindia.com/admin/click2call_data/'.$log->lead_id.'_M'.$log->id.'_'.$full_response['data']['crm_id'].'_'.$log->created_by.'_'.$log->verified.'/'.$log->vmn_used,false,$context);
+                $response = file_get_contents('https://obd.ametecsindia.com/admin/click2call_data/'.$log->lead_id.'_M'.$log->id.'_'.$full_response['data']['crm_id'].'_'.$log->created_by.'_'.$log->verified.'/'.$log->vmn_used,false,$context);
                 $response = json_decode($response);
             }
             catch(Exception $e)
@@ -357,7 +357,7 @@ ORDER BY sales_person_id");
             $json = json_encode($fields);
             $ch = curl_init();
 
-            curl_setopt($ch, CURLOPT_URL,"http://obd.ametecsindia.com/admin/incoming_data/");
+            curl_setopt($ch, CURLOPT_URL,"https://obd.ametecsindia.com/admin/incoming_data/");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
@@ -441,7 +441,7 @@ ORDER BY sales_person_id");
         {
             try{
                 $context = stream_context_create($opts);
-                $response = file_get_contents('http://obd.ametecsindia.com/admin/click2call_data/'.$log->uuid.'/'.$log->vmn_used,false,$context);
+                $response = file_get_contents('https://obd.ametecsindia.com/admin/click2call_data/'.$log->uuid.'/'.$log->vmn_used,false,$context);
                 $response = json_decode($response);
             }
             catch(Exception $e)
@@ -841,7 +841,7 @@ public function fetchIncomingVmnLogs()
     $json = json_encode($fields);
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://obd.ametecsindia.com/admin/incoming_data/");
+    curl_setopt($ch, CURLOPT_URL, "https://obd.ametecsindia.com/admin/incoming_data/");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $json);

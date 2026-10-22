@@ -76,10 +76,11 @@ return [
     ],
     'telephony' => [
         // the provider's shared Secret-Key (same value as the recording webhook and the incoming_data pull)
+        // provider URLs must be https: http answers 301, which turns a POST into a GET without the Secret-Key (401)
         'secret' => env('TELEPHONY_WEBHOOK_SECRET', 'ffcab6c009f568588842b54f15de6efb'),
         // Inbound Calls: optional comma-separated IP allow-list for the webhook (empty = any IP with the secret)
         'inbound_ips' => env('INBOUND_CALLS_WEBHOOK_IPS', ''),
-        'incoming_url' => env('TELEPHONY_INCOMING_URL', 'http://obd.ametecsindia.com/admin/incoming_data/'),
+        'incoming_url' => env('TELEPHONY_INCOMING_URL', 'https://obd.ametecsindia.com/admin/incoming_data/'),
         // Inbound Calls webhook secret (Secret-Key header or ?secret=); empty = the provider's shared secret above
         'inbound_secret' => env('INBOUND_CALLS_WEBHOOK_SECRET', ''),
         // An event for a VMN that is not in Add Voucher is still saved when this app has one company (null = automatic:
