@@ -54,19 +54,12 @@ return new class extends Migration
         if (Schema::getColumnType('tenants', 'db_password') !== 'text') {
             Schema::table('tenants', fn (Blueprint $t) => $t->text('db_password')->nullable()->change());
         }
-
-        foreach (DB::table('tenants')->get(['id', 'db_password']) as $row) {
-            if ($row->db_password === null || $row->db_password === '') continue;
-            try {
-                Crypt::decryptString($row->db_password);   // already encrypted
-            } catch (\Throwable $e) {
-                DB::table('tenants')->where('id', $row->id)->update(['db_password' => Crypt::encryptString($row->db_password)]);
-            }
-        }
+        // Existing passwords are NOT rewritten here: other servers / scripts may still read this table in plain text.
+        // Encrypt them on purpose with: php artisan tenants:encrypt-passwords (App\Models\TenantSetup reads both).
     }
 
     public function down(): void
     {
-        // the companies list is never dropped by a rollback; passwords stay encrypted
+        // the companies list is never dropped by a rollback
     }
 };
