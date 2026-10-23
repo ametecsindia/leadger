@@ -91,7 +91,7 @@ return [
     ],
     // WebRTC agents (App\Services\SmartPingAgent): the company account at SmartPing for add-agent
     'smartping' => [
-        'url' => env('SMARTPING_URL', 'https://smartcloud.smartping.io'),
+        'url' => env('SMARTPING_URL', 'https://sip.telozar.com'),   // add-agent lives on sip.telozar.com (smartcloud.smartping.io: "account does not exist")
         'company_id' => env('SMARTPING_COMPANY_ID', 'ametecs'),
     ],
     // WebRTC softphone: used when the call gateway does not send its own SIP domain / websocket

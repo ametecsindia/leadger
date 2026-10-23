@@ -749,7 +749,7 @@ class WebRTCController extends Controller
             ];
 
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://smartcloud.smartping.io/api/add-agent');
+            curl_setopt($ch, CURLOPT_URL, rtrim(config('services.smartping.url'), '/') . '/api/add-agent');   // sip.telozar.com
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
