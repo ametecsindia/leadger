@@ -133,6 +133,30 @@ class WebRTCCallResultTest extends TestCase
             'no call row, nothing sent to the gateway');
     }
 
+    public function test_smartping_agents_are_created_with_the_configured_company_and_errors_are_explained()
+    {
+        config(['services.smartping.company_id' => 'acme-co']);
+        $user = User::factory()->make(['name' => 'Agent Test', 'mobile' => '+91 91549 36351', 'smartping_user_id' => null]);
+        $user->forceFill(['email' => uniqid('agent', true) . '@example.test', 'password' => bcrypt('x')])->save();
+
+        \Illuminate\Support\Facades\Http::fake(['*/api/add-agent' => \Illuminate\Support\Facades\Http::sequence()
+            ->push(['error' => 'SQLSTATE[45000]: <<Unknown error>>: 1644 Error: account does not exist'], 422)
+            ->push(['user_id' => 'AG-501', 'password' => 'sip-secret'], 200)]);
+
+        $refused = \App\Services\SmartPingAgent::create($user);
+        $this->assertFalse($refused['ok']);
+        $this->assertSame('SmartPing: account does not exist (HTTP 422)', $refused['message']);
+
+        $created = \App\Services\SmartPingAgent::create($user->fresh());
+        $this->assertTrue($created['ok']);
+        $this->assertSame('AG-501', $user->fresh()->smartping_user_id);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['company_id'] === 'acme-co' && $r['mobile_number'] === '9154936351'
+            && $r['password'] !== 'x' && strlen($r['password']) >= 14);
+
+        $user->forceFill(['mobile' => null, 'smartping_user_id' => null])->save();
+        $this->assertSame('the user has no valid 10-digit mobile number', \App\Services\SmartPingAgent::create($user->fresh())['message']);
+    }
+
     public function test_gateway_fields_are_read_at_any_level_and_the_call_id_is_never_a_message_text()
     {
         $field = fn ($wrapper, $key) => WebRTCController::gatewayField($wrapper, $key);

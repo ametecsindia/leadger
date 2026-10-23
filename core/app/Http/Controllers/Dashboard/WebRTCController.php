@@ -490,7 +490,7 @@ class WebRTCController extends Controller
             return null;
         }
         return response()->json(['success' => false, 'reason' => 'no_agent',
-            'message' => 'Your user has no WebRTC agent ID yet. Open People > Users, edit your user, enter the mobile number and a password, and Save - then try again.'], 422);
+            'message' => 'Your user has no WebRTC agent yet, so the provider refuses WebRTC calls. Ask your administrator to set up your WebRTC agent (php artisan webrtc:agents).'], 422);
     }
 
     /** 10-digit Indian number from any format (+91 98..., 098..., 91-98...), or null when it is not one. */
@@ -737,7 +737,7 @@ class WebRTCController extends Controller
         $name = $user->first_name . " " . $user->last_name;
         $mobile = $user->contact_number;
         $password = $user->password; // ?? careful: this is hashed. You may need a plain password field if API requires plain text
-        $companyId = "ametec";
+        $companyId = config('services.smartping.company_id');
         $email = $user->email;
 
         try {

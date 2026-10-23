@@ -89,6 +89,11 @@ return [
         // the provider's times carry no timezone: they are in this one (the report's "Today" is also this timezone)
         'timezone' => env('TELEPHONY_TIMEZONE', 'Asia/Kolkata'),
     ],
+    // WebRTC agents (App\Services\SmartPingAgent): the company account at SmartPing for add-agent
+    'smartping' => [
+        'url' => env('SMARTPING_URL', 'https://smartcloud.smartping.io'),
+        'company_id' => env('SMARTPING_COMPANY_ID', 'ametecs'),
+    ],
     // WebRTC softphone: used when the call gateway does not send its own SIP domain / websocket
     'sip' => [
         'domain' => env('SIP_DOMAIN', 'voip.ametecsindia.com'),

@@ -244,7 +244,7 @@ class UsersController extends Controller
        
             try {
                 $email=$request->email;
-                $companyId='ametecs';
+                $companyId = config('services.smartping.company_id');
                 $postData = [
                     'full_name' => $request->name,
                     'mobile_number' => $request->mobile,
@@ -407,7 +407,7 @@ class UsersController extends Controller
             $name=$request->name;
             $mobile=$request->mobile;
             $password=$request->password;
-            $companyId="ametec";
+            $companyId = config('services.smartping.company_id');
             $email=$request->email;
             try {
                 $postData = [
