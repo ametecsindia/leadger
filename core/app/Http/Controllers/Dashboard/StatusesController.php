@@ -25,7 +25,7 @@ class StatusesController extends Controller
         $this->middleware('auth');
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
         $this->middleware('lg.permission:add')->only(['create', 'store', 'ajaxStoreSubstatus']);
-        $this->middleware('lg.permission:edit')->only(['edit', 'update', 'ajaxToggleFollowup']);
+        $this->middleware('lg.permission:edit')->only(['edit', 'update', 'ajaxToggleFollowup', 'ajaxToggleConnected']);
         $this->middleware('lg.permission:delete')->only(['ajaxDeleteSubstatus']);
     }
 
@@ -290,6 +290,18 @@ class StatusesController extends Controller
             return response()->json(['success' => true, 'message' => 'Sub-disposition removed.']);
         }
         return response()->json(['success' => false, 'message' => 'Sub-disposition not found.'], 404);
+    }
+
+    /** "Only after a connected call": the status cannot be saved for a call that did not connect. */
+    public function ajaxToggleConnected(Request $request)
+    {
+        $status = Status::find($request->status_id);
+        if (!$status) {
+            return response()->json(['success' => false, 'message' => 'Status not found.'], 404);
+        }
+        $status->needs_connected_call = $request->boolean('needs_connected_call');
+        $status->save();
+        return response()->json(['success' => true, 'message' => 'Connected-call requirement updated.']);
     }
 
     public function ajaxToggleFollowup(Request $request)

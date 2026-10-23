@@ -557,8 +557,6 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
                         <th style="text-align: right;">Connected</th>
                         <th style="text-align: right;">Talk Time</th>
                         <th style="text-align: right;">Follow-Ups</th>
-                        <th style="text-align: right;">Won</th>
-                        <th style="text-align: right;">Idle</th>
                         <th style="text-align: right; padding-right: 20px;">Action</th>
                     </tr>
                 </thead>
@@ -569,7 +567,7 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
 
         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid #E2E8F0; background: #F8FAFC; padding: 12px 20px; font-size: 12px; color: #64748B;">
             <span id="rowCount"></span>
-            <span>Live status, current lead and idle time stream directly from the SIP dialer engine.</span>
+            <span>Live status and current lead stream directly from the SIP dialer engine.</span>
         </div>
     </section>
 
@@ -623,8 +621,6 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
         <td class="tnum" style="text-align: right;">${conn} <span style="font-size: 12px; color: #64748B;">(${rate}%)</span></td>
         <td class="tnum" style="text-align: right;">${fmtDur(talk)}</td>
         <td class="tnum" style="text-align: right; ${fu >= 6 ? 'font-weight: 600; color: #B45309;' : ''}">${fu}</td>
-        <td class="tnum" style="text-align: right; ${won ? 'font-weight: 600; color: #047857;' : 'color: #64748B;'}">${won}</td>
-        <td class="tnum" style="text-align: right; ${idle >= 1800 ? 'font-weight: 600; color: #B91C1C;' : 'color: #64748B;'}">${off ? '—' : fmtDur(idle)}</td>
         <td style="text-align: right; padding-right: 20px;">
           ${s === 'call'
             ? '<button onclick="alert(\'Listening into active call...\')" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; border-radius: 6px; border: 1px solid #E2E8F0; background: #FFFFFF; padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--lg-accent); cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z"/></svg>Listen</button>'

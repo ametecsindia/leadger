@@ -426,6 +426,7 @@ Route::post('/statuses/{id}/update', [StatusesController::class, 'update'])->nam
 Route::post('/statuses/substatus/store', [StatusesController::class, 'ajaxStoreSubstatus'])->name('statusesSubstatusStore');
 Route::post('/statuses/substatus/delete', [StatusesController::class, 'ajaxDeleteSubstatus'])->name('statusesSubstatusDelete');
 Route::post('/statuses/toggle-followup', [StatusesController::class, 'ajaxToggleFollowup'])->name('statusesToggleFollowup');
+Route::post('/statuses/toggle-connected', [StatusesController::class, 'ajaxToggleConnected'])->name('statusesToggleConnected');
 
 
 // Substatuses

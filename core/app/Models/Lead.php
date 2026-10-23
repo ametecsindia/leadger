@@ -27,6 +27,21 @@ class Lead extends Model
     }
 
     /**
+     * Statuses with "Only after a connected call" ticked in Disposition Settings cannot be saved for a call that
+     * did not connect (no answer time and no talk time). Returns the error message, or null when the save may go on.
+     */
+    public static function connectedCallError($statusId, $call): ?string
+    {
+        $status = empty($statusId) ? null : Status::find($statusId);
+        if (!$status || empty($status->needs_connected_call)) {
+            return null;
+        }
+        $connected = $call && (!empty($call->answer_time) || (int)$call->duration > 0 || (int)($call->time_taken ?? 0) > 0
+            || in_array($call->call_state, ['answered', 'connected'], true));
+        return $connected ? null : "{$status->name} can only be saved after a connected call.";
+    }
+
+    /**
      * Schedule (or move) this lead's follow-up. One follow-up per lead: resubmitting updates it, never duplicates.
      * Also keeps one calendar event per lead + agent, as the dialer's quick follow-up already did.
      */

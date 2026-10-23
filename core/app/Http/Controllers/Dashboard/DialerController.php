@@ -59,8 +59,13 @@ class DialerController extends Controller
         $vmnList = \App\Services\VmnService::listFor($User, 'click2call');
         $wvmnList = \App\Services\VmnService::listFor($User, 'webrtc');
 
-        // Fetch all leads for manual dialer drawer
-        $allLeads = \App\Models\Lead::limit(50)->orderBy('id', 'desc')->get();
+        // Manual dialer drawer: the newest leads this user may see (all for admins / managers; otherwise their own,
+        // assigned to them, or public)
+        $allLeads = \App\Models\Lead::query()
+            ->when(!in_array((string)optional($User->permissionsGroup)->name, ['Super Admin', 'Admin', 'Webmaster', 'Manager', 'Team Leader'], true),
+                fn ($q) => $q->where(fn ($w) => $w->where('assigned_to', $User->id)->orWhere('sales_person_id', $User->id)
+                    ->orWhere('created_by', $User->id)->orWhere('is_public', 1)))
+            ->limit(50)->orderBy('id', 'desc')->get();
         foreach ($allLeads as $aLead) {
             $parts = explode(' ', trim($aLead->name ?: 'Lead'));
             $aLead->initials = count($parts) >= 2 ? strtoupper(substr($parts[0], 0, 1) . substr($parts[1], 0, 1)) : strtoupper(substr($aLead->name ?: 'LD', 0, 2));
@@ -74,9 +79,11 @@ class DialerController extends Controller
         }
 
         // Default campaign & lead data for Tab 1 if requested/needed
+        // No lead is preselected here: the Campaign tab opens a lead once a campaign is chosen, and the Manual Dial
+        // number starts empty (a "first lead of the database" showed another agent's / a random customer's number)
         $firstCampaign = $Campaigns->first();
         $campaignId = $firstCampaign ? $firstCampaign->id : 1;
-        $Lead = \App\Models\Lead::where('campaign_id', $campaignId)->first() ?? \App\Models\Lead::first();
+        $Lead = null;
         
         $campaignLeads = collect([]);
         $callLogs = collect([]);
@@ -485,6 +492,26 @@ class DialerController extends Controller
         [$followAt, $followError] = $this->followupFromRequest($request, \App\Models\Lead::statusRequiresFollowup($request->status_id));
         if ($followError) {
             return response()->json(['success' => false, 'message' => $followError], 422);
+        }
+
+        // "Only after a connected call" statuses: the call being saved (same lookup as below) must have connected
+        if (\App\Models\Status::where('id', $request->status_id)->value('needs_connected_call')) {
+            $call = null;
+            if (!empty($request->id)) {
+                $call = (string)$request->input('is_campaign') === '1' ? null : DialerLog::find($request->id);
+                $call = $call ?: \App\Models\CallLog::find($request->id);
+            }
+            if (!$call && !empty($request->uuid)) {
+                $call = DialerLog::where('uuid', 'like', $request->uuid . '%')->orderBy('id', 'desc')->first();
+            }
+            if (!$call) {
+                $phone = $this->normalizePhone($request->mobile);
+                $call = DialerLog::where('created_by', Auth::id())->whereIn('phone_number', array_filter([$phone, $request->mobile]))
+                    ->where('created_at', '>=', Carbon::now()->subHours(2))->orderBy('id', 'desc')->first();
+            }
+            if ($error = \App\Models\Lead::connectedCallError($request->status_id, $call)) {
+                return response()->json(['success' => false, 'message' => $error], 422);
+            }
         }
 
         try {

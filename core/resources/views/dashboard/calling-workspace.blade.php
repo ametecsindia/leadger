@@ -2197,14 +2197,15 @@
                         <select id="camp_status_id" class="cw-select">
                             <option value="">Select Status</option>
                             @foreach($lgOutcomeStatuses as $st)
-                                <option value="{{ $st->id }}">{{ $st->name }}</option>
+                                {{-- data-followup: "Requires follow-up date" in Lead Status settings --}}
+                                <option value="{{ $st->id }}" data-followup="{{ (int)($st->lead_pool ?? 0) === 1 ? 1 : 0 }}">{{ $st->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <!-- Substatus Dropdown -->
                     <div class="cw-field-group">
-                        <label class="cw-label" for="camp_substatus_id">Substatus *</label>
+                        <label class="cw-label" for="camp_substatus_id">Substatus</label>
                         <select id="camp_substatus_id" class="cw-select" disabled>
                             <option value="">Select a status first</option>
                         </select>
@@ -2572,7 +2573,7 @@
 
                     <!-- Substatus Dropdown -->
                     <div class="cw-field-group" style="margin-bottom: 0;">
-                        <label class="cw-label" for="manual_substatus_id" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Substatus *</label>
+                        <label class="cw-label" for="manual_substatus_id" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Substatus</label>
                         <select id="manual_substatus_id" class="cw-select" style="width: 100%; height: 42px; border-radius: 8px; font-size: 13.5px;" disabled>
                             <option value="">Select a status first</option>
                         </select>
@@ -3727,6 +3728,12 @@ function saveCampaignOutcome() {
         $('#camp_substatus_id').focus();
         return;
     }
+    // a status with "Requires follow-up date" needs the date before saving (the server checks it too)
+    if (String($('#camp_status_id option:selected').data('followup')) === '1' && !followupDate) {
+        toastr.error($('#camp_status_id option:selected').text() + ' requires a follow-up date and time.');
+        $('#camp_followup_date').focus();
+        return;
+    }
 
     const $btn = $('#btn-save-outcome');
     const originalBtnHtml = $btn.html();
@@ -3868,9 +3875,9 @@ function lgFillSubstatus($sub, statusId, preselect) {
     if ($.fn.select2 && $sub.hasClass('select2-hidden-accessible')) $sub.trigger('change.select2');
 }
 
-/** True when the status has substatuses, i.e. a substatus must be chosen. */
+/** Substatus is optional (testing feedback, Oct 2026): a status can be saved without one. */
 function lgSubstatusRequired(statusId) {
-    return !!(statusId && (window.lgStatusSubs[statusId] || []).length);
+    return false;
 }
 
 /** Highlight the Call Status button that matches the Status dropdown (none when there is no match). */

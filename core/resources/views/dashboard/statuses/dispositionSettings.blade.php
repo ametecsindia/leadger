@@ -346,6 +346,10 @@
                                 <input type="checkbox" class="js-followup-toggle" data-status-id="{{ $status->id }}" {{ $status->lead_pool == 1 ? 'checked' : '' }}>
                                 <span>Requires follow-up date</span>
                             </label>
+                            <label class="lg-checkbox-label" title="This status cannot be saved for a call that did not connect">
+                                <input type="checkbox" class="js-connected-toggle" data-status-id="{{ $status->id }}" {{ !empty($status->needs_connected_call) ? 'checked' : '' }}>
+                                <span>Only after a connected call</span>
+                            </label>
                         </div>
 
                         <!-- Sub-dispositions Chips -->
@@ -401,6 +405,25 @@ $(document.body).on('change', '.js-followup-toggle', function() {
             alert('Failed to update follow-up setting.');
             $checkbox.prop('checked', !isChecked);
         }
+    });
+});
+
+$(document.body).on('change', '.js-connected-toggle', function() {
+    var $checkbox = $(this);
+    var isChecked = $checkbox.is(':checked') ? 1 : 0;
+
+    $.post("{{ route('statusesToggleConnected') }}", {
+        _token: "{{ csrf_token() }}",
+        status_id: $checkbox.data('status-id'),
+        needs_connected_call: isChecked
+    }).done(function(response) {
+        if (!response.success) {
+            alert(response.message || 'Error updating connected-call setting');
+            $checkbox.prop('checked', !isChecked);
+        }
+    }).fail(function() {
+        alert('Failed to update connected-call setting.');
+        $checkbox.prop('checked', !isChecked);
     });
 });
 

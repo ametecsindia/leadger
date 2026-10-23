@@ -1957,7 +1957,10 @@ WHERE campaign_id = '".$orgCampaign->id."'
             $Lead = null;   // a lead of another campaign: open this campaign's first lead instead
         }
         if (empty($Lead)) {
-            $Lead = Lead::where('campaign_id', $campaignId)->first();
+            // the first lead of this campaign that this user may open (not another agent's lead)
+            $allowed = self::getAllowedCampaignsForUser($User);
+            $Lead = Lead::where('campaign_id', $campaignId)->orderBy('id')->get()
+                ->first(fn ($l) => self::canOpenCampaignLead($User, $l, $campaignId, $allowed));
         }
 
         // Fetch leads for the Next Leads sidebar queue with active lead at the top
@@ -2089,7 +2092,13 @@ WHERE campaign_id = '".$orgCampaign->id."'
         $vmnList = \App\Services\VmnService::listFor($User, 'click2call');
         $wvmnList = \App\Services\VmnService::listFor($User, 'webrtc');
 
-        $allLeads = Lead::limit(50)->orderBy('id', 'desc')->get();
+        // Manual dialer drawer: the newest leads this user may see (all for admins / managers; otherwise their own,
+        // assigned to them, or public)
+        $allLeads = Lead::query()
+            ->when(!in_array((string)optional($User->permissionsGroup)->name, ['Super Admin', 'Admin', 'Webmaster', 'Manager', 'Team Leader'], true),
+                fn ($q) => $q->where(fn ($w) => $w->where('assigned_to', $User->id)->orWhere('sales_person_id', $User->id)
+                    ->orWhere('created_by', $User->id)->orWhere('is_public', 1)))
+            ->limit(50)->orderBy('id', 'desc')->get();
         foreach ($allLeads as $aLead) {
             $parts = explode(' ', trim($aLead->name ?: 'Lead'));
             $aLead->initials = count($parts) >= 2 ? strtoupper(substr($parts[0], 0, 1) . substr($parts[1], 0, 1)) : strtoupper(substr($aLead->name ?: 'LD', 0, 2));
@@ -2330,6 +2339,16 @@ WHERE campaign_id = '".$orgCampaign->id."'
         } elseif (Lead::statusRequiresFollowup($statusId)) {
             $name = \App\Models\Status::where('id', $statusId)->value('name') ?: 'This status';
             return response()->json(['success' => false, 'message' => "{$name} requires a follow-up date and time."], 422);
+        }
+
+        // "Only after a connected call" statuses: this lead's call (same lookup as below) must have connected
+        if ($statusId && \App\Models\Status::where('id', $statusId)->value('needs_connected_call')) {
+            $call = $request->filled('call_log_id') ? \App\Models\CallLog::find($request->input('call_log_id')) : null;
+            $call = $call ?: \App\Models\CallLog::where('lead_id', $Lead->id)->where('created_by', Auth::id() ?: 1)
+                ->where('created_at', '>=', \Carbon\Carbon::now()->subHours(24))->orderBy('id', 'desc')->first();
+            if ($error = Lead::connectedCallError($statusId, $call)) {
+                return response()->json(['success' => false, 'message' => $error], 422);
+            }
         }
 
         // Lead outcome, follow-up and call log are saved together: all of them or none

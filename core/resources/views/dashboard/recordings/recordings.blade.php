@@ -1087,8 +1087,8 @@
                 <div class="lg-filter-col lg-col-date">
                     <label class="lg-filter-label" for="from_date">From Date</label>
                     <div class="lg-date-wrap">
-                        <input type="text" id="from_date" class="lg-input-date" placeholder="From Date" autocomplete="off" readonly>
-                        <span class="lg-date-clear-btn" id="from_date_clear" title="Clear Date" style="display: none;">&times;</span>
+                        <input type="text" id="from_date" class="lg-input-date" placeholder="From Date" autocomplete="off" readonly value="{{ now()->subDays(7)->toDateString() }}">
+                        <span class="lg-date-clear-btn" id="from_date_clear" title="Clear Date">&times;</span>
                         <span class="lg-date-icon" id="from_date_icon" title="Open Calendar">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </span>
@@ -1099,8 +1099,8 @@
                 <div class="lg-filter-col lg-col-date">
                     <label class="lg-filter-label" for="to_date">To Date</label>
                     <div class="lg-date-wrap">
-                        <input type="text" id="to_date" class="lg-input-date" placeholder="To Date" autocomplete="off" readonly>
-                        <span class="lg-date-clear-btn" id="to_date_clear" title="Clear Date" style="display: none;">&times;</span>
+                        <input type="text" id="to_date" class="lg-input-date" placeholder="To Date" autocomplete="off" readonly value="{{ now()->toDateString() }}">
+                        <span class="lg-date-clear-btn" id="to_date_clear" title="Clear Date">&times;</span>
                         <span class="lg-date-icon" id="to_date_icon" title="Open Calendar">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </span>
@@ -1817,6 +1817,7 @@
 
             var toPicker = flatpickr("#to_date", {
                 dateFormat: "Y-m-d",
+                minDate: $('#from_date').val() || null,
                 allowInput: false,
                 clickOpens: true,
                 onChange: function(selectedDates, dateStr) {
@@ -1938,16 +1939,12 @@
                 $('#telecaller_id').val('');
                 clearAllEmployees();
                 lgClearSelection();
-                $('#from_date').val('');
-                $('#to_date').val('');
-                $('#from_date_clear').hide();
-                $('#to_date_clear').hide();
+                // back to the default range: the last 7 days and today
+                fromPicker.setDate('{{ now()->subDays(7)->toDateString() }}', false);
+                toPicker.setDate('{{ now()->toDateString() }}', false);
+                toPicker.set("minDate", $('#from_date').val());
+                $('#from_date_clear, #to_date_clear').show();
                 $('#date-range-error').hide();
-                if (typeof fromPicker !== 'undefined' && fromPicker.clear) fromPicker.clear();
-                if (typeof toPicker !== 'undefined' && toPicker.clear) {
-                    toPicker.clear();
-                    toPicker.set("minDate", null);
-                }
                 if (dataTable) dataTable.draw();
             });
 
