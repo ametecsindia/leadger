@@ -6,7 +6,7 @@ use App\Services\TenantsCopy;
 use Illuminate\Console\Command;
 
 /**
- * Refresh this installation's copy of the companies list (Leadger_app2.leadger_tenants) from the master list
+ * Refresh the copy of the companies list (leadger_tenants in TENANCY_COPY_DATABASE, else in this database) from the master list
  * (TENANCY_DB_DATABASE, e.g. tenants_leadger). Scheduled every minute; does nothing without such a copy.
  */
 class TenantsSyncCopyCommand extends Command

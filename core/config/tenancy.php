@@ -25,6 +25,10 @@ return [
     // TENANCY_DB_DATABASE=tenants_leadger on app.leadger.in. Empty = the tenants table of DB_DATABASE.
     'database' => env('TENANCY_DB_DATABASE'),
 
+    // The database that keeps a real-table copy of that companies list (App\Services\TenantsCopy), on the same
+    // server and login as DB_DATABASE, e.g. TENANCY_COPY_DATABASE=leadger_app. Empty = DB_DATABASE itself.
+    'copy_database' => env('TENANCY_COPY_DATABASE'),
+
     // true = this installation only MANAGES the companies list (Super Admin > Companies): it does not serve the
     // companies' hosts, run their scheduled tasks or migrate their databases - another installation does that.
     'manage_only' => (bool)env('TENANCY_MANAGE_ONLY', false),
