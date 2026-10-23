@@ -124,6 +124,15 @@ class WebRTCCallResultTest extends TestCase
         }
     }
 
+    public function test_a_user_without_a_webrtc_agent_id_gets_a_clear_message_before_anything_is_dialed()
+    {
+        $this->agent->forceFill(['smartping_user_id' => null])->save();
+        $this->actingAs($this->agent)->postJson(route('dialerwebrtc'), ['mobile' => '9154936351', 'vmn' => '916744123664'])
+            ->assertStatus(422)->assertJsonPath('reason', 'no_agent');
+        $this->assertSame(0, DialerLog::where('phone_number', '9154936351')->where('created_at', '>=', now()->subMinute())->count(),
+            'no call row, nothing sent to the gateway');
+    }
+
     public function test_gateway_fields_are_read_at_any_level_and_the_call_id_is_never_a_message_text()
     {
         $field = fn ($wrapper, $key) => WebRTCController::gatewayField($wrapper, $key);

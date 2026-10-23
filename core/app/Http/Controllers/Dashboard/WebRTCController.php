@@ -146,6 +146,10 @@ class WebRTCController extends Controller
             ], 400);
         }
 
+        if ($request->call_type === 'webrtc' && ($missing = self::agentMissing(Auth::user()))) {
+            return $missing;
+        }
+
         // Enforce backend outbound calling restrictions (hours + retry limit)
         $callCheck = \App\Services\CallingRestrictionService::canPlaceOutboundCall($request->phonenumber, Auth::user(), $request->call_type, $request->call_type !== 'webrtc');   // WebRTC: counted by webrtcCall
         if (!$callCheck['allowed']) {
@@ -277,6 +281,9 @@ class WebRTCController extends Controller
         }
         if (!self::nationalNumber($request->mobile)) {
             return response()->json(['success' => false, 'message' => 'Enter a valid 10-digit mobile number.'], 422);
+        }
+        if ($missing = self::agentMissing($user)) {
+            return $missing;
         }
 
         // Enforce backend outbound calling restrictions (hours + retry limit)
@@ -473,6 +480,19 @@ class WebRTCController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * The gateway places a WebRTC call for the user's agent id (SmartPing agent, created when the user is saved in
+     * People > Users). Without it the gateway refuses the call ("agent_id must be a string") - say so before dialing.
+     */
+    private static function agentMissing($user)
+    {
+        if (trim((string)$user->smartping_user_id) !== '') {
+            return null;
+        }
+        return response()->json(['success' => false, 'reason' => 'no_agent',
+            'message' => 'Your user has no WebRTC agent ID yet. Open People > Users, edit your user, enter the mobile number and a password, and Save - then try again.'], 422);
+    }
+
     /** 10-digit Indian number from any format (+91 98..., 098..., 91-98...), or null when it is not one. */
     public static function nationalNumber($number): ?string
     {
@@ -545,8 +565,11 @@ class WebRTCController extends Controller
         $log->sip_reason = 'gateway error ' . ($httpCode ?: 'no reply');
         $log->end_time = $log->end_time ?: Carbon::now();
         $log->save();
+        $why = is_array($reply) && is_string($reply['message'] ?? null) ? trim(strip_tags($reply['message']), " \"'.") : '';
+        $log->sip_reason = mb_substr('gateway ' . ($httpCode ?: 'no reply') . ($why !== '' ? ': ' . $why : ''), 0, 120);
+        $log->save();
         return response()->json(['success' => false,
-            'message' => 'The calling gateway did not accept the call (' . ($httpCode ? 'HTTP ' . $httpCode : 'no reply') . '). Please try again.'], 502);
+            'message' => 'The calling gateway did not accept the call' . ($why !== '' ? ': ' . mb_substr($why, 0, 120) : ' (' . ($httpCode ? 'HTTP ' . $httpCode : 'no reply') . ')') . '.'], 502);
     }
 
     /** SIP_DEBUG: the gateway's reply to the call request, secrets removed. */
