@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Inbound Calls report: one query for the table rows, the KPI cards and the Excel / CSV export, so they always match.
  * Who sees what: Admin / Webmaster all calls; Manager / Team Leader the calls of their teams (answered by a team
- * member, or to a VMN of their team; all calls when they have no team); everyone else only the calls they answered.
+ * member, or to a VMN of their team; all calls when they have no team); everyone else the calls they answered, the
+ * callbacks from numbers they called (Click2Call or WebRTC) and the calls from their own leads.
  */
 class InboundCallQuery
 {
@@ -160,7 +161,24 @@ class InboundCallQuery
             });
             return;
         }
-        // Telecaller and every other role: the calls they answered themselves
-        $q->where('inbound_calls.agent_user_id', $user->id)->where('inbound_calls.status', 'answered');
+        // Telecaller and every other role: the calls they answered themselves, callbacks from numbers they called
+        // (Click2Call or WebRTC, campaign or manual dial, last CALLBACK_DAYS days) and calls from their own leads.
+        // A WebRTC agent has no phone number, so a callback to a WebRTC number is only theirs through the number called.
+        $uid = (int)$user->id;
+        $tp = DB::getTablePrefix();
+        $since = now()->subDays(self::CALLBACK_DAYS);
+        $dialed = DB::table('call_logs')->where('created_by', $uid)->where('created_at', '>=', $since)
+            ->selectRaw("RIGHT(REGEXP_REPLACE({$tp}call_logs.phonenumber, '[^0-9]', ''), 10) AS n")
+            ->union(DB::table('dialer_logs')->where('created_by', $uid)->where('created_at', '>=', $since)
+                ->selectRaw("RIGHT(REGEXP_REPLACE({$tp}dialer_logs.phone_number, '[^0-9]', ''), 10) AS n"));
+        $q->where(function ($w) use ($uid, $dialed) {
+            $w->where(fn ($a) => $a->where('inbound_calls.agent_user_id', $uid)->where('inbound_calls.status', 'answered'))
+                ->orWhereIn('inbound_calls.customer_mobile_normalized', DB::query()->fromSub($dialed, 'dialed')->select('n'))
+                ->orWhereIn('inbound_calls.lead_id', DB::table('leads')
+                    ->where(fn ($l) => $l->where('assigned_to', $uid)->orWhere('sales_person_id', $uid))->select('id'));
+        });
     }
+
+    /** How far back a number a telecaller called still makes its inbound call theirs (a callback). */
+    public const CALLBACK_DAYS = 90;
 }

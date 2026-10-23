@@ -150,6 +150,33 @@ class InboundCallsTest extends TestCase
 
     /* ---- visibility ---- */
 
+    public function test_telecaller_sees_callbacks_from_customers_they_called_by_webrtc_or_click2call_and_from_own_leads()
+    {
+        // agent two called 9876500011 by WebRTC (manual dial) and 9876500022 by Click2Call (campaign)
+        DB::table('dialer_logs')->insert(['phone_number' => '+91 98765 00011', 'created_by' => $this->otherAgentId, 'call_type' => 'webrtc',
+            'time_taken' => 0, 'duration' => '00:00', 'created_at' => now()->subDays(2), 'updated_at' => now()]);
+        DB::table('call_logs')->insert(['phonenumber' => '9876500022', 'created_by' => $this->otherAgentId, 'call_type' => 'click2call',
+            'duration' => 0, 'created_at' => now()->subDay(), 'updated_at' => now()]);
+        // ...and long ago (outside the callback window) 9876500033
+        DB::table('dialer_logs')->insert(['phone_number' => '9876500033', 'created_by' => $this->otherAgentId, 'call_type' => 'webrtc',
+            'time_taken' => 0, 'duration' => '00:00', 'created_at' => now()->subDays(\App\Services\InboundCallQuery::CALLBACK_DAYS + 5), 'updated_at' => now()]);
+        // a lead assigned to agent two
+        $ownLead = DB::table('leads')->insertGetId(['name' => 'Agent Two Lead', 'phonenumber' => '9876500044', 'assigned_to' => $this->otherAgentId,
+            'created_at' => now(), 'updated_at' => now()]);
+
+        $this->inbound('CB-WEBRTC', '10:00:00', null, '919876500011');          // callback, nobody answered
+        $this->inbound('CB-C2C', '10:05:00', '9123456780', '09876500022');       // callback answered by agent one
+        $this->inbound('CB-OLD', '10:10:00', null, '9876500033');
+        $this->inbound('OWN-LEAD', '10:15:00', null, '9876500044');
+
+        $two = array_column($this->report(User::find($this->otherAgentId))['data'], 'call_id');
+        $this->assertEqualsCanonicalizing(['CB-WEBRTC', 'CB-C2C', 'OWN-LEAD'], $two);
+        $this->assertSame($ownLead, InboundCall::where('call_id', 'OWN-LEAD')->value('lead_id'));
+
+        $one = array_column($this->report(User::find($this->agentId))['data'], 'call_id');
+        $this->assertSame(['CB-C2C'], $one, 'agent one sees only the call they answered');
+    }
+
     public function test_telecaller_sees_only_the_calls_they_answered()
     {
         $this->inbound('V-1', '09:00:00', '9123456780');   // answered by agent one
