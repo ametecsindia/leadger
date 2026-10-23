@@ -23,6 +23,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('tenants:each "recordings:fetch-pending --sweep --sweep-minutes=1440"')->dailyAt('23:30')->withoutOverlapping(120);
         // Inbound Calls report: pull the provider's inbound call logs, and nightly link calls to leads / agents added later
         $schedule->command('inbound-calls:pull --hours=3')->everyFiveMinutes()->withoutOverlapping(10);   // a crashed run frees the lock after 10 min
+        // Leadger_app2's copy of the companies list (master: TENANCY_DB_DATABASE) - nothing to do without one
+        $schedule->command('tenants:sync-copy')->everyMinute()->withoutOverlapping(5);
         $schedule->command('tenants:each "inbound-calls:rematch"')->dailyAt('02:15')->withoutOverlapping(120);
     }
 

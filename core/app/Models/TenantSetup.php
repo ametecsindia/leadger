@@ -36,6 +36,10 @@ class TenantSetup extends Model
         };
         static::saved($forget);
         static::deleted($forget);
+        // Leadger_app2 keeps a copy of a list that lives in another database: refresh it right away
+        $copy = fn () => \App\Services\TenantsCopy::sync();
+        static::saved($copy);
+        static::deleted($copy);
     }
 
     /** Decrypted; a password saved before encryption (plain text) is returned as it is. */
