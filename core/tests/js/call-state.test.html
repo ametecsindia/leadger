@@ -66,6 +66,29 @@ test('200 OK + ACK + ICE connected + increasing inbound RTP = Connected, timer f
     eq([end.outcome, end.duration], ['completed', 60]);
 });
 
+test('Live trace 23 Oct: gateway 200 OK after 0.16 s, packets of pure silence -> never Connected, ends "no audio"', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 100 }, 65);
+    c.ev({ type: 'response', code: 200 }, 163);
+    c.ev({ type: 'ice', state: 'connected' }, 216);
+    c.ev({ type: 'stats', packetsReceived: 0, audioEnergy: 0 }, 246);
+    for (let t = 746, p = 16; t < 15200; t += 500, p += 25) c.ev({ type: 'stats', packetsReceived: p, audioEnergy: 0 }, t);
+    eq(c.all().includes('connected'), false, 'silence is not an answer');
+    eq(types(c.ev({ type: 'tick' }, 5200)), ['warn']);
+    eq(types(c.ev({ type: 'tick' }, 15200)), ['hangup']);
+    eq(c.ev({ type: 'terminated' }, 15500)[0].reason, 'no audio');
+});
+
+test('Packets with real sound (audio energy rising) = Connected', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 180 }, 900);
+    c.ev({ type: 'response', code: 200 }, 7000);
+    c.ev({ type: 'ice', state: 'connected' }, 7050);
+    c.ev({ type: 'stats', packetsReceived: 10, audioEnergy: 0 }, 7500);
+    eq(types(c.ev({ type: 'stats', packetsReceived: 35, audioEnergy: 0 }, 8000)), [], 'packets, still silence');
+    eq(types(c.ev({ type: 'stats', packetsReceived: 60, audioEnergy: 0.004 }, 8500)), ['connected']);
+});
+
 test('Audio packets but ICE never connected is not Connected', () => {
     const c = call();
     c.ev({ type: 'response', code: 200 }, 1000);

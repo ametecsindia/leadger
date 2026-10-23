@@ -13,10 +13,10 @@ import {
     onCallEstablished,
     onCallRinging,
     onCallWarning,
-} from './sip-client.js?v=20261023';
+} from './sip-client.js?v=20261023b';
 
 // Re-exported so pages register listeners on the SAME sip-client instance that places the calls
-export { hangupCall, muteCall, holdCall, onCallEnded, onCallEstablished, onCallRinging, onCallWarning, hasActiveCall } from './sip-client.js?v=20261023';
+export { hangupCall, muteCall, holdCall, onCallEnded, onCallEstablished, onCallRinging, onCallWarning, hasActiveCall } from './sip-client.js?v=20261023b';
 
 /* --- STATE --------------------------------------------------------------- */
 let _registered  = false;

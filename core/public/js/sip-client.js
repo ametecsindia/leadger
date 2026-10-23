@@ -6,7 +6,7 @@ import {
     URI,
     Web
 } from "https://cdn.jsdelivr.net/npm/sip.js@0.20.0/+esm";
-import { createCallMachine } from "./call-state.js?v=20261023";
+import { createCallMachine } from "./call-state.js?v=20261023b";
 
 /* -----------------------------------------------------------------------------
  *  DEBUG TRACE (SIP_DEBUG=true): every SIP / WebRTC event to the console and, in
@@ -313,15 +313,15 @@ const startCallTick = (sess) => {
         const pc = sess?.sessionDescriptionHandler?.peerConnection;
         if (pc && m.state.phase === "answered") {
             try {
-                let packets = 0, energy = 0;
+                let packets = 0, energy = 0, hasEnergy = false;
                 (await pc.getStats()).forEach(r => {
                     if (r.type === "inbound-rtp" && (r.kind === "audio" || r.mediaType === "audio")) {
                         packets += r.packetsReceived || 0;
-                        energy += r.totalAudioEnergy || 0;
+                        if (typeof r.totalAudioEnergy === "number") { energy += r.totalAudioEnergy; hasEnergy = true; }
                     }
                 });
-                dbg("rtp", { packetsReceived: packets, audioEnergy: Math.round(energy * 1000) / 1000, ice: pc.iceConnectionState });
-                runActions(m.handle({ type: "stats", packetsReceived: packets }));
+                dbg("rtp", { packetsReceived: packets, audioEnergy: hasEnergy ? Math.round(energy * 1e6) / 1e6 : null, ice: pc.iceConnectionState });
+                runActions(m.handle({ type: "stats", packetsReceived: packets, audioEnergy: hasEnergy ? energy : null }));
             } catch (_) {}
         }
         runActions(m.handle({ type: "tick" }));

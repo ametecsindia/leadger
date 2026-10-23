@@ -4,7 +4,8 @@
  *   connecting -> ringing (180/183) -> answered (200 OK, checking audio) -> connected -> ended
  *
  * "connected" needs ALL of: 200 OK for our INVITE (session established, ACK sent), ICE connected/completed,
- * and inbound RTP packets increasing after the 200 OK. A gateway that answers the browser leg but never reaches
+ * and inbound RTP packets increasing after the 200 OK with real sound in them (audio energy rising; a gateway that
+ * answers by itself streams silence). A gateway that answers the browser leg but never reaches
  * the customer therefore never shows "Connected": after audioWait it warns, after audioGrace more it hangs up.
  *
  * handle(event) returns the actions the caller must perform:
@@ -17,6 +18,9 @@
 export const PHASE = Object.freeze({
     CONNECTING: 'connecting', RINGING: 'ringing', ANSWERED: 'answered', CONNECTED: 'connected', ENDED: 'ended',
 });
+
+// inbound-rtp totalAudioEnergy increase that counts as real sound (digital silence adds exactly 0)
+const MIN_AUDIO_ENERGY = 0.00001;
 
 const SIP_REASONS = {
     403: 'not allowed by the provider', 404: 'number not found', 407: 'provider login failed',
@@ -36,7 +40,7 @@ export function createCallMachine(options = {}) {
     const o = { ringTimeoutMs: 45000, audioWaitMs: 5000, audioGraceMs: 10000, ...options };
     const s = {
         phase: PHASE.CONNECTING, invitedAt: null, okAt: null, connectedAt: null,
-        ice: null, rtpBaseline: null, rtpPackets: 0,
+        ice: null, rtpBaseline: null, rtpPackets: 0, energyBaseline: null, energy: null,
         sipCode: null, sipReason: '', cancelledByAgent: false, failReason: null, warned: false, stopping: false,
         result: null,
     };
@@ -55,7 +59,11 @@ export function createCallMachine(options = {}) {
     function tryConnect(at) {
         if (s.phase !== PHASE.ANSWERED || s.stopping) return [];
         const iceOk = s.ice === 'connected' || s.ice === 'completed';
-        const audio = s.rtpBaseline !== null && s.rtpPackets > s.rtpBaseline;
+        // packets alone are not enough: a gateway that answered by itself streams silence (audio energy stays 0).
+        // Browsers without the energy statistic fall back to packets only.
+        const sound = s.energy === null || s.energy === undefined || s.energyBaseline === null
+            || s.energy - s.energyBaseline > MIN_AUDIO_ENERGY;
+        const audio = s.rtpBaseline !== null && s.rtpPackets > s.rtpBaseline && sound;
         if (!iceOk || !audio) return [];
         s.phase = PHASE.CONNECTED;
         s.connectedAt = at;
@@ -130,9 +138,12 @@ export function createCallMachine(options = {}) {
                 if (s.rtpBaseline === null) {            // first sample after the 200 OK
                     s.rtpBaseline = ev.packetsReceived | 0;
                     s.rtpPackets = s.rtpBaseline;
+                    s.energyBaseline = ev.audioEnergy ?? null;
+                    s.energy = s.energyBaseline;
                     return [];
                 }
                 s.rtpPackets = ev.packetsReceived | 0;
+                s.energy = ev.audioEnergy ?? null;
                 return tryConnect(at);
             case 'tick':
                 if (early() && s.invitedAt !== null && at - s.invitedAt >= o.ringTimeoutMs) return stop('ring-timeout');

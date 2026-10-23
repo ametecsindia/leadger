@@ -124,6 +124,27 @@ class WebRTCCallResultTest extends TestCase
         }
     }
 
+    public function test_gateway_fields_are_read_at_any_level_and_the_call_id_is_never_a_message_text()
+    {
+        $field = fn ($wrapper, $key) => WebRTCController::gatewayField($wrapper, $key);
+        foreach ([
+            ['response' => ['agent_id' => 'A1', 'domain' => 'voip.x']],                                  // top level
+            ['response' => ['status' => 200, 'response' => ['agent_id' => 'A1', 'domain' => 'voip.x']]], // nested "response"
+            ['response' => ['status' => true, 'data' => ['agent_id' => 'A1', 'domain' => 'voip.x']]],    // nested "data"
+        ] as $wrapper) {
+            $this->assertSame('A1', $field($wrapper, 'agent_id'));
+            $this->assertSame('voip.x', $field($wrapper, 'domain'));
+        }
+        $this->assertSame('', $field(['response' => ['agent_id' => '']], 'agent_id'));
+
+        $callId = new \ReflectionMethod(WebRTCController::class, 'gatewayCallId');
+        $this->assertSame('c-77', $callId->invoke(null, ['response' => ['call_id' => 'c-77'], 'message' => 'x'], 'ref'));
+        $this->assertSame('c-88', $callId->invoke(null, ['data' => ['uuid' => 'c-88']], 'ref'));
+        $this->assertSame('6f1c2a9e-1b', $callId->invoke(null, ['message' => '6f1c2a9e-1b'], 'ref'), 'older gateways: the id as message');
+        $this->assertSame('ref', $callId->invoke(null, ['message' => 'WebRTC Call initiated successfully'], 'ref'), 'never a text');
+        $this->assertSame('ref', $callId->invoke(null, null, 'ref'));
+    }
+
     public function test_the_debug_trace_is_off_by_default_and_never_logs_secrets()
     {
         config(['services.sip.debug' => false]);

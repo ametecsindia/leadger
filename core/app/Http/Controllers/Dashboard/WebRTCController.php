@@ -225,7 +225,7 @@ class WebRTCController extends Controller
         if (!($api_response['success'] ?? false)) 
             return $response;
 
-        $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $CallLog->reference_id));
+        $providerCallId = $api_response['provider_call_id'] ?? $CallLog->reference_id;   // the gateway's id (webrtcCall), never our message text
         $CallLog->provider_call_id = $providerCallId;
         $dial = self::dialNumber(self::nationalNumber($request->phonenumber) ?? preg_replace('/\D/', '', (string)$request->phonenumber), $api_response);
         $CallLog->dialed_number = $dial;
@@ -239,11 +239,11 @@ class WebRTCController extends Controller
                         'sip_ws'       => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
                         'dial_number'  => $dial,
                         'sip_port'     => '7443',
-                        'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
+                        'gateway_prefix' => self::gatewayField($api_response, 'gateway_prefix'),
                         'call_id'      => $providerCallId,
-                        'ref_id'       => $api_response['response']['ref_id'] ?? '',
-                        'did'          => $api_response['response']['did'] ?? '',
-                        'gateway'      => $api_response['response']['sip_gateway'] ?? '',
+                        'ref_id'       => self::gatewayField($api_response, 'ref_id') ?: $CallLog->reference_id,
+                        'did'          => self::gatewayField($api_response, 'did') ?: (string)$request->vmn,
+                        'gateway'      => self::gatewayField($api_response, 'sip_gateway'),
                         'headers'      => $api_response['response']['headers'] ?? '',
                         'sip_password' => Auth::user()->smartping_password
                         ]);
@@ -417,7 +417,7 @@ class WebRTCController extends Controller
                 return $response;
             }
 
-            $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $activeRecord->reference_id));
+            $providerCallId = $api_response['provider_call_id'] ?? $activeRecord->reference_id;   // the gateway's id (webrtcdialerCall), never our message text
             $activeRecord->provider_call_id = $providerCallId;
             $activeRecord->dialed_number = self::dialNumber($targetMobile, $api_response);
             $activeRecord->save();
@@ -437,11 +437,11 @@ class WebRTCController extends Controller
                 'sip_ws' => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
                 'dial_number' => $activeRecord->dialed_number,
                 'sip_port' => '7443',
-                'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
+                'gateway_prefix' => self::gatewayField($api_response, 'gateway_prefix'),
                 'call_id' => $providerCallId,
-                'ref_id' => $api_response['response']['ref_id'] ?? $referenceId,
-                'did' => $api_response['response']['did'] ?? $request->vmn,
-                'gateway' => $api_response['response']['sip_gateway'] ?? '',
+                'ref_id' => self::gatewayField($api_response, 'ref_id') ?: $referenceId,
+                'did' => self::gatewayField($api_response, 'did') ?: $request->vmn,
+                'gateway' => self::gatewayField($api_response, 'sip_gateway'),
                 'headers' => $api_response['response']['headers'] ?? '',
                 'sip_password' => Auth::user()->smartping_password ?? ''
             ]);
@@ -486,7 +486,7 @@ class WebRTCController extends Controller
     /** The customer number in the format the SIP trunk expects (SIP_DIAL_FORMAT): national, 91, +91, 0 or prefix. */
     public static function dialNumber(string $national, ?array $api_response = null): string
     {
-        $prefix = trim((string)($api_response['response']['gateway_prefix'] ?? ''));
+        $prefix = self::gatewayField($api_response, 'gateway_prefix');
         return match (strtolower((string)config('services.sip.dial_format', 'national'))) {
             '91' => '91' . $national,
             '+91' => '+91' . $national,
@@ -499,8 +499,70 @@ class WebRTCController extends Controller
     // The gateway's value, or the fallback when it sends none (an empty SIP domain breaks the softphone: "missing or invalid host")
     private function sipValue(?array $api_response, string $key, $fallback): string
     {
-        $value = trim((string) ($api_response['response'][$key] ?? ''));
+        $value = self::gatewayField($api_response, $key);
         return $value !== '' ? $value : trim((string) $fallback);
+    }
+
+    /**
+     * A field of the gateway's reply (webrtcCall / webrtcdialerCall put it under "response"). The gateway may send its
+     * fields at the top level or nested in "response" / "data": reading only the top level gave an empty agent and
+     * domain (the softphone registered without a user, the INVITE could not be linked to the prepared call).
+     */
+    public static function gatewayField(?array $api_response, string $key): string
+    {
+        $reply = is_array($api_response['response'] ?? null) ? $api_response['response'] : [];
+        foreach ([$reply, $reply['response'] ?? null, $reply['data'] ?? null] as $level) {
+            if (is_array($level) && isset($level[$key]) && !is_array($level[$key]) && trim((string)$level[$key]) !== '') {
+                return trim((string)$level[$key]);
+            }
+        }
+        return '';
+    }
+
+    /**
+     * The gateway's id of the call it prepared: sent back in the INVITE (X-CALL-ID) so the gateway can link the browser
+     * leg to the customer leg. Never a message text such as "WebRTC Call initiated successfully".
+     */
+    private static function gatewayCallId(?array $reply, string $fallback): string
+    {
+        $wrapped = ['response' => $reply ?? []];
+        foreach (['call_id', 'callid', 'call_uuid', 'uuid'] as $k) {
+            if (($v = self::gatewayField($wrapped, $k)) !== '') return mb_substr($v, 0, 191);
+        }
+        $message = trim((string)($reply['message'] ?? ''));   // older gateway versions answered with the id as "message"
+        return ($message !== '' && !preg_match('/\s/', $message) && strlen($message) <= 191) ? $message : $fallback;
+    }
+
+    /** The gateway did not take the call request (no reply / HTTP error): the call is failed, the browser must not dial. */
+    private static function gatewayFailed($log, int $httpCode, $curlError, $reply, array $payload)
+    {
+        self::debugGatewayReply($httpCode, $reply, $payload);
+        if (!$curlError && $httpCode >= 200 && $httpCode < 300) {
+            return null;
+        }
+        Log::warning('[WebRTC] Gateway did not accept the call request', ['http' => $httpCode, 'error' => $curlError ?: null, 'log' => $log->id]);
+        $log->call_state = 'failed';
+        $log->sip_reason = 'gateway error ' . ($httpCode ?: 'no reply');
+        $log->end_time = $log->end_time ?: Carbon::now();
+        $log->save();
+        return response()->json(['success' => false,
+            'message' => 'The calling gateway did not accept the call (' . ($httpCode ? 'HTTP ' . $httpCode : 'no reply') . '). Please try again.'], 502);
+    }
+
+    /** SIP_DEBUG: the gateway's reply to the call request, secrets removed. */
+    private static function debugGatewayReply(int $httpCode, $reply, array $payload): void
+    {
+        if (!config('services.sip.debug')) return;
+        $clean = function ($v) use (&$clean) {
+            if (!is_array($v)) return is_string($v) ? mb_substr($v, 0, 300) : $v;
+            $out = [];
+            foreach ($v as $k => $item) {
+                if (is_string($k) && preg_match('/pass|auth|token|secret|nonce|key/i', $k)) { $out[$k] = '[removed]'; continue; }
+                $out[$k] = $clean($item);
+            }
+            return $out;
+        };
+        Log::info('[WebRTC-debug] gateway reply', ['http' => $httpCode, 'request' => $clean($payload), 'reply' => $clean($reply)]);
     }
 
     // SIP host only: the gateway may send "wss://host:7443" or "host:port"
@@ -556,11 +618,12 @@ class WebRTCController extends Controller
         if ($targetNumber && ($curlError || $httpCode < 200 || $httpCode >= 300)) {
             \App\Services\CallingRestrictionService::releaseAttempt($targetNumber);   // the call did not start
         }
-   
-        if ($httpCode == 200 && isset($api_response['message'])) {
-            $Log->webrtc_call_id = $api_response['message'];
+        if ($failed = self::gatewayFailed($Log, (int)$httpCode, $curlError, $api_response ?? $response, $payload)) {
+            return $failed;
         }
-        $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $Log->reference_id));
+
+        $providerCallId = self::gatewayCallId($api_response, $Log->reference_id);
+        $Log->webrtc_call_id = $providerCallId;
         $Log->provider_call_id = $providerCallId;
         $Log->save();
 
@@ -618,11 +681,12 @@ class WebRTCController extends Controller
     if ($targetNumber && ($curlError || $httpCode < 200 || $httpCode >= 300)) {
         \App\Services\CallingRestrictionService::releaseAttempt($targetNumber);   // the call did not start
     }
-
-    if ($httpCode == 200 && isset($api_response['message'])) {
-        $callLog->webrtc_call_id = $api_response['message'];
+    if ($failed = self::gatewayFailed($callLog, (int)$httpCode, $curlError, $api_response ?? $response, $payload)) {
+        return $failed;
     }
-    $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $callLog->reference_id));
+
+    $providerCallId = self::gatewayCallId($api_response, $callLog->reference_id);
+    $callLog->webrtc_call_id = $providerCallId;
     $callLog->provider_call_id = $providerCallId;
     $callLog->save();
 
