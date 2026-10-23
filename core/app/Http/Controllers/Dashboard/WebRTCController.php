@@ -218,9 +218,6 @@ class WebRTCController extends Controller
                 "agent_id" => Auth::user()->smartping_user_id,
                 "customer_number" => $request->phonenumber,
                 "ref_id" => $request->lead_id.'_M'.$CallLog->id.'_'.$full_response['data']['crm_id'].'_'.(Auth::user()->id).'_'.$CallLog->verified,
-                "record" => 1,
-                "recording" => 1,
-                "record_call" => 1,
             );
            $response=$this->webrtcCall($callfields, $CallLog);
         $responseContent = $response->getContent(); // get the JSON string
@@ -410,9 +407,6 @@ class WebRTCController extends Controller
                 "agent_id" => Auth::user()->smartping_user_id,
                 "customer_number" => $request->mobile,
                 "ref_id" => $referenceId,
-                "record" => 1,
-                "recording" => 1,
-                "record_call" => 1,
             );
 
             $response = $this->webrtcdialerCall($callfields, $activeRecord);
@@ -598,10 +592,7 @@ class WebRTCController extends Controller
 
         public function webrtcdialerCall(array $payload, $Log)
     {
-        $payload['record'] = 1;
-        $payload['recording'] = 1;
-        $payload['record_call'] = 1;
-
+        // Telozar's webrtc_call accepts only did / agent_id / customer_number / ref_id: "record" is not allowed (HTTP 400)
         // The number's daily attempt is counted here, when the call is requested; given back if it does not start
         $targetNumber = $payload['customer_number'] ?? null;
         if ($targetNumber) {
@@ -661,10 +652,7 @@ class WebRTCController extends Controller
 
     public function webrtcCall(array $payload, CallLog $callLog)
     {
-        $payload['record'] = 1;
-        $payload['recording'] = 1;
-        $payload['record_call'] = 1;
-
+        // Telozar's webrtc_call accepts only did / agent_id / customer_number / ref_id: "record" is not allowed (HTTP 400)
         // The number's daily attempt is counted here, when the call is requested; given back if it does not start
         $targetNumber = $payload['customer_number'] ?? null;
         if ($targetNumber) {
