@@ -526,6 +526,8 @@ body.lg-ad-visible #tab-campaign-queue { padding-bottom: 96px; }
         toast(msg[0], msg[1]);
         announce(msg[1]);
         render();
+        // the agent continues by hand: Next lead / Skip work again
+        if (typeof lgUpdateOutcomeButtons === 'function') lgUpdateOutcomeButtons();
     }
 
     /* ---------- heartbeat (connection check) ---------- */

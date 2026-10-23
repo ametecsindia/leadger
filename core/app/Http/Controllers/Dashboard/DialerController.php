@@ -1133,6 +1133,16 @@ class DialerController extends Controller
             return response()->json(['status' => 'calling', 'message' => 'Calling...', 'final' => false]);
         }
 
+        // Already closed on our side (provider webhook processed, or the agent saved the outcome): stop following it
+        $stored = ['completed' => ['ended', 'Call Ended'], 'busy' => ['busy', 'Customer line is busy'],
+            'no-answer' => ['no_answer', 'Customer did not answer'], 'failed' => ['failed', 'Call failed'], 'cancelled' => ['failed', 'Call cancelled']];
+        if (!empty($log->end_time) && isset($stored[$log->call_state])) {
+            [$status, $message] = $stored[$log->call_state];
+            $talk = $log instanceof DialerLog ? (int)$log->time_taken : (int)$log->duration;   // dialer_logs.duration is "mm:ss"
+            return response()->json(['status' => $status, 'message' => $message, 'final' => true, 'duration' => $talk,
+                'duration_formatted' => \App\Helpers\Helper::formatDuration($talk)]);
+        }
+
         // 1. Stored provider record, 2. live gateway lookup
         $payload = is_array($log->click_response) ? $log->click_response : json_decode((string)$log->click_response, true);
         $payload = is_array($payload) && (isset($payload['A_DIAL_STATUS']) || isset($payload['B_DIAL_STATUS']) || isset($payload['EVENT_TYPE'])) ? $payload : null;

@@ -1961,15 +1961,21 @@ WHERE campaign_id = '".$orgCampaign->id."'
             $allowed = self::getAllowedCampaignsForUser($User);
             $Lead = Lead::where('campaign_id', $campaignId)->orderBy('id')->get()
                 ->first(fn ($l) => self::canOpenCampaignLead($User, $l, $campaignId, $allowed));
+            // Start Calling (lead 0) or a lead of another campaign: the address shows the lead opened (the page loads it from there)
+            if ($Lead && (int)$leadId !== (int)$Lead->id) {
+                return redirect()->route('leadCallingView', ['campaignId' => $campaignId, 'leadId' => $Lead->id]);
+            }
         }
 
-        // Fetch leads for the Next Leads sidebar queue with active lead at the top
+        // Fetch leads for the Next Leads sidebar queue with active lead at the top (only leads this user may open)
+        $allowed = $allowed ?? self::getAllowedCampaignsForUser($User);
         $remainingLeads = Lead::where('campaign_id', $campaignId)
             ->when($Lead, function($q) use ($Lead) {
                 return $q->where('id', '!=', $Lead->id);
             })
             ->orderBy('id', 'asc')
-            ->get();
+            ->get()
+            ->filter(fn ($l) => self::canOpenCampaignLead($User, $l, $campaignId, $allowed))->values();
         $campaignLeads = $Lead ? collect([$Lead])->concat($remainingLeads) : $remainingLeads;
         
         $totalQueueCount = $campaignLeads->count();
@@ -2005,7 +2011,7 @@ WHERE campaign_id = '".$orgCampaign->id."'
             }
             $Lead->product_name = $productName;
             $Lead->source_name = !empty($Lead->source) ? $Lead->source : 'Website';
-            $Lead->calls_count = count($callLogs);
+            $Lead->calls_count = $callLogs->whereNotNull('next_status')->count();   // calls with feedback saved
 
             // Status name & dot color (a lead without a status is a new lead)
             $statusName = 'New Lead';
@@ -2247,7 +2253,7 @@ WHERE campaign_id = '".$orgCampaign->id."'
                 $productName = $campaign->name;
             }
 
-            $callsCount = DB::table('call_logs')->where('lead_id', $lead->id)->count();
+            $callsCount = DB::table('call_logs')->where('lead_id', $lead->id)->whereNotNull('next_status')->count();   // calls with feedback saved
 
             $validLeads[] = [
                 'id' => $lead->id,
@@ -2504,7 +2510,8 @@ WHERE campaign_id = '".$orgCampaign->id."'
                     'duration' => $formattedDur,
                     'disposition' => $log->remarks ?? ($log->disposition ?? 'Interested'),
                     'comments' => $log->remarks ?? ($log->comments ?? ''),
-                    'recording_url' => $log->recording_url ?? ''
+                    'recording_url' => $log->recording_url ?? '',
+                    'next_status' => $log->next_status,   // feedback saved (Calls count)
                 ];
             });
 
@@ -2539,7 +2546,7 @@ WHERE campaign_id = '".$orgCampaign->id."'
                 'campaign_id' => $campaignId,
                 'campaign_calling_type' => $campaignCallingType,
                 'source' => !empty($Lead->source) ? $Lead->source : 'Website',
-                'calls_count' => count($callLogs),
+                'calls_count' => collect($callLogs)->whereNotNull('next_status')->count(),   // calls with feedback saved
                 'alt_phone' => !empty($Lead->alt_mobile) ? $Lead->alt_mobile : (!empty($Lead->alternate_phone) ? $Lead->alternate_phone : 'N/A'),
                 'last_contacted' => !empty($Lead->last_actioned_date) ? date('M d, Y, h:i A', strtotime($Lead->last_actioned_date)) : 'Not contacted yet',
                 'status' => $Lead->status,

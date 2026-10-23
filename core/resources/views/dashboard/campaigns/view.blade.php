@@ -833,11 +833,18 @@ function toggleCampaignStatus(campaignId) {
     });
 }
 
+// Opens the Campaign Queue on this campaign's first lead the user may open (lead 0 = let the server pick it)
 function startCallingFlow() {
-    $('html, body').animate({
-        scrollTop: $("#leadsTableSection").offset().top - 20
-    }, 400);
-    toastr.info("Select a lead from the table below to start calling.");
+    // the calling page lists only active campaigns that have not expired
+    @if(!empty($Campaign->expiry_date) && \Carbon\Carbon::parse($Campaign->expiry_date)->startOfDay()->lte(now()->startOfDay()))
+    toastr.error("This campaign expired on {{ \Carbon\Carbon::parse($Campaign->expiry_date)->format('d M Y') }}. Extend its expiry date to call its leads.");
+    return;
+    @endif
+    if ($.trim($('#statusLabel').text()) !== 'Active') {
+        toastr.error('This campaign is paused. Resume it to start calling.');
+        return;
+    }
+    window.location.href = "{{ route('leadCallingView', ['campaignId' => $Campaign->id, 'leadId' => 0]) }}";
 }
 
 function leadDetail(id) {

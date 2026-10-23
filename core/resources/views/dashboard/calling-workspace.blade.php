@@ -2596,11 +2596,17 @@
                 </div>
 
                 <!-- Action Button pinned to bottom -->
-                <div class="cw-outcome-btns-row" style="margin-top: auto; padding-top: 14px; display: flex; justify-content: flex-end;">
+                <div class="cw-outcome-btns-row" style="margin-top: auto; padding-top: 14px; display: flex; justify-content: flex-end; gap: 8px;">
                     <button type="button" id="btn-save-manual-outcome" class="cw-btn-save-next" onclick="saveManualOutcome()">
                         <span id="save-btn-text">Save</span>
                         <i id="save-btn-icon" class="fa fa-check"></i>
                     </button>
+                    {{-- the next lead of the leads list, once this call is saved --}}
+                    <span class="cw-btn-tip" id="btn-manual-next-tip" title="Save the outcome first">
+                        <button type="button" class="cw-btn-next" id="btn-manual-next-lead" onclick="manualNextLead()" disabled>
+                            <span>Next lead</span>
+                        </button>
+                    </span>
                 </div>
             </div>
         </div>
@@ -2720,7 +2726,8 @@
                         <div class="cw-drawer-lead-row" 
                              data-name="{{ strtolower($aLead->name) }}" 
                              data-phone="{{ $aLead->phonenumber }}"
-                             onclick="selectManualLead('{{ $aLead->name }}', '{{ $aLead->phonenumber }}', '{{ $aLead->city_name }}', '{{ $aLead->id }}', '{{ $aLead->email }}')">
+                             data-id="{{ $aLead->id }}" data-label="{{ $aLead->name }}"
+                             onclick="selectManualLeadRow(this)">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div class="cw-avatar-circle" style="width: 36px; height: 36px; font-size: 13px; background: var(--cw-blue);">
                                     {{ $aLead->initials ?? 'LD' }}
@@ -2997,7 +3004,25 @@ function filterDrawerLeads(query) {
     $('#cw-drawer-no-results').toggle(q !== '' && $rows.length > 0 && shown === 0);
 }
 
+function selectManualLeadRow(row) {
+    selectManualLead(row.getAttribute('data-label'), row.getAttribute('data-phone'), '', row.getAttribute('data-id'), '');
+}
+
+/** Manual Dial Next lead: the lead after the current one in the leads list (the first one when none is open). */
+function manualNextLead() {
+    var $rows = $('#cw-drawer-all-list .cw-drawer-lead-row');
+    if (!$rows.length) { toastr.info('No leads in the list.'); return; }
+    var idx = $rows.index($rows.filter('[data-id="' + ($('#manual_lead_id').val() || '') + '"]'));
+    selectManualLeadRow($rows.get((idx + 1) % $rows.length));
+}
+
+function lgManualNextState(enabled) {
+    $('#btn-manual-next-lead').prop('disabled', !enabled);
+    $('#btn-manual-next-tip').attr('title', enabled ? 'Open the next lead' : 'Save the outcome first');
+}
+
 function selectManualLead(name, phone, city, id, email) {
+    lgManualNextState(false);
     $('#mobile').val(phone).trigger('input');
     $('#manual_lead_id').val(id);
     $('#manual_lead_name').val(name);
@@ -3764,6 +3789,7 @@ function saveCampaignOutcome() {
             toastr.success('Outcome saved');
             window.lgOutcomePending = false;
             lgCampOutcomeSaved = true;
+            if (window._c2cFinish) window._c2cFinish();
 
             // The saved lead leaves the queue (as before); remember where the next one is
             const savedIdx = campaignQueue.findIndex(l => l.id == savedLeadId);
@@ -4043,6 +4069,15 @@ function saveManualOutcome() {
         success: function(res) {
             // Shown only after the server committed the outcome (and the follow-up, when a date was given)
             if (res && res.warning) { toastr.warning(res.warning); } else { toastr.success((res && res.message) || 'Call outcome saved successfully.'); }
+            // The call is closed: stop following it, empty the form for the next call (a new save is a new call)
+            if (window._c2cFinish) window._c2cFinish();
+            $('#manual_status_id').val('').trigger('change');
+            $('#manual_comments').val('');
+            $('#manual-comment-counter').text('0/500');
+            $('#manual_followup_date').val('');
+            $('#id, #uuid').val('');
+            $('#is_campaign').val('0');
+            lgManualNextState(true);
             refreshTodayPerformance();
             refreshRecentActivity();
             setTimeout(function() {
@@ -5083,6 +5118,7 @@ function pollClick2CallStatus(callId, callUuid, isCampaign, $btn, iconClass) {
     var inFlight = false;
     var resetBtn = function () { $btn.prop('disabled', false).find('i').attr('class', iconClass); };
     var finish = function () {
+        window._c2cFinish = null;
         stopCallPolling();
         resetBtn();
         if (isCampaign) markCampaignCallEnded();
@@ -5090,6 +5126,8 @@ function pollClick2CallStatus(callId, callUuid, isCampaign, $btn, iconClass) {
         refreshRecentActivity();
     };
     var failLabels = { busy: 'Busy', no_answer: 'No Answer', failed: 'Failed' };
+    // Saving the call outcome closes the call: stop following it (button back, Next lead available)
+    window._c2cFinish = function () { showLiveCallStatus('ended', 'Call Ended', '', 'click2call'); finish(); };
 
     _callPollInterval = setInterval(function() {
         if (Date.now() - startTime >= 15 * 60 * 1000) {
