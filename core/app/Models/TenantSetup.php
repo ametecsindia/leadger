@@ -7,17 +7,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 
 /**
- * One company (tenant) in the central database: its host, its own database and its status.
+ * One company (tenant) of the companies list: its host and its own database. The table has exactly
+ * id, subdomain, db_host, db_name, db_user, db_password, created_at, updated_at; every listed company is active.
  * Read through the companies list's own connection (getConnectionName: "mysql", or "tenancy" for tenants_leadger).
  * db_password: plain text, or encrypted with APP_KEY when TENANCY_ENCRYPT_PASSWORDS=true (then never change APP_KEY).
  */
 class TenantSetup extends Model
 {
-    public const STATUS_ACTIVE = 'active';
-    public const STATUS_SUSPENDED = 'suspended';
-    public const STATUS_PROVISIONING = 'provisioning';
-    public const STATUS_FAILED = 'failed';
-
     protected $table = 'tenants';
 
     /** The companies list's own connection (App\Support\Tenancy::registry()), never a company database. */
@@ -26,23 +22,13 @@ class TenantSetup extends Model
         return \App\Support\Tenancy::registry();
     }
 
-    protected $fillable = [
-        'name', 'slug', 'subdomain', 'db_host', 'db_name', 'db_user', 'db_password', 'status', 'plan', 'max_users',
-        'expires_at', 'provisioning_status', 'provisioning_log', 'app_version',
-        'last_migrated_at', 'last_migration_status', 'last_migration_error',
-    ];
+    protected $fillable = ['subdomain', 'db_host', 'db_name', 'db_user', 'db_password'];
 
     protected $hidden = ['db_password'];
 
-    protected $casts = [
-        'expires_at' => 'date',
-        'last_migrated_at' => 'datetime',
-        'max_users' => 'integer',
-    ];
-
     protected static function booted(): void
     {
-        // the host -> company lookup is cached: a change (status, database) applies at once
+        // the host -> company lookup is cached: a change (address, database) applies at once
         $forget = function (self $t) {
             foreach (array_unique([(string)$t->getOriginal('subdomain'), (string)$t->subdomain]) as $host) {
                 if ($host !== '') Cache::store('tenancy')->forget(\App\Support\Tenancy::lookupCacheKey($host));
@@ -70,21 +56,15 @@ class TenantSetup extends Model
             ? $value : Crypt::encryptString((string)$value);
     }
 
-    /** Usable: active (rows made before the status column have no status and count as active). */
-    public function isActive(): bool
+    /** Short name of the company from its address (company-a.leadger.in -> company-a). */
+    public function shortName(): string
     {
-        return in_array($this->status ?? self::STATUS_ACTIVE, [self::STATUS_ACTIVE, null, ''], true);
+        return explode('.', (string)$this->subdomain)[0] ?: (string)$this->subdomain;
     }
 
-    public function scopeActive($q)
-    {
-        return $q->where(fn ($w) => $w->whereNull('status')->orWhere('status', self::STATUS_ACTIVE));
-    }
-
-    /** Folder / cache name of this company: its slug, else derived from the host. */
+    /** Folder / cache name of this company, from its address. */
     public function storageKey(): string
     {
-        $key = $this->slug ?: preg_replace('/[^a-z0-9]+/', '-', strtolower((string)$this->subdomain));
-        return trim($key, '-') ?: 'tenant-' . $this->id;
+        return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string)$this->subdomain)), '-') ?: 'tenant-' . $this->id;
     }
 }

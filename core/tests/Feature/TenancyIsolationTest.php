@@ -35,8 +35,8 @@ class TenancyIsolationTest extends TestCase
         $this->prepareCompanyDatabase();
 
         $c = config('database.connections.mysql');
-        $this->tenant = TenantSetup::create(['name' => 'Company T', 'slug' => 'company-t', 'subdomain' => self::HOST,
-            'db_host' => $c['host'], 'db_name' => self::TEST_DB, 'db_user' => $c['username'], 'db_password' => $c['password'], 'status' => 'active']);
+        $this->tenant = TenantSetup::create(['subdomain' => self::HOST,
+            'db_host' => $c['host'], 'db_name' => self::TEST_DB, 'db_user' => $c['username'], 'db_password' => $c['password']]);
         Cache::store('tenancy')->flush();
     }
 
@@ -121,7 +121,7 @@ class TenancyIsolationTest extends TestCase
         $this->assertSame(['tenant' => self::HOST], json_decode($row->payload, true)['lg_company']);
     }
 
-    public function test_hosts_resolve_to_their_company_and_a_suspended_or_unknown_company_is_refused()
+    public function test_hosts_resolve_to_their_company_and_an_unknown_host_is_refused()
     {
         $this->app['env'] = 'production';
         config(['tenancy.central_hosts' => ['central.leadger.test']]);
@@ -134,9 +134,6 @@ class TenancyIsolationTest extends TestCase
         $this->assertSame(config('database.connections.mysql.database'), DB::connection()->getDatabaseName());
 
         $this->get('http://nobody.leadger.test/admin/login')->assertNotFound();
-
-        $this->tenant->update(['status' => TenantSetup::STATUS_SUSPENDED]);
-        $this->get('http://' . self::HOST . '/admin/login')->assertForbidden();
     }
 
     public function test_a_session_of_one_company_is_not_accepted_by_another()
@@ -166,7 +163,7 @@ class TenancyIsolationTest extends TestCase
 
         Tenancy::useTenant($this->tenant);
         $own = Tenancy::path($central);
-        $this->assertSame($central . DIRECTORY_SEPARATOR . 'tenants' . DIRECTORY_SEPARATOR . 'company-t', $own);
+        $this->assertSame($central . DIRECTORY_SEPARATOR . 'tenants' . DIRECTORY_SEPARATOR . 'company-t-leadger-test', $own);
         @mkdir($own, 0755, true);
         file_put_contents($ownFile = $own . DIRECTORY_SEPARATOR . 'iso-test.wav', 'x');
         file_put_contents($centralFile = $central . DIRECTORY_SEPARATOR . 'iso-test-central.wav', 'x');
@@ -180,16 +177,17 @@ class TenancyIsolationTest extends TestCase
         @unlink($centralFile);
     }
 
-    public function test_tenants_each_runs_a_task_for_every_active_company_and_returns_to_central()
+    public function test_tenants_each_runs_a_task_for_every_company_survives_a_broken_one_and_returns_to_central()
     {
-        TenantSetup::create(['name' => 'Suspended Co', 'subdomain' => 'off.leadger.test', 'db_host' => '127.0.0.1', 'db_name' => 'none',
-            'db_user' => 'none', 'db_password' => 'x', 'status' => TenantSetup::STATUS_SUSPENDED]);
+        TenantSetup::create(['subdomain' => 'broken.leadger.test', 'db_host' => '127.0.0.1', 'db_name' => 'no_such_company_db',
+            'db_user' => 'none', 'db_password' => 'x']);
         $seen = [];
-        Tenancy::forEachCompany(function ($company, $label) use (&$seen) {
+        $results = Tenancy::forEachCompany(function ($company, $label) use (&$seen) {
+            DB::select('select 1');   // a real task queries its company database
             $seen[$label] = DB::connection()->getDatabaseName();
         });
         $this->assertSame(self::TEST_DB, $seen[self::HOST] ?? null);
-        $this->assertArrayNotHasKey('off.leadger.test', $seen, 'suspended companies are skipped');
+        $this->assertInstanceOf(\Throwable::class, $results['broken.leadger.test'], 'a company whose database fails is reported');
         $this->assertSame(config('database.connections.mysql.database'), DB::connection()->getDatabaseName());
     }
 

@@ -484,7 +484,6 @@ Route::post('/companies', [\App\Http\Controllers\Dashboard\CompaniesController::
 Route::post('/companies/test-connection', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'testConnection'])->middleware('throttle:30,1')->name('companiesTestConnection');
 Route::get('/companies/{company}/edit', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'edit'])->whereNumber('company')->name('companiesEdit');
 Route::put('/companies/{company}', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'update'])->whereNumber('company')->name('companiesUpdate');
-Route::post('/companies/{company}/status', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'status'])->whereNumber('company')->name('companiesStatus');
 Route::get('/companies/{company}/check', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'check'])->whereNumber('company')->middleware('throttle:120,1')->name('companiesCheck');
 
 // Work Locations

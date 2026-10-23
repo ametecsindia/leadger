@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Run an artisan command once for every active company (the central one first), each with its own database, cache
+ * Run an artisan command once for every company (the central one first), each with its own database, cache
  * and folders. Scheduled tasks use it so every company gets its recording fetch, sweeps and nightly jobs:
  *   php artisan tenants:each "recordings:fetch-pending --sweep"
  *   php artisan tenants:each "inbound-calls:rematch" --company=company-a.leadger.in
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 class TenantsEachCommand extends Command
 {
     protected $signature = 'tenants:each {task : the command with its options, in quotes} {--company=* : only these hosts / databases}';
-    protected $description = 'Run a command for every active company';
+    protected $description = 'Run a command for every company';
 
     public function handle(): int
     {

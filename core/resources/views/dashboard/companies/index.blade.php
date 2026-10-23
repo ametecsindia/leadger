@@ -17,11 +17,6 @@
 .co-host:hover { text-decoration:underline; }
 .co-db { font-family:monospace; font-size:12.5px; color:#334155; }
 .co-db small { display:block; color:#94A3B8; font-family:inherit; }
-.co-badge { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
-.co-badge::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
-.co-badge.active { background:#E8F7EF; color:#0E8C59; }
-.co-badge.suspended { background:#FDECEC; color:#C62828; }
-.co-badge.other { background:#F1F5F9; color:#475569; }
 .co-num { font-variant-numeric:tabular-nums; color:#0F172A; font-weight:600; }
 .co-muted { color:#94A3B8; font-size:12.5px; }
 .co-db-state { font-size:12.5px; font-weight:600; white-space:nowrap; }
@@ -31,7 +26,6 @@
 .co-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .co-btn { height:30px; padding:0 10px; border-radius:7px; border:1px solid #CBD5E1; background:#fff; color:#334155 !important; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:5px; cursor:pointer; text-decoration:none !important; }
 .co-btn:hover { border-color:var(--lg-accent); color:var(--lg-accent) !important; }
-.co-btn.danger:hover { border-color:#C62828; color:#C62828 !important; }
 .co-btn:focus-visible, .co-add-btn:focus-visible { outline:2px solid var(--lg-accent); outline-offset:2px; }
 .co-empty { padding:40px 16px !important; text-align:center; color:#64748B; }
 </style>
@@ -58,7 +52,7 @@
     @if ($manageOnly)
         <p class="co-note">
             These companies are served by another LeadGER installation. Changes here update the shared companies list
-            ({{ $registry }}). Suspending a company takes effect there once that installation runs this version.
+            ({{ $registry }}).
         </p>
     @endif
 
@@ -78,7 +72,6 @@
                     <tr>
                         <th>Company</th>
                         <th>Database</th>
-                        <th>Status</th>
                         <th>Users</th>
                         <th>Leads</th>
                         <th>Calls</th>
@@ -89,19 +82,14 @@
                 </thead>
                 <tbody>
                 @forelse ($companies as $c)
-                    @php $active = $c->isActive(); @endphp
                     <tr data-check="{{ route('companiesCheck', $c->id) }}"
-                        data-search="{{ strtolower(($c->name ?? '') . ' ' . $c->subdomain . ' ' . $c->db_name) }}">
+                        data-search="{{ strtolower($c->subdomain . ' ' . $c->db_name) }}">
                         <td>
-                            <div class="co-name">{{ $c->name ?: \Illuminate\Support\Str::before($c->subdomain, '.') }}</div>
+                            <div class="co-name">{{ $c->shortName() }}</div>
                             <a class="co-host" href="https://{{ $c->subdomain }}" target="_blank" rel="noopener">{{ $c->subdomain }}</a>
                         </td>
                         <td class="co-db">{{ $c->db_name }}<small>{{ $c->db_host }}</small>
                             <span class="co-db-state wait" data-field="state">Checking&hellip;</span></td>
-                        <td>
-                            <span class="co-badge {{ $active ? 'active' : ($c->status === 'suspended' ? 'suspended' : 'other') }}">{{ ucfirst($c->status ?: 'active') }}</span>
-                            @if ($c->expires_at)<div class="co-muted">until {{ $c->expires_at->format('d M Y') }}</div>@endif
-                        </td>
                         <td class="co-num" data-field="users">&ndash;</td>
                         <td class="co-num" data-field="leads">&ndash;</td>
                         <td class="co-num" data-field="calls">&ndash;</td>
@@ -110,17 +98,12 @@
                         <td>
                             <div class="co-actions">
                                 <a class="co-btn" href="{{ route('companiesEdit', $c->id) }}">Edit</a>
-                                <form method="POST" action="{{ route('companiesStatus', $c->id) }}" class="co-status-form"
-                                      data-confirm="{{ $active ? 'Suspend ' . ($c->name ?: $c->subdomain) . '? Its users will not be able to use LeadGER.' : 'Activate ' . ($c->name ?: $c->subdomain) . '?' }}">
-                                    @csrf
-                                    <input type="hidden" name="status" value="{{ $active ? 'suspended' : 'active' }}">
-                                    <button type="submit" class="co-btn {{ $active ? 'danger' : '' }}">{{ $active ? 'Suspend' : 'Activate' }}</button>
-                                </form>
+                                <a class="co-btn" href="https://{{ $c->subdomain }}" target="_blank" rel="noopener">Open</a>
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="co-empty">No companies yet. Use "Add company" to register the first one.</td></tr>
+                    <tr><td colspan="8" class="co-empty">No companies yet. Use "Add company" to register the first one.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -161,11 +144,6 @@
     document.getElementById('coSearch').addEventListener('input', function () {
         var q = this.value.trim().toLowerCase();
         rows.forEach(function (row) { row.style.display = !q || row.getAttribute('data-search').indexOf(q) !== -1 ? '' : 'none'; });
-    });
-    document.querySelectorAll('.co-status-form').forEach(function (form) {
-        form.addEventListener('submit', function (e) {
-            if (!window.confirm(form.getAttribute('data-confirm'))) e.preventDefault();
-        });
     });
 })();
 </script>

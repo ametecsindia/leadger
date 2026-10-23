@@ -38,8 +38,7 @@ class CompaniesManagementTest extends TestCase
 
     private function form(array $over = []): array
     {
-        return array_merge(['name' => 'Acme Pvt Ltd', 'subdomain' => 'acme-test.leadger.in', 'status' => 'active', 'plan' => 'Standard',
-            'max_users' => 25, 'expires_at' => now()->addYear()->format('Y-m-d')], $this->db, $over);
+        return array_merge(['subdomain' => 'acme-test.leadger.in'], $this->db, $over);
     }
 
     public function test_only_a_listed_super_admin_can_open_companies()
@@ -62,7 +61,7 @@ class CompaniesManagementTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('companiesStore'), $this->form())->assertRedirect(route('companies'));
         $t = TenantSetup::where('subdomain', 'acme-test.leadger.in')->firstOrFail();
-        $this->assertSame(['Acme Pvt Ltd', 'acme-test', 'active', 25], [$t->name, $t->slug, $t->status, $t->max_users]);
+        $this->assertSame([self::COMPANY_DB, 'acme-test'], [$t->db_name, $t->shortName()]);
         $this->assertSame($this->db['db_password'], DB::table('tenants')->where('id', $t->id)->value('db_password'),
             'stored as plain text while another installation reads the list');
         $audit = (string)@file_get_contents(storage_path('logs/audit-' . now()->format('Y-m-d') . '.log'));
@@ -73,10 +72,10 @@ class CompaniesManagementTest extends TestCase
 
     public function test_editing_keeps_the_saved_password_and_validates_the_address()
     {
-        $t = TenantSetup::create($this->form() + ['slug' => 'acme-test']);
-        $this->actingAs($this->admin)->put(route('companiesUpdate', $t->id), $this->form(['name' => 'Acme Renamed', 'db_password' => '']))
+        $t = TenantSetup::create($this->form());
+        $this->actingAs($this->admin)->put(route('companiesUpdate', $t->id), $this->form(['subdomain' => 'acme-renamed.leadger.in', 'db_password' => '']))
             ->assertRedirect(route('companies'));
-        $this->assertSame('Acme Renamed', $t->fresh()->name);
+        $this->assertSame('acme-renamed.leadger.in', $t->fresh()->subdomain);
         $this->assertSame($this->db['db_password'], $t->fresh()->db_password);
 
         $this->actingAs($this->admin)->put(route('companiesUpdate', $t->id), $this->form(['subdomain' => 'https://bad address/']))
@@ -86,14 +85,12 @@ class CompaniesManagementTest extends TestCase
             ->assertSessionHasErrors('subdomain');
     }
 
-    public function test_suspend_and_activate()
+    public function test_the_companies_list_has_exactly_the_eight_columns()
     {
-        $t = TenantSetup::create($this->form());
-        $this->actingAs($this->admin)->post(route('companiesStatus', $t->id), ['status' => 'suspended'])->assertRedirect();
-        $this->assertFalse($t->fresh()->isActive());
-        $this->actingAs($this->admin)->post(route('companiesStatus', $t->id), ['status' => 'active'])->assertRedirect();
-        $this->assertTrue($t->fresh()->isActive());
-        $this->actingAs($this->admin)->post(route('companiesStatus', $t->id), ['status' => 'deleted'])->assertSessionHasErrors('status');
+        $this->assertSame(['created_at', 'db_host', 'db_name', 'db_password', 'db_user', 'id', 'subdomain', 'updated_at'],
+            collect(\Illuminate\Support\Facades\Schema::connection(Tenancy::registry())->getColumnListing('tenants'))->sort()->values()->all());
+        $this->actingAs($this->admin)->get(route('companiesCreate'))->assertOk()
+            ->assertDontSee('name="status"', false)->assertDontSee('name="name"', false)->assertSee('name="subdomain"', false);
     }
 
     public function test_live_check_and_connection_test_read_the_company_database()

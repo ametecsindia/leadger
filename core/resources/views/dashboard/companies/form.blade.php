@@ -13,7 +13,6 @@
 .co-field label { display:block !important; float:none !important; width:auto !important; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:6px; }
 .co-field input, .co-field select { display:block !important; width:100% !important; max-width:none !important; height:40px; border:1px solid #CBD5E1; border-radius:8px; padding:0 12px; font-size:14px; color:#0F172A; background:#fff; box-sizing:border-box; }
 .co-field input:focus, .co-field select:focus { outline:2px solid var(--lg-accent); outline-offset:1px; border-color:transparent; }
-.co-field .select2-container { width:100% !important; }   /* selects are turned into Select2 boxes globally */
 .co-field .co-hint { font-size:12px; color:#94A3B8; margin-top:5px; }
 .co-field .co-err { font-size:12px; color:#C62828; margin-top:5px; font-weight:500; }
 .co-field.has-error input, .co-field.has-error select { border-color:#C62828; }
@@ -35,7 +34,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="13" x2="21" y2="13"/></svg>
             </div>
             <div>
-                <h1 class="cr-header-title">{{ $company->exists ? 'Edit ' . ($company->name ?: $company->subdomain) : 'Add company' }}</h1>
+                <h1 class="cr-header-title">{{ $company->exists ? 'Edit ' . $company->subdomain : 'Add company' }}</h1>
                 <div class="cr-header-sub"><a href="{{ route('companies') }}">Companies</a> &rsaquo; {{ $company->exists ? 'Edit' : 'Add' }}</div>
             </div>
         </div>
@@ -50,40 +49,11 @@
             <p class="co-card-sub">The company's users open LeadGER at its web address.</p>
             <div class="co-grid">
                 @php $f = fn ($name, $default = null) => old($name, $company->{$name} ?? $default); @endphp
-                <div class="co-field {{ $errors->has('name') ? 'has-error' : '' }}">
-                    <label for="co-name">Company name *</label>
-                    <input id="co-name" name="name" value="{{ $f('name') }}" maxlength="191" required>
-                    @error('name')<div class="co-err">{{ $message }}</div>@enderror
-                </div>
                 <div class="co-field {{ $errors->has('subdomain') ? 'has-error' : '' }}">
                     <label for="co-host">Web address *</label>
                     <input id="co-host" name="subdomain" value="{{ $f('subdomain') }}" placeholder="company-a.{{ config('tenancy.base_domain') }}" maxlength="191" required>
                     <div class="co-hint">Address only, without https:// (DNS must point to the server)</div>
                     @error('subdomain')<div class="co-err">{{ $message }}</div>@enderror
-                </div>
-                <div class="co-field {{ $errors->has('status') ? 'has-error' : '' }}">
-                    <label for="co-status">Status *</label>
-                    <select id="co-status" name="status">
-                        @foreach (['active' => 'Active', 'suspended' => 'Suspended'] as $v => $label)
-                            <option value="{{ $v }}" {{ $f('status', 'active') === $v ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('status')<div class="co-err">{{ $message }}</div>@enderror
-                </div>
-                <div class="co-field {{ $errors->has('plan') ? 'has-error' : '' }}">
-                    <label for="co-plan">Plan</label>
-                    <input id="co-plan" name="plan" value="{{ $f('plan') }}" maxlength="64" placeholder="e.g. Standard">
-                    @error('plan')<div class="co-err">{{ $message }}</div>@enderror
-                </div>
-                <div class="co-field {{ $errors->has('max_users') ? 'has-error' : '' }}">
-                    <label for="co-max">Maximum users</label>
-                    <input id="co-max" name="max_users" type="number" min="1" value="{{ $f('max_users') }}">
-                    @error('max_users')<div class="co-err">{{ $message }}</div>@enderror
-                </div>
-                <div class="co-field {{ $errors->has('expires_at') ? 'has-error' : '' }}">
-                    <label for="co-exp">Subscription valid until</label>
-                    <input id="co-exp" name="expires_at" type="date" value="{{ old('expires_at', optional($company->expires_at)->format('Y-m-d')) }}">
-                    @error('expires_at')<div class="co-err">{{ $message }}</div>@enderror
                 </div>
             </div>
         </div>

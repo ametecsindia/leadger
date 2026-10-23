@@ -13,16 +13,16 @@ use Illuminate\Support\Facades\Log;
  * Apply the database migrations to every company database (the central one is migrated by `php artisan migrate`).
  * Code is shared, so one deploy updates every company; the schema of each company database is brought up to date
  * here. Laravel's migrations table in each company database prevents running a migration twice; a failing company
- * is reported and recorded (tenants.last_migration_*), the others continue; re-running retries only what is left.
+ * is reported (on screen and in the log), the others continue; re-running retries only what is left.
  *
  *   php artisan tenants:migrate --status              pending migrations per company
  *   php artisan tenants:migrate --pretend             the SQL that would run (review before a risky change)
  *   php artisan tenants:migrate --backup              mysqldump each company database first (storage/app/backups)
- *   php artisan tenants:migrate --tenant=a.leadger.in only these companies; --all includes suspended companies
+ *   php artisan tenants:migrate --tenant=a.leadger.in only these companies
  */
 class MigrateTenants extends Command
 {
-    protected $signature = 'tenants:migrate {--tenant=* : only these hosts} {--all : also suspended / failed companies}
+    protected $signature = 'tenants:migrate {--tenant=* : only these hosts}
         {--status : show pending migrations only} {--pretend : show the SQL, change nothing} {--backup : back up each database first}';
     protected $description = 'Run migrations for all tenant databases';
 
@@ -46,7 +46,6 @@ class MigrateTenants extends Command
         $failed = 0;
         try {
             $tenants = TenantSetup::query()
-                ->when(!$this->option('all'), fn ($q) => $q->active())
                 ->when($this->option('tenant'), fn ($q, $hosts) => $q->whereIn('subdomain', $hosts))
                 ->orderBy('id')->get();
             if ($tenants->isEmpty()) {
@@ -65,7 +64,7 @@ class MigrateTenants extends Command
             $lock->release();
         }
 
-        $this->line($failed ? "<error>{$failed} company database(s) failed - see above and tenants.last_migration_error.</error>"
+        $this->line($failed ? "<error>{$failed} company database(s) failed - see above and storage/logs.</error>"
             : '<info>All company databases are up to date.</info>');
         return $failed ? self::FAILURE : self::SUCCESS;
     }
@@ -90,18 +89,12 @@ class MigrateTenants extends Command
             $this->line($out !== '' ? preg_replace('/^/m', '  ', $out) : '  nothing to migrate');
 
             if (!$this->option('pretend')) {
-                $tenant->forceFill(['last_migrated_at' => now(), 'last_migration_status' => 'ok', 'last_migration_error' => null,
-                    'app_version' => self::appVersion()])->save();
+                Log::info('[Tenancy] Company database migrated', ['company' => $tenant->subdomain, 'version' => self::appVersion()]);
             }
             return true;
         } catch (\Throwable $e) {
             $this->error('  failed: ' . $e->getMessage());
             Log::error('[Tenancy] Company migration failed', ['company' => $tenant->subdomain, 'error' => $e->getMessage()]);
-            try {
-                $tenant->forceFill(['last_migrated_at' => now(), 'last_migration_status' => 'failed',
-                    'last_migration_error' => mb_substr($e->getMessage(), 0, 2000)])->save();
-            } catch (\Throwable $ignored) {
-            }
             return false;
         } finally {
             Tenancy::apply(Tenancy::central());

@@ -193,14 +193,14 @@ class Tenancy
     }
 
     /**
-     * Every company as a context: the central company first, then each active company of the tenants table.
+     * Every company as a context: the central company first, then each company of the tenants table.
      * Used by scheduled tasks and commands that must run for all companies.
      */
-    public static function companies(bool $activeOnly = true): array
+    public static function companies(): array
     {
         $companies = [self::central()];
         if (self::servesCompanies()) {
-            foreach (TenantSetup::query()->when($activeOnly, fn ($q) => $q->active())->orderBy('id')->pluck('subdomain') as $host) {
+            foreach (TenantSetup::query()->orderBy('id')->pluck('subdomain') as $host) {
                 $companies[] = ['tenant' => $host];
             }
         }
@@ -208,11 +208,11 @@ class Tenancy
     }
 
     /** Run $fn for every company (switching database, cache and folders), then return to the central company. */
-    public static function forEachCompany(callable $fn, bool $activeOnly = true): array
+    public static function forEachCompany(callable $fn): array
     {
         $results = [];
         try {
-            foreach (self::companies($activeOnly) as $company) {
+            foreach (self::companies() as $company) {
                 $label = $company['tenant'] ?? $company['database'];
                 try {
                     self::apply($company);

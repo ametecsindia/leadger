@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\URL;
 
 /**
  * Which company this request belongs to, by host (never by anything the browser sends):
- *  - a host in the tenants table -> that company's own database (suspended -> 403);
+ *  - a host in the tenants table -> that company's own database;
  *  - a host mapped in .env (legacy: HOST=database name) -> that database;
  *  - a central host (TENANCY_CENTRAL_HOSTS / APP_URL host), local development, or no tenants table -> the central
  *    database;
@@ -31,9 +31,6 @@ class Tenants
         $tenant = Tenancy::findTenant($host);
 
         if ($tenant) {
-            if (!$tenant->isActive()) {
-                abort(403, 'This company account is not active. Please contact LeadGER support.');
-            }
             Tenancy::useTenant($tenant);
             try {
                 DB::connection()->getPdo();
