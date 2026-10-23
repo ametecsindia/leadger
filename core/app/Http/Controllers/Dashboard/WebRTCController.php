@@ -278,9 +278,6 @@ class WebRTCController extends Controller
         if (!self::nationalNumber($request->mobile)) {
             return response()->json(['success' => false, 'message' => 'Enter a valid 10-digit mobile number.'], 422);
         }
-        if (!$user->smartping_user_id || !$user->smartping_password) {
-            return response()->json(['success' => false, 'message' => 'WebRTC calling is not set up for your user (no softphone login).'], 422);
-        }
 
         // Enforce backend outbound calling restrictions (hours + retry limit)
         $callCheck = \App\Services\CallingRestrictionService::canPlaceOutboundCall($request->mobile, $user, 'webrtc', false);   // counted by webrtcdialerCall
