@@ -1242,6 +1242,25 @@ class DialerController extends Controller
             }
 
             $normState = ($state === 'no_answer') ? 'no-answer' : ($state === 'ended' ? 'completed' : $state);
+            $record = $callLog ?: $dialerLog;
+
+            // WebRTC: "completed" (talk time, recording) only for a call the browser confirmed as answered
+            // (200 OK + media + customer audio) or the provider reported answered; otherwise it never connected
+            if ($normState === 'completed' && in_array($record->call_type, ['webrtc', 'sip'], true) && empty($record->answer_time)) {
+                $normState = 'failed';
+                $request->merge(['sip_reason' => $request->input('sip_reason') ?: 'not answered']);
+                $duration = 0;
+            }
+            if (in_array($normState, ['connected', 'answered'], true) && empty($record->answer_time)) {
+                $record->answer_time = Carbon::now();
+            }
+            $sipCode = (int)$request->input('sip_code');
+            if ($sipCode >= 100 && $sipCode <= 699) {
+                $record->sip_code = $sipCode;
+            }
+            if (($sipReason = trim(strip_tags((string)$request->input('sip_reason')))) !== '') {
+                $record->sip_reason = mb_substr($sipReason, 0, 120);
+            }
 
             if ($callLog) {
                 $callLog->call_source = 'campaign';

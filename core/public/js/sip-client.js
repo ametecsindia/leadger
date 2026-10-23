@@ -6,6 +6,33 @@ import {
     URI,
     Web
 } from "https://cdn.jsdelivr.net/npm/sip.js@0.20.0/+esm";
+import { createCallMachine } from "./call-state.js?v=20261023";
+
+/* -----------------------------------------------------------------------------
+ *  DEBUG TRACE (SIP_DEBUG=true): every SIP / WebRTC event to the console and, in
+ *  batches, to the server log. Never passwords, Authorization headers or tokens.
+ * ------------------------------------------------------------------------- */
+const sipOptions = () => window.__SIP_OPTIONS__ || {};
+let debugBuffer = [];
+let debugTimer  = null;
+const dbg = (event, data = {}) => {
+    if (!sipOptions().debug) return;
+    const clean = JSON.parse(JSON.stringify(data, (k, v) => /pass|auth|token|secret|nonce|response$/i.test(k) ? undefined : v));
+    console.info("[SIP]", event, clean);
+    debugBuffer.push({ t: new Date().toISOString(), ev: event, data: clean });
+    clearTimeout(debugTimer);
+    debugTimer = setTimeout(flushDebug, debugBuffer.length >= 40 ? 0 : 2000);
+};
+const flushDebug = () => {
+    const opts = sipOptions();
+    if (!debugBuffer.length || !opts.debugUrl) return;
+    const events = debugBuffer.splice(0, 200);
+    fetch(opts.debugUrl, {
+        method: "POST", credentials: "same-origin", keepalive: true,
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": opts.csrf || "", "Accept": "application/json" },
+        body: JSON.stringify({ call_id: currentCall?.meta?.callId || null, events }),
+    }).catch(() => {});
+};
 
 /* -----------------------------------------------------------------------------
  *  STATE
@@ -19,6 +46,8 @@ let seconds                 = 0;
 const callEndListeners         = new Set();
 const callEstablishedListeners = new Set();
 const callRingingListeners     = new Set();
+const callWarningListeners     = new Set();
+let callTick                   = null;   // 500 ms: timeouts + inbound RTP stats while a call is up
 // Current call: real SIP outcome, connect time, and an 'end already reported' guard
 let currentCall             = null;
 let isOnHold                = false;
@@ -69,6 +98,17 @@ export const initSip = async (config) => {
         },
         authorizationUsername: config.username,
         authorizationPassword: config.password,
+        // SIP_DEBUG: start line of every SIP message in / out (+ CSeq, Reason, Warning, X- headers; never Authorization)
+        logConnector: (level, category, label, content) => {
+            if (!sipOptions().debug || typeof content !== "string" || !content.includes("SIP/2.0")) return;
+            const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const start = lines.find(l => /SIP\/2\.0/.test(l));
+            if (!start) return;
+            dbg(/^Sending/i.test(lines[0]) ? "sip-out" : "sip-in", {
+                line: start,
+                headers: lines.filter(l => /^(CSeq|Reason|Warning|X-[\w-]+):/i.test(l)),
+            });
+        },
         contactParams:         { transport: "ws" },
         hackWssInTransport:    true,
         forceRport:            true,
@@ -94,16 +134,43 @@ export const initSip = async (config) => {
 
     // Re-register automatically on reconnect
     ua.transport.stateChange.addListener(async (state) => {
+        dbg("transport", { state });
         if (state === "Connected" && registerer) {
             try   { await registerer.register(); }
             catch (e) { console.warn("Re-register failed:", e); }
         }
     });
 
+    dbg("ua-start", { user: config.username, domain: config.domain, websocket: config.websocket });
     await ua.start();
 
     registerer = new Registerer(ua, { expires: 120, refreshFrequency: 80 });
-    await registerer.register();
+    registerer.stateChange.addListener((state) => dbg("registration", { state }));
+    let rejected = null;
+    await registerer.register({
+        requestDelegate: {
+            onReject(response) {
+                rejected = response?.message?.statusCode || 0;
+                dbg("register-rejected", { code: rejected, reason: response?.message?.reasonPhrase });
+            },
+        },
+    });
+
+    // register() resolves when REGISTER is sent: wait for the gateway to accept it before any call
+    const registered = await new Promise((resolve) => {
+        if (registerer.state === "Registered") return resolve(true);
+        const t = setTimeout(() => resolve(registerer.state === "Registered"), 8000);
+        registerer.stateChange.addListener((state) => {
+            if (state === "Registered") { clearTimeout(t); resolve(true); }
+            if (state === "Unregistered" && rejected) { clearTimeout(t); resolve(false); }
+        });
+    });
+    if (!registered) {
+        _registeredConfig = null;
+        throw new Error(rejected === 401 || rejected === 403
+            ? "Softphone login was refused by the provider (check the WebRTC username / password)"
+            : "Softphone could not register with the provider");
+    }
 
     _registeredConfig = { ...config };
     console.log("? SIP Registered �", config.username, "@", config.domain);
@@ -132,6 +199,22 @@ export const makeCall = async (target, meta = {}) => {
         session = null;
     }
 
+    if (registerer?.state !== "Registered") {
+        dbg("call-blocked", { reason: "not registered", registration: registerer?.state });
+        throw new Error("Softphone is not registered with the provider");
+    }
+
+    // Microphone first: a missing / blocked microphone must fail clearly, not as a silent "connected" call
+    try {
+        const probe = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        probe.getTracks().forEach(t => t.stop());
+    } catch (e) {
+        dbg("microphone-error", { name: e?.name });
+        throw new Error(e?.name === "NotAllowedError" || e?.name === "SecurityError"
+            ? "Microphone permission is blocked - allow the microphone for this site"
+            : e?.name === "NotFoundError" ? "No microphone found on this computer" : "Microphone could not be opened");
+    }
+
     // Accept both "7702004422" and "sip:7702004422@domain"
     let targetURI;
     if (target.startsWith("sip:")) {
@@ -141,6 +224,7 @@ export const makeCall = async (target, meta = {}) => {
         targetURI   = UserAgent.makeURI(`sip:${clean}@${ua.configuration.uri.host}`);
     }
     if (!targetURI) throw new Error(`Cannot build SIP URI for: ${target}`);
+    dbg("dial", { uri: targetURI.toString(), user: targetURI.user, host: targetURI.host, did: meta.did, gateway: meta.gateway, prefix: meta.prefix, refId: meta.refId });
 
     const extraHeaders = [];
     if (meta.callId)  extraHeaders.push(`X-CALL-ID: ${meta.callId}`);
@@ -161,95 +245,164 @@ export const makeCall = async (target, meta = {}) => {
     isOnHold = false;
     isMuted  = false;
 
-    currentCall = { session, establishedAt: null, sipCode: null, cancelledByAgent: false, ended: false, ringing: false };
+    const opts = sipOptions();
+    const machine = createCallMachine({
+        ringTimeoutMs: (opts.ringTimeout || 45) * 1000,
+        audioWaitMs:   (opts.audioWait   || 5)  * 1000,
+        audioGraceMs:  (opts.audioGrace  || 10) * 1000,
+    });
+    currentCall = { session, machine, meta, establishedAt: null, sipCode: null, ended: false };
     attachSessionEvents(session);
 
+    // Every SIP response of our INVITE goes to the state machine
+    const onResponse = (kind) => (response) => {
+        const code = response?.message?.statusCode;
+        const reason = response?.message?.reasonPhrase || "";
+        dbg("invite-response", { kind, code, reason });
+        if (code >= 300 && currentCall) currentCall.sipCode = code;
+        if (kind === "accept") dbg("ack", { sent: true });
+        runActions(machine.handle({ type: "response", code, reason }));
+    };
+
     try {
+        runActions(machine.handle({ type: "invite" }));
+        startCallTick(session);
         await session.invite({
             requestDelegate: {
-                onProgress(response) {
-                    const code = response?.message?.statusCode;
-                    // 180 Ringing / 183 Session Progress = the destination is really ringing
-                    if ((code === 180 || code === 183) && currentCall && !currentCall.ringing) {
-                        currentCall.ringing = true;
-                        notify(callRingingListeners, { sipCode: code });
-                    }
-                },
-                onReject(response) {
-                    if (currentCall) currentCall.sipCode = response?.message?.statusCode || null;
-                },
+                onTrying:   onResponse("trying"),
+                onProgress: onResponse("progress"),
+                onAccept:   onResponse("accept"),
+                onRedirect: onResponse("redirect"),
+                onReject:   onResponse("reject"),
             },
         });
-        console.log("?? Outgoing INVITE sent ?", targetURI.toString());
+        dbg("invite-sent", { uri: targetURI.toString() });
     } catch (err) {
+        dbg("invite-error", { message: err?.message });
+        stopCallTick();
         session = null;
+        currentCall = null;
         window._sipCallInProgress = false;
-        throw new Error(`INVITE failed: ${err.message}`);
+        throw new Error("The call could not be started");
     }
 };
 
+/* Perform what the state machine decided (see call-state.js). */
+const runActions = (actions) => {
+    for (const a of actions) {
+        dbg("state", { action: a.type, phase: currentCall?.machine?.state?.phase, reason: a.reason, outcome: a.outcome });
+        if (a.type === "ringing") notify(callRingingListeners, {});
+        if (a.type === "warn") notify(callWarningListeners, { message: a.message });
+        if (a.type === "connected") {
+            if (currentCall) currentCall.establishedAt = Date.now();
+            startLegacyTimer();
+            notify(callEstablishedListeners, {});
+        }
+        if (a.type === "cancel") cancelInvite();
+        if (a.type === "hangup") byeCall();
+        if (a.type === "ended") cleanupCall(a);
+    }
+};
+
+/* Timeouts and the inbound-audio check (getStats: inbound-rtp audio packetsReceived). */
+const startCallTick = (sess) => {
+    stopCallTick();
+    callTick = setInterval(async () => {
+        const m = currentCall?.machine;
+        if (!m) return stopCallTick();
+        const pc = sess?.sessionDescriptionHandler?.peerConnection;
+        if (pc && m.state.phase === "answered") {
+            try {
+                let packets = 0, energy = 0;
+                (await pc.getStats()).forEach(r => {
+                    if (r.type === "inbound-rtp" && (r.kind === "audio" || r.mediaType === "audio")) {
+                        packets += r.packetsReceived || 0;
+                        energy += r.totalAudioEnergy || 0;
+                    }
+                });
+                dbg("rtp", { packetsReceived: packets, audioEnergy: Math.round(energy * 1000) / 1000, ice: pc.iceConnectionState });
+                runActions(m.handle({ type: "stats", packetsReceived: packets }));
+            } catch (_) {}
+        }
+        runActions(m.handle({ type: "tick" }));
+    }, 500);
+};
+const stopCallTick = () => { if (callTick) { clearInterval(callTick); callTick = null; } };
+
+const startLegacyTimer = () => {
+    clearInterval(timerInterval);
+    seconds = 0;
+    timerInterval = setInterval(() => {
+        seconds++;
+        const el = document.getElementById("sip-timer");
+        if (el) el.innerText = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    }, 1000);
+};
+
+/* CANCEL an INVITE that has no 200 OK yet (ringing timeout, End call while ringing, ICE failure). */
+const cancelInvite = async () => {
+    const sess = session;
+    if (!sess) return;
+    try {
+        if (sess.state === SessionState.Initial || sess.state === SessionState.Establishing) {
+            await sess.cancel();
+            dbg("cancel-sent", {});
+        } else if (sess.state === SessionState.Established) {
+            byeCall();
+        }
+    } catch (e) {
+        dbg("cancel-error", { message: e?.message });
+        forceEnd();
+    }
+};
+
+/* End an answered call: the provider's hangup API (as before) and a BYE if the gateway does not end it. */
+const byeCall = async () => {
+    const sess = session;
+    if (!sess) return;
+    try {
+        await fetch("https://sip.telozar.com/api/webrtc/calls/hangup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ agent_id: currentAgentId }),
+        });
+        dbg("hangup-api", { ok: true });
+    } catch (err) {
+        dbg("hangup-api", { ok: false, message: err?.message });
+    }
+    setTimeout(() => {
+        if (session === sess && sess.state === SessionState.Established) {
+            sess.bye().then(() => dbg("bye-sent", {})).catch(e => { dbg("bye-error", { message: e?.message }); forceEnd(); });
+        }
+    }, 1500);
+    setTimeout(() => { if (session === sess) { dbg("safety-net", {}); forceEnd(); } }, 4000);
+};
+
+/* The session did not terminate by itself: end it locally and report the result. */
+const forceEnd = () => {
+    const m = currentCall?.machine;
+    try { session?.dispose(); } catch (_) {}
+    if (m) runActions(m.handle({ type: "terminated", code: currentCall?.sipCode }));
+    else cleanupCall();
+};
+
 /* -----------------------------------------------------------------------------
- *  HANGUP
- * ------------------------------------------------------------------------- */
-/* -----------------------------------------------------------------------------
- *  HANGUP
+ *  HANGUP (End call): CANCEL while ringing -> "Cancelled"; BYE once answered
  * ------------------------------------------------------------------------- */
 export const hangupCall = async () => {
     if (!session) { closeSipDialerUI(); return; }
+    dbg("agent-hangup", { state: session.state, phase: currentCall?.machine?.state?.phase });
 
-    const currentState = session.state;
-    console.log("hangupCall � session state:", currentState);
-
+    const m = currentCall?.machine;
+    if (m) {
+        runActions(m.handle({ type: "agentHangup" }));
+        return;
+    }
+    // no tracked call (should not happen): end whatever is there
     try {
-        switch (currentState) {
-
-            case SessionState.Initial:
-            case SessionState.Establishing:
-                if (typeof session.cancel === "function") {
-                    if (currentCall) currentCall.cancelledByAgent = true;
-                    await session.cancel();
-                    console.log("?? INVITE cancelled");
-                }
-                break;
-
-            case SessionState.Established:
-                   try {
-                        await fetch("https://sip.telozar.com/api/webrtc/calls/hangup", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                agent_id: currentAgentId
-                            })
-                        });
-
-                        console.log("Hangup API called");
-                    } catch (err) {
-                        console.error("Hangup API failed:", err);
-                    }
-                    console.log("?? BYE sent");
-                    // Safety net � if Terminated never fires force cleanup
-                    setTimeout(() => {
-                        if (session) {
-                            console.warn("?? Safety net cleanup");
-                            cleanupCall();
-                        }
-                    }, 3000);
-                    break;
-
-            case SessionState.Terminating:
-                console.log("?? Already terminating");
-                break;
-
-            case SessionState.Terminated:
-                cleanupCall();
-                break;
-
-            default:
-                try { session.dispose(); } catch (_) {}
-                cleanupCall();
-        }
+        if (session.state === SessionState.Initial || session.state === SessionState.Establishing) await session.cancel();
+        else if (session.state === SessionState.Established) await session.bye();
+        else { try { session.dispose(); } catch (_) {} cleanupCall(); }
     } catch (e) {
         console.error("hangupCall error:", e);
         cleanupCall();
@@ -335,6 +488,7 @@ export const holdCall = () => {
 export const onCallEnded       = (cb) => { callEndListeners.add(cb); };
 export const onCallEstablished = (cb) => { callEstablishedListeners.add(cb); };
 export const onCallRinging     = (cb) => { callRingingListeners.add(cb); };
+export const onCallWarning     = (cb) => { callWarningListeners.add(cb); };
 export const hasActiveCall     = ()   => !!session && session.state !== SessionState.Terminated;
 const notify = (set, payload) => set.forEach(cb => { try { cb(payload); } catch (e) { console.error('SIP listener error:', e); } });
 
@@ -393,7 +547,7 @@ const wirePeerConnectionListeners = (sess) => {
         // Assigning pc.ontrack overwrites sip.js's own handler; addEventListener
         // stacks safely alongside it.
         pc.addEventListener("track", (event) => {
-            console.log("?? PC track event:", event.track.kind, event.track.readyState);
+            dbg("remote-track", { kind: event.track.kind, state: event.track.readyState, muted: event.track.muted });
             const stream = event.streams?.[0] ?? new MediaStream([event.track]);
             if (remoteAudio) {
                 remoteAudio.srcObject = stream;
@@ -402,19 +556,20 @@ const wirePeerConnectionListeners = (sess) => {
             }
         });
 
-        // -- ICE connection state ----------------------------------------
+        // -- ICE connection state (also decides "connected" / ICE failure in the state machine)
         pc.addEventListener("iceconnectionstatechange", () => {
             const s = pc.iceConnectionState;
-            console.log(`?? ICE state: ${s}`);
+            dbg("ice", { state: s });
             if (s === "connected" || s === "completed") {
                 attachRemoteAudio(sess);
             }
+            if (currentCall?.session === sess) runActions(currentCall.machine.handle({ type: "ice", state: s }));
         });
 
         // -- General connection state ------------------------------------
         pc.addEventListener("connectionstatechange", () => {
             const s = pc.connectionState;
-            console.log(`?? Connection state: ${s}`);
+            dbg("peer-connection", { state: s });
             if (s === "connected") {
                 attachRemoteAudio(sess);
             }
@@ -482,72 +637,41 @@ const attachSessionEvents = (sess) => {
                 console.warn("re-INVITE handler error:", e);
             }
         },
-        onReject()  { console.log("? Rejected");   cleanupCall(); },
-        onCancel()  { console.log("? Cancelled");  cleanupCall(); },
-        onBye()     { console.log("?? Remote BYE"); cleanupCall(); },
+        // the end is reported once, from the Terminated state below
+        onReject()  { dbg("session-reject", {}); },
+        onCancel()  { dbg("session-cancel", {}); },
+        onBye()     { dbg("remote-bye", {}); },
         onTrack()   { attachRemoteAudio(sess); },
     };
 
     sess.stateChange.addListener((state) => {
-        console.log("Session state ?", state);
+        dbg("session", { state });
 
         if (state === SessionState.Establishing) {
-            console.log("?? Ringing�");
-
-            // Start a ringing-phase timer so the UI shows something
-            clearInterval(timerInterval);
-            seconds = 0;
-            timerInterval = setInterval(() => {
-                seconds++;
-                const m  = String(Math.floor(seconds / 60)).padStart(2, "0");
-                const s  = String(seconds % 60).padStart(2, "0");
-                const el = document.getElementById("sip-timer");
-                if (el) el.innerText = `${m}:${s}`;
-            }, 1000);
-
-            // Wire PC listeners again here in case SDH wasn't ready during the
-            // initial poll above (some sip.js versions create it lazily)
+            // No timer while ringing: the duration starts only when the customer is really connected.
+            // Wire PC listeners again in case the SDH was created lazily
             wirePeerConnectionListeners(sess);
         }
 
         if (state === SessionState.Established) {
-            console.log("? Call connected");
-
-            // Reset timer to 0 now that call is truly connected
             if (sess._pendingHangup) {
-                console.warn("?? Established after pending hangup � sending BYE now");
-                sess.bye().catch(e => { console.warn("Pending hangup BYE error:", e); cleanupCall(); });
+                dbg("established-after-hangup", {});
+                sess.bye().catch(e => { dbg("bye-error", { message: e?.message }); forceEnd(); });
                 return;
             }
-            clearInterval(timerInterval);
-            seconds = 0;
-            timerInterval = setInterval(() => {
-                seconds++;
-                const m  = String(Math.floor(seconds / 60)).padStart(2, "0");
-                const s  = String(seconds % 60).padStart(2, "0");
-                const el = document.getElementById("sip-timer");
-                if (el) el.innerText = `${m}:${s}`;
-            }, 1000);
-
-            // Retry audio � RTP may arrive slightly after Established fires
+            // 200 OK + ACK only: "connected" also needs ICE and inbound audio (call-state.js, checked every 500 ms)
             [0, 300, 700, 1500, 3000].forEach(ms =>
                 setTimeout(() => attachRemoteAudio(sess), ms)
             );
-
-            if (currentCall && !currentCall.establishedAt) {
-                currentCall.establishedAt = Date.now();
-                notify(callEstablishedListeners, {});
-            }
         }
         if (state === SessionState.Terminating) {
-            console.log("?? Terminating � BYE sent, awaiting 200");
-            // ? Mark pending so onAccept knows to re-BYE if late 200 OK arrives
+            // Mark pending so onAccept knows to re-BYE if a late 200 OK arrives
             sess._pendingHangup = true;
             clearInterval(timerInterval);
         }
         if (state === SessionState.Terminated) {
-            console.log("?? Terminated");
-            cleanupCall();
+            if (currentCall?.session === sess) runActions(currentCall.machine.handle({ type: "terminated", code: currentCall.sipCode }));
+            else if (session === sess) cleanupCall();
         }
     });
 };
@@ -589,7 +713,8 @@ const attachRemoteAudio = (sess) => {
 /* -----------------------------------------------------------------------------
  *  INTERNAL � cleanup after call ends
  * ------------------------------------------------------------------------- */
-const cleanupCall = () => {
+const cleanupCall = (result = null) => {
+    stopCallTick();
     clearInterval(timerInterval);
     timerInterval = null;
     seconds       = 0;
@@ -598,6 +723,13 @@ const cleanupCall = () => {
     if (remoteAudio) {
         remoteAudio.pause();
         remoteAudio.srcObject = null;
+    }
+
+    // Always release the microphone and close the media path
+    const pc = session?.sessionDescriptionHandler?.peerConnection;
+    if (pc) {
+        try { pc.getSenders().forEach(s => s.track && s.track.stop()); } catch (_) {}
+        try { if (pc.signalingState !== "closed") pc.close(); } catch (_) {}
     }
 
     const timerEl = document.getElementById("sip-timer");
@@ -609,12 +741,16 @@ const cleanupCall = () => {
     if (currentCall && !currentCall.ended) {
         currentCall.ended = true;
         const wasEstablished = !!currentCall.establishedAt;
-        notify(callEndListeners, {
-            outcome:  outcomeFromSipCode(currentCall.sipCode, wasEstablished, currentCall.cancelledByAgent),
+        const info = result || {
+            outcome:  outcomeFromSipCode(currentCall.sipCode, wasEstablished, false),
             sipCode:  currentCall.sipCode,
             duration: wasEstablished ? Math.round((Date.now() - currentCall.establishedAt) / 1000) : 0,
-        });
+        };
+        dbg("ended", { outcome: info.outcome, reason: info.reason, sipCode: info.sipCode, duration: info.duration });
+        notify(callEndListeners, info);
+        flushDebug();
     }
+    currentCall = null;
 };
 
 /* -----------------------------------------------------------------------------

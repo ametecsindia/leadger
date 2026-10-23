@@ -93,5 +93,14 @@ return [
     'sip' => [
         'domain' => env('SIP_DOMAIN', 'voip.ametecsindia.com'),
         'websocket' => env('SIP_WEBSOCKET', 'wss://voip.ametecsindia.com:7443'),
+        // How the customer number is sent to the gateway: national (9XXXXXXXXX), 91, +91, 0, or prefix (the
+        // gateway_prefix returned by the call API + the 10 digits)
+        'dial_format' => env('SIP_DIAL_FORMAT', 'national'),
+        // seconds: no answer -> CANCEL; after 200 OK: wait for customer audio, then warn this long before hanging up
+        'ring_timeout' => (int)env('SIP_RING_TIMEOUT', 45),
+        'audio_wait' => (int)env('SIP_AUDIO_WAIT', 5),
+        'audio_grace' => (int)env('SIP_AUDIO_GRACE', 10),
+        // every SIP / WebRTC event in the browser console and storage/logs/laravel.log ([WebRTC-debug]); no secrets
+        'debug' => (bool)env('SIP_DEBUG', false),
     ],
 ];

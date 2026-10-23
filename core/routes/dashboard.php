@@ -594,6 +594,7 @@ Route::get('/leads/getTeamMembersByCampaign/{id}', [LeadsController::class, 'get
 Route::get('/sso-login-lead', [WebRTCController::class, 'loginSmartPing'])->name('sso-login-lead');
 Route::post('/leads/webrtc_call/', [WebRTCController::class, 'logCall'])->name('webrtcCall');
 Route::post('/dialer/webrtc', [WebRTCController::class, 'webrtcdialer'])->name('dialerwebrtc');
+Route::post('/dialer/webrtc-debug', [WebRTCController::class, 'debugLog'])->middleware('throttle:120,1')->name('dialerWebrtcDebug');
 
 Route::post('/sso-logout', [WebRTCController::class, 'ssoLogout'])->name('sso_logout');
 

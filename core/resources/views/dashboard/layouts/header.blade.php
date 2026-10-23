@@ -30,6 +30,20 @@ $headerCampaignCount = $headerCampaigns->count();
             <span>Active Call Workspace</span>
         </a>
 
+        <!-- WebRTC call settings (public/js/sip-client.js): timeouts and the SIP debug trace; no secrets -->
+        @auth
+            <script>
+                window.__SIP_OPTIONS__ = {
+                    ringTimeout: {{ (int)config('services.sip.ring_timeout', 45) }},
+                    audioWait:   {{ (int)config('services.sip.audio_wait', 5) }},
+                    audioGrace:  {{ (int)config('services.sip.audio_grace', 10) }},
+                    debug:       {{ config('services.sip.debug') ? 'true' : 'false' }},
+                    debugUrl:    @json(config('services.sip.debug') ? route('dialerWebrtcDebug') : null),
+                    csrf:        @json(config('services.sip.debug') ? csrf_token() : null),
+                };
+            </script>
+        @endauth
+
         <!-- WebRTC Telephony Authentication Controls (if configured) -->
         @if(auth()->user() && auth()->user()->smartping_user_id && auth()->user()->smartping_password)
             @php

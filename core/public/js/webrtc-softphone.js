@@ -11,10 +11,12 @@ import {
     holdCall,
     onCallEnded,
     onCallEstablished,
-} from './sip-client.js';
+    onCallRinging,
+    onCallWarning,
+} from './sip-client.js?v=20261023';
 
 // Re-exported so pages register listeners on the SAME sip-client instance that places the calls
-export { hangupCall, muteCall, holdCall, onCallEnded, onCallEstablished, onCallRinging, hasActiveCall } from './sip-client.js';
+export { hangupCall, muteCall, holdCall, onCallEnded, onCallEstablished, onCallRinging, onCallWarning, hasActiveCall } from './sip-client.js?v=20261023';
 
 /* --- STATE --------------------------------------------------------------- */
 let _registered  = false;
@@ -34,17 +36,27 @@ const BTN_HANGUP_ID = 'sp-btn-hangup';
 /* --- PUBLIC --------------------------------------------------------------- */
 export async function initSoftphone(config) {
     window.__SIP_DOMAIN__ = config.domain;
+    _registered = false;
     await initSip(config);
     _registered = true;
     onCallEnded(_onCallEnded);
     onCallEstablished(_onCallEstablished);
+    onCallRinging(_onCallRinging);
+    onCallWarning(_onCallWarning);
 }
 
+/* Connecting -> Ringing -> On call: "On call" and the timer only once the customer is really connected */
 export async function makeSoftphoneCall(number, meta = {}) {
-    if (!_registered) throw new Error('SIP not registered. Call initSoftphone() first.');
+    if (!_registered) throw new Error('Softphone is not registered with the provider');
     _buildPanel(number);
-    _setStatus('Calling�');
-    await makeCall(number, meta);
+    _setStatus('Connecting');
+    try {
+        await makeCall(number, meta);
+    } catch (e) {
+        _stopTimer();
+        _removePanel();
+        throw e;
+    }
 }
 
 export function destroySoftphone() {
@@ -253,7 +265,7 @@ function _buildPanel(number) {
                 <span class="sp-dot"></span>
                 <span>WebRTC Softphone</span>
             </div>
-            <span class="sp-badge" id="${STATUS_ID}">Calling�</span>
+            <span class="sp-badge" id="${STATUS_ID}">Connecting</span>
         </div>
         <div class="sp-body">
 
@@ -401,6 +413,15 @@ async function _handleHangup() {
 }
 
 /* --- SIP CALLBACKS -------------------------------------------------------- */
+function _onCallRinging() {
+    _setStatus('Ringing');
+}
+
+function _onCallWarning() {
+    _setStatus('No audio yet');
+}
+
+/* Only after 200 OK + ICE connected + inbound audio (sip-client / call-state.js) */
 function _onCallEstablished() {
     _setStatus('On call');
     _startTimer();
@@ -408,7 +429,7 @@ function _onCallEstablished() {
 
 function _onCallEnded(info) {
     _stopTimer();
-    const labels = { completed: 'Call Ended', busy: 'Busy', 'no-answer': 'No Answer', cancelled: 'Cancelled', failed: 'Failed' };
+    const labels = { completed: 'Call Ended', busy: 'Busy / declined', 'no-answer': 'No Answer', cancelled: 'Cancelled', failed: 'Failed' };
     _setStatus(labels[info?.outcome] || 'Call Ended');
     setTimeout(_removePanel, 1500);
 }

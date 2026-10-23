@@ -251,7 +251,7 @@ body.lg-ad-visible #tab-campaign-queue { padding-bottom: 96px; }
         if (!isActive()) {
             var note = NOTES[el.type.value];
             el.note.textContent = note || '';
-            el.start.disabled = !!note || el.type.options[el.type.selectedIndex].disabled;
+            el.start.disabled = !!note || !!(el.type.options[el.type.selectedIndex] || { disabled: true }).disabled;
             return;
         }
         el.sessType.textContent = TYPE_LABEL[session.dialer_type] || session.dialer_type;

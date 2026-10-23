@@ -120,6 +120,7 @@ class CallRecordingService
             }
             $dialerLog->provider_call_id = $effectiveCallId;
             $dialerLog->call_state = 'completed';
+            $dialerLog->answer_time = $dialerLog->answer_time ?: Carbon::now();   // the provider reports the customer leg connected
             if (empty($dialerLog->end_time)) {
                 $dialerLog->end_time = Carbon::now();
             }
@@ -134,6 +135,7 @@ class CallRecordingService
             }
             $callLog->provider_call_id = $effectiveCallId;
             $callLog->call_state = 'completed';
+            $callLog->answer_time = $callLog->answer_time ?: Carbon::now();   // the provider reports the customer leg connected
             if (empty($callLog->end_time)) {
                 $callLog->end_time = Carbon::now();
             }

@@ -1,0 +1,160 @@
+<!doctype html>
+<!--
+  Unit tests of public/js/call-state.js (WebRTC call state machine) with a mocked SIP session.
+  Run from core/:  powershell -File tests/js/run-js-tests.ps1   (serves core/ with php -S and opens this page in
+  headless Chrome; prints "JS TESTS: PASS n/n" or the failures).
+-->
+<html lang="en">
+<head><meta charset="utf-8"><title>call-state tests</title></head>
+<body>
+<pre id="out">running</pre>
+<script type="module">
+import { createCallMachine } from '/public/js/call-state.js';
+
+const results = [];
+const test = (name, fn) => {
+    try { fn(); results.push(['ok', name]); }
+    catch (e) { results.push(['FAIL', name + ': ' + e.message]); }
+};
+const eq = (a, b, msg) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg || '') + ' expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a)); };
+const types = (actions) => actions.map(a => a.type);
+
+/* A mocked call: feed events with a fake clock, collect every action */
+function call(opts) {
+    const m = createCallMachine({ ringTimeoutMs: 45000, audioWaitMs: 5000, audioGraceMs: 10000, ...opts });
+    const log = [];
+    const ev = (e, at) => { const a = m.handle({ ...e, at }); log.push(...a); return a; };
+    ev({ type: 'invite' }, 0);
+    return { m, log, ev, all: () => types(log), ended: () => log.find(a => a.type === 'ended') };
+}
+
+test('100 / 180 / 183 never produce Connected', () => {
+    const c = call();
+    eq(types(c.ev({ type: 'response', code: 100 }, 100)), []);
+    eq(types(c.ev({ type: 'response', code: 180 }, 900)), ['ringing']);
+    eq(types(c.ev({ type: 'response', code: 183 }, 1200)), []);
+    c.ev({ type: 'ice', state: 'connected' }, 1300);
+    c.ev({ type: 'stats', packetsReceived: 50 }, 1500);   // early media before 200 OK
+    c.ev({ type: 'stats', packetsReceived: 90 }, 2000);
+    eq(c.all().includes('connected'), false);
+    eq(c.m.state.phase, 'ringing');
+});
+
+test('200 OK without inbound audio is not Connected: warn after 5 s, hang up after 15 s, result "no audio"', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 200 }, 1000);
+    c.ev({ type: 'ice', state: 'connected' }, 1100);
+    c.ev({ type: 'stats', packetsReceived: 0 }, 1500);
+    c.ev({ type: 'stats', packetsReceived: 0 }, 3000);
+    eq(c.all().includes('connected'), false);
+    eq(types(c.ev({ type: 'tick' }, 6000)), ['warn']);
+    eq(types(c.ev({ type: 'tick' }, 9000)), []);
+    eq(types(c.ev({ type: 'tick' }, 16000)), ['hangup']);
+    const end = c.ev({ type: 'terminated' }, 17000)[0];
+    eq([end.outcome, end.reason, end.duration], ['failed', 'no audio', 0]);
+});
+
+test('200 OK + ACK + ICE connected + increasing inbound RTP = Connected, timer from that moment', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 180 }, 500);
+    c.ev({ type: 'response', code: 200 }, 8000);
+    c.ev({ type: 'stats', packetsReceived: 10 }, 8500);           // baseline after 200 OK
+    eq(c.all().includes('connected'), false, 'no ICE yet');
+    c.ev({ type: 'ice', state: 'completed' }, 8600);
+    eq(types(c.ev({ type: 'stats', packetsReceived: 35 }, 9000)), ['connected']);
+    const end = c.ev({ type: 'terminated' }, 69000)[0];
+    eq([end.outcome, end.duration], ['completed', 60]);
+});
+
+test('Audio packets but ICE never connected is not Connected', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 200 }, 1000);
+    c.ev({ type: 'ice', state: 'checking' }, 1100);
+    c.ev({ type: 'stats', packetsReceived: 1 }, 1500);
+    c.ev({ type: 'stats', packetsReceived: 40 }, 2000);
+    eq(c.all().includes('connected'), false);
+});
+
+test('Order does not matter: ICE first, then 200 OK, then audio', () => {
+    const c = call();
+    c.ev({ type: 'ice', state: 'connected' }, 300);
+    c.ev({ type: 'response', code: 200 }, 2000);
+    c.ev({ type: 'stats', packetsReceived: 5 }, 2500);
+    eq(types(c.ev({ type: 'stats', packetsReceived: 6 }, 3000)), ['connected']);
+});
+
+test('486 / 600 / 603 = Customer busy / declined', () => {
+    for (const code of [486, 600, 603]) {
+        const c = call();
+        c.ev({ type: 'response', code: 180 }, 500);
+        c.ev({ type: 'response', code, reason: 'Busy Here' }, 4000);
+        const end = c.ev({ type: 'terminated' }, 4100)[0];
+        eq([end.outcome, end.sipCode], ['busy', code], 'code ' + code);
+    }
+});
+
+test('408 / 480 = No answer; 404 / 484 / 503 / 488 = Failed with a short reason', () => {
+    for (const code of [408, 480]) {
+        const c = call();
+        c.ev({ type: 'response', code }, 3000);
+        eq(c.ev({ type: 'terminated' }, 3100)[0].outcome, 'no-answer', 'code ' + code);
+    }
+    const reasons = { 404: 'number not found', 484: 'incomplete number', 503: 'provider unavailable', 488: 'audio format not accepted' };
+    for (const [code, reason] of Object.entries(reasons)) {
+        const c = call();
+        c.ev({ type: 'response', code: +code }, 3000);
+        const end = c.ev({ type: 'terminated' }, 3100)[0];
+        eq([end.outcome, end.reason, end.duration], ['failed', reason, 0], 'code ' + code);
+    }
+});
+
+test('ICE failure while ringing cancels the call and ends as Failed', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 183 }, 500);
+    eq(types(c.ev({ type: 'ice', state: 'failed' }, 3000)), ['cancel']);
+    const end = c.ev({ type: 'terminated', code: 487 }, 3200)[0];
+    eq(end.outcome, 'failed');
+});
+
+test('No answer within the ringing timeout: CANCEL, then No answer', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 180 }, 1000);
+    eq(types(c.ev({ type: 'tick' }, 44000)), []);
+    eq(types(c.ev({ type: 'tick' }, 45000)), ['cancel']);
+    eq(types(c.ev({ type: 'tick' }, 46000)), [], 'cancel only once');
+    eq(c.ev({ type: 'terminated', code: 487 }, 46500)[0].outcome, 'no-answer');
+});
+
+test('End call while ringing sends CANCEL and ends as Cancelled', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 180 }, 1000);
+    eq(types(c.ev({ type: 'agentHangup' }, 5000)), ['cancel']);
+    const end = c.ev({ type: 'terminated', code: 487 }, 5200)[0];
+    eq([end.outcome, end.duration], ['cancelled', 0]);
+});
+
+test('End call after Connected hangs up and ends as completed with the talk time', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 200 }, 1000);
+    c.ev({ type: 'ice', state: 'connected' }, 1000);
+    c.ev({ type: 'stats', packetsReceived: 1 }, 1500);
+    c.ev({ type: 'stats', packetsReceived: 50 }, 2000);
+    eq(types(c.ev({ type: 'agentHangup' }, 32000)), ['hangup']);
+    eq(c.ev({ type: 'terminated' }, 32500)[0].duration, 31);
+});
+
+test('The result is reported once', () => {
+    const c = call();
+    c.ev({ type: 'response', code: 486 }, 1000);
+    eq(types(c.ev({ type: 'terminated' }, 1100)), ['ended']);
+    eq(types(c.ev({ type: 'terminated' }, 1200)), []);
+    eq(types(c.ev({ type: 'response', code: 200 }, 1300)), []);
+});
+
+const failed = results.filter(r => r[0] !== 'ok');
+document.getElementById('out').textContent =
+    (failed.length ? 'JS TESTS: FAIL ' : 'JS TESTS: PASS ') + (results.length - failed.length) + '/' + results.length + '\n' +
+    results.map(r => r[0] + '  ' + r[1]).join('\n');
+</script>
+</body>
+</html>

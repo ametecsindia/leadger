@@ -3324,7 +3324,7 @@ function placeCampaignCall(type) {
                                 domain: res.sip_ip || '',
                                 websocket: res.sip_ws,
                             }).then(function() {
-                                return sp.makeSoftphoneCall(phone, {
+                                return sp.makeSoftphoneCall(res.dial_number || phone, {
                                     callId: res.call_id,
                                     refId: res.ref_id,
                                     agent: res.sip_id,
@@ -3338,7 +3338,7 @@ function placeCampaignCall(type) {
                                 lgAdNotify('call_failed', { reason: 'sip', message: err && err.message });
                                 endCampaignWebRTCCall();
                                 showLiveCallStatus('failed', 'Call Failed', err.message || 'SIP connection error', 'webrtc');
-                                sendCallStateUpdate(res.id, res.uuid, 'failed');
+                                sendCallStateUpdate(res.id, res.uuid, 'failed', 0, { sip_reason: err && err.message });
                             });
                         });
                     }
@@ -4841,10 +4841,11 @@ function stopLiveTimer() {
     _liveTimerSeconds = 0;
 }
 
-function sendCallStateUpdate(id, uuid, state, duration) {
+function sendCallStateUpdate(id, uuid, state, duration, sip) {
     if (!id && !uuid) return;
     var leadId = $('#manual_lead_id').val() || $('#current_lead_id').val() || '';
     var campaignId = $('#manual_campaign_id').val() || $('#current_campaign_id').val() || '';
+    sip = sip || {};
 
     $.ajax({
         url: "{{ route('dialerUpdateCallState') }}",
@@ -4856,7 +4857,10 @@ function sendCallStateUpdate(id, uuid, state, duration) {
             state: state,
             duration: duration || 0,
             lead_id: leadId,
-            campaign_id: campaignId
+            campaign_id: campaignId,
+            is_campaign: window._activeCallIsCampaign ? 1 : 0,
+            sip_code: sip.sip_code || '',
+            sip_reason: sip.sip_reason || ''
         },
         dataType: 'json',
         success: function(res) {
@@ -5277,7 +5281,7 @@ function startWebRTCCall() {
                         websocket: response.sip_ws       || (window.__SIP_CONFIG__ || {}).websocket || '',
                     })
                     .then(function() {
-                        return sp.makeSoftphoneCall(mobile, {
+                        return sp.makeSoftphoneCall(response.dial_number || mobile, {
                             callId:  response.call_id,
                             refId:   response.ref_id,
                             agent:   response.sip_id,
@@ -5293,7 +5297,7 @@ function startWebRTCCall() {
                         showCallToast('error', 'Call Failed', err.message || 'SIP call could not connect');
                         window._sipCallInProgress = false;
                         $btn.prop('disabled', false).find('i').attr('class', 'fa fa-headset');
-                        sendCallStateUpdate(response.id, response.uuid, 'failed');
+                        sendCallStateUpdate(response.id, response.uuid, 'failed', 0, { sip_reason: err && err.message });
                     });
                 });
             } else {
@@ -5431,11 +5435,17 @@ $(function() {
     }
     const callIds = () => [document.getElementById('id')?.value, document.getElementById('uuid')?.value];
 
-    // Real SIP events only: 180/183 -> Ringing, 200 OK (Established) -> Connected, hangup -> result
+    // Real SIP events only: 180/183 -> Ringing; Connected only after 200 OK + ICE + inbound audio
+    // (public/js/call-state.js); hangup -> the true result
     sp.onCallRinging(() => {
         showLiveCallStatus('ringing', 'Ringing...', '', 'webrtc');
         showCallToast('ringing', 'Ringing...', 'Customer phone is ringing');
         sendCallStateUpdate(...callIds(), 'ringing');
+    });
+
+    sp.onCallWarning((info) => {
+        showLiveCallStatus('ringing', 'Waiting for the customer...', '', 'webrtc');
+        showCallToast('ringing', 'No audio yet', (info && info.message) || 'Connected to the gateway, but no audio from the customer yet');
     });
 
     sp.onCallEstablished(() => {
@@ -5450,16 +5460,17 @@ $(function() {
         window._sipCallInProgress = false;
         const outcome = info?.outcome || 'completed';
         const duration = info?.duration || 0;
-        sendCallStateUpdate(...callIds(), outcome, duration);
+        sendCallStateUpdate(...callIds(), outcome, duration, { sip_code: info?.sipCode, sip_reason: info?.reason || info?.sipReason });
 
         if (outcome === 'completed') {
             showLiveCallStatus('ended', 'Call Ended', '', 'webrtc', duration);
         } else {
+            const reason = info?.reason ? info.reason.charAt(0).toUpperCase() + info.reason.slice(1) : '';
             const labels = {
-                busy: ['Busy', 'Customer line is busy'],
-                'no-answer': ['No Answer', 'Customer did not answer'],
+                busy: ['Customer busy / declined', reason || 'Customer line is busy'],
+                'no-answer': ['No answer', 'Customer did not answer'],
                 cancelled: ['Cancelled', 'Call cancelled before it was answered'],
-                failed: ['Failed', 'The call could not be connected'],
+                failed: [reason ? 'Call failed: ' + info.reason : 'Call failed', 'The call could not be connected'],
             };
             const [title, desc] = labels[outcome] || labels.failed;
             showLiveCallStatus('failed', title, desc, 'webrtc');

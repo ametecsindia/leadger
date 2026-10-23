@@ -227,6 +227,8 @@ class WebRTCController extends Controller
 
         $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $CallLog->reference_id));
         $CallLog->provider_call_id = $providerCallId;
+        $dial = self::dialNumber(self::nationalNumber($request->phonenumber) ?? preg_replace('/\D/', '', (string)$request->phonenumber), $api_response);
+        $CallLog->dialed_number = $dial;
         $CallLog->save();
 
        return response()->json(['call_log_id' => $CallLog->id, 
@@ -235,6 +237,7 @@ class WebRTCController extends Controller
                          'sip_id'       => $this->sipValue($api_response, 'agent_id', Auth::user()->smartping_user_id),
                         'sip_ip'       => $this->sipDomain($api_response),
                         'sip_ws'       => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
+                        'dial_number'  => $dial,
                         'sip_port'     => '7443',
                         'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
                         'call_id'      => $providerCallId,
@@ -271,6 +274,12 @@ class WebRTCController extends Controller
         $user = Auth::user();
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+        if (!self::nationalNumber($request->mobile)) {
+            return response()->json(['success' => false, 'message' => 'Enter a valid 10-digit mobile number.'], 422);
+        }
+        if (!$user->smartping_user_id || !$user->smartping_password) {
+            return response()->json(['success' => false, 'message' => 'WebRTC calling is not set up for your user (no softphone login).'], 422);
         }
 
         // Enforce backend outbound calling restrictions (hours + retry limit)
@@ -413,6 +422,7 @@ class WebRTCController extends Controller
 
             $providerCallId = $api_response['response']['call_id'] ?? ($api_response['call_id'] ?? ($api_response['message'] ?? $activeRecord->reference_id));
             $activeRecord->provider_call_id = $providerCallId;
+            $activeRecord->dialed_number = self::dialNumber($targetMobile, $api_response);
             $activeRecord->save();
 
 
@@ -428,6 +438,7 @@ class WebRTCController extends Controller
                 'sip_id' => $this->sipValue($api_response, 'agent_id', Auth::user()->smartping_user_id),
                 'sip_ip' => $this->sipDomain($api_response),
                 'sip_ws' => $this->sipValue($api_response, 'websocket', config('services.sip.websocket')),
+                'dial_number' => $activeRecord->dialed_number,
                 'sip_port' => '7443',
                 'gateway_prefix' => $api_response['response']['gateway_prefix'] ?? '',
                 'call_id' => $providerCallId,
@@ -438,6 +449,56 @@ class WebRTCController extends Controller
                 'sip_password' => Auth::user()->smartping_password ?? ''
             ]);
         }
+    /**
+     * POST /dialer/webrtc-debug (SIP_DEBUG=true only): the browser's SIP / WebRTC event trace of a call, written to
+     * storage/logs/laravel.log as [WebRTC-debug]. Values that look like secrets are removed again on the server.
+     */
+    public function debugLog(Request $request)
+    {
+        if (!config('services.sip.debug')) {
+            return response()->json(['success' => false], 404);
+        }
+        $events = array_slice((array)$request->input('events', []), 0, 200);
+        $clean = function ($v) use (&$clean) {
+            if (!is_array($v)) return is_string($v) ? mb_substr($v, 0, 300) : $v;
+            $out = [];
+            foreach ($v as $k => $item) {
+                if (is_string($k) && preg_match('/pass|auth|token|secret|nonce/i', $k)) continue;
+                $out[$k] = $clean($item);
+            }
+            return $out;
+        };
+        Log::info('[WebRTC-debug]', [
+            'user' => Auth::id(),
+            'call_id' => mb_substr((string)$request->input('call_id'), 0, 100),
+            'events' => $clean($events),
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    /** 10-digit Indian number from any format (+91 98..., 098..., 91-98...), or null when it is not one. */
+    public static function nationalNumber($number): ?string
+    {
+        $n = ltrim(preg_replace('/\D/', '', (string)$number), '0');
+        if (strlen($n) === 12 && str_starts_with($n, '91')) {
+            $n = substr($n, 2);
+        }
+        return strlen($n) === 10 ? $n : null;
+    }
+
+    /** The customer number in the format the SIP trunk expects (SIP_DIAL_FORMAT): national, 91, +91, 0 or prefix. */
+    public static function dialNumber(string $national, ?array $api_response = null): string
+    {
+        $prefix = trim((string)($api_response['response']['gateway_prefix'] ?? ''));
+        return match (strtolower((string)config('services.sip.dial_format', 'national'))) {
+            '91' => '91' . $national,
+            '+91' => '+91' . $national,
+            '0' => '0' . $national,
+            'prefix' => preg_replace('/[^\d+*#]/', '', $prefix) . $national,
+            default => $national,
+        };
+    }
+
     // The gateway's value, or the fallback when it sends none (an empty SIP domain breaks the softphone: "missing or invalid host")
     private function sipValue(?array $api_response, string $key, $fallback): string
     {
