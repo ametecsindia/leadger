@@ -477,6 +477,15 @@ Route::post('/webrtc/store', [WebRTCController::class, 'store'])->name('webrtcSt
 Route::get('/webrtc/{id}/edit', [WebRTCController::class, 'edit'])->name('webrtcEdit');
 Route::get('/webrtc/{id}/delete', [WebRTCController::class, 'delete'])->name('webrtcDelete');
 Route::post('/webrtc/toggle/{id}', [WebRTCController::class, 'webrtcToggle'])->name('webrtcToggle');
+// Configuration > Companies (Super Admin): the companies list, each company with its own database
+Route::get('/companies', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'index'])->name('companies');
+Route::get('/companies/create', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'create'])->name('companiesCreate');
+Route::post('/companies', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'store'])->name('companiesStore');
+Route::post('/companies/test-connection', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'testConnection'])->middleware('throttle:30,1')->name('companiesTestConnection');
+Route::get('/companies/{company}/edit', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'edit'])->whereNumber('company')->name('companiesEdit');
+Route::put('/companies/{company}', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'update'])->whereNumber('company')->name('companiesUpdate');
+Route::post('/companies/{company}/status', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'status'])->whereNumber('company')->name('companiesStatus');
+Route::get('/companies/{company}/check', [\App\Http\Controllers\Dashboard\CompaniesController::class, 'check'])->whereNumber('company')->middleware('throttle:120,1')->name('companiesCheck');
 
 // Work Locations
 Route::get('/workLocations', [WorkLocationsController::class, 'index'])->name('workLocations');

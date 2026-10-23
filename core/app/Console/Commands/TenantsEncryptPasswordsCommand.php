@@ -18,7 +18,11 @@ class TenantsEncryptPasswordsCommand extends Command
 
     public function handle(): int
     {
-        $plain = DB::connection('mysql')->table('tenants')->get(['id', 'subdomain', 'db_password'])
+        if (\App\Support\Tenancy::manageOnly()) {
+            $this->error('TENANCY_MANAGE_ONLY: another installation serves these companies and reads the passwords in plain text.');
+            return self::FAILURE;
+        }
+        $plain = DB::connection(\App\Support\Tenancy::registry())->table('tenants')->get(['id', 'subdomain', 'db_password'])
             ->filter(function ($row) {
                 if ($row->db_password === null || $row->db_password === '') return false;
                 try {
@@ -39,7 +43,7 @@ class TenantsEncryptPasswordsCommand extends Command
             return self::SUCCESS;
         }
         foreach ($plain as $row) {
-            DB::connection('mysql')->table('tenants')->where('id', $row->id)->update(['db_password' => Crypt::encryptString($row->db_password)]);
+            DB::connection(\App\Support\Tenancy::registry())->table('tenants')->where('id', $row->id)->update(['db_password' => Crypt::encryptString($row->db_password)]);
         }
         $this->info('Encrypted ' . $plain->count() . ' password(s).');
         return self::SUCCESS;

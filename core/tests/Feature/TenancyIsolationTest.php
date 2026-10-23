@@ -195,6 +195,8 @@ class TenancyIsolationTest extends TestCase
 
     public function test_company_database_passwords_are_stored_encrypted()
     {
+        config(['tenancy.encrypt_passwords' => true]);
+        $this->tenant->update(['db_password' => config('database.connections.mysql.password')]);
         $raw = DB::table('tenants')->where('id', $this->tenant->id)->value('db_password');
         $this->assertNotSame(config('database.connections.mysql.password'), $raw);
         $this->assertSame(config('database.connections.mysql.password'), $this->tenant->fresh()->db_password);

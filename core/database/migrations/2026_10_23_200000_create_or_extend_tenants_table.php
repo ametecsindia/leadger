@@ -1,18 +1,19 @@
 <?php
 
+use App\Support\Tenancy;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Central companies list (tenants): until now a hand-made table with only host + database credentials in plain
- * text. Creates it when missing, adds name / slug / status / subscription / provisioning / migration tracking, and
- * encrypts stored database passwords (App\Models\TenantSetup decrypts them).
+ * Companies list (tenants): until now a hand-made table with only host + database credentials. Creates it when
+ * missing and adds name / slug / status / subscription / provisioning / migration tracking. Existing rows keep their
+ * values; all companies start as "active". Passwords are never rewritten here (another installation may read them in
+ * plain text; tenants:encrypt-passwords encrypts on purpose).
  *
- * Central database only: tenants:migrate runs every migration on each company database too, where this one does
- * nothing (a company database never holds the companies list).
+ * Works on the companies list's own connection (Tenancy::registry(): tenants_leadger when TENANCY_DB_DATABASE is
+ * set, else this installation's database). Skipped while tenants:migrate runs it on a company database.
  */
 return new class extends Migration
 {
@@ -21,21 +22,22 @@ return new class extends Migration
         if (DB::getDefaultConnection() !== 'mysql') {
             return;
         }
+        $schema = Schema::connection(Tenancy::registry());
 
-        if (!Schema::hasTable('tenants')) {
-            Schema::create('tenants', function (Blueprint $t) {
+        if (!$schema->hasTable('tenants')) {
+            $schema->create('tenants', function (Blueprint $t) {
                 $t->id();
                 $t->string('subdomain', 191)->unique();   // the host, e.g. company-a.leadger.in
                 $t->string('db_host', 191)->default('127.0.0.1');
                 $t->string('db_name', 191);
                 $t->string('db_user', 191);
-                $t->text('db_password')->nullable();      // encrypted
+                $t->text('db_password')->nullable();
                 $t->timestamps();
             });
         }
 
-        Schema::table('tenants', function (Blueprint $t) {
-            $add = fn (string $c) => !Schema::hasColumn('tenants', $c);
+        $schema->table('tenants', function (Blueprint $t) use ($schema) {
+            $add = fn (string $c) => !$schema->hasColumn('tenants', $c);
             if ($add('name')) $t->string('name', 191)->nullable()->after('id');
             if ($add('slug')) $t->string('slug', 64)->nullable()->unique()->after('name');
             if ($add('status')) $t->string('status', 20)->default('active')->index();   // active | suspended | provisioning | failed
@@ -50,12 +52,10 @@ return new class extends Migration
             if ($add('last_migration_error')) $t->text('last_migration_error')->nullable();
         });
 
-        // encrypted passwords are longer than the old column may allow
-        if (Schema::getColumnType('tenants', 'db_password') !== 'text') {
-            Schema::table('tenants', fn (Blueprint $t) => $t->text('db_password')->nullable()->change());
+        // room for an encrypted password (only lengthens the column)
+        if (!in_array($schema->getColumnType('tenants', 'db_password'), ['text', 'mediumtext', 'longtext'], true)) {
+            $schema->table('tenants', fn (Blueprint $t) => $t->text('db_password')->nullable()->change());
         }
-        // Existing passwords are NOT rewritten here: other servers / scripts may still read this table in plain text.
-        // Encrypt them on purpose with: php artisan tenants:encrypt-passwords (App\Models\TenantSetup reads both).
     }
 
     public function down(): void

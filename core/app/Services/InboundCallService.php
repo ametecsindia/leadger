@@ -71,7 +71,7 @@ class InboundCallService
             return filter_var($set, FILTER_VALIDATE_BOOLEAN);
         }
         static $single = null;
-        return $single ??= !Schema::connection('mysql')->hasTable('tenants');
+        return $single ??= !\App\Support\Tenancy::servesCompanies();
     }
 
     /** A webhook body as a list of events: one event, a batch, or a batch wrapped in data / events / calls / records. */

@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Crypt;
 
 /**
  * One company (tenant) in the central database: its host, its own database and its status.
- * Always read through the central "mysql" connection (TenantSetup::on('mysql') / App\Support\Tenancy).
- * db_password is stored encrypted with APP_KEY (keep APP_KEY unchanged, or the company databases are unreachable).
+ * Read through the companies list's own connection (getConnectionName: "mysql", or "tenancy" for tenants_leadger).
+ * db_password: plain text, or encrypted with APP_KEY when TENANCY_ENCRYPT_PASSWORDS=true (then never change APP_KEY).
  */
 class TenantSetup extends Model
 {
@@ -18,8 +18,13 @@ class TenantSetup extends Model
     public const STATUS_PROVISIONING = 'provisioning';
     public const STATUS_FAILED = 'failed';
 
-    protected $connection = 'mysql';
     protected $table = 'tenants';
+
+    /** The companies list's own connection (App\Support\Tenancy::registry()), never a company database. */
+    public function getConnectionName()
+    {
+        return \App\Support\Tenancy::registry();
+    }
 
     protected $fillable = [
         'name', 'slug', 'subdomain', 'db_host', 'db_name', 'db_user', 'db_password', 'status', 'plan', 'max_users',
@@ -58,9 +63,11 @@ class TenantSetup extends Model
         }
     }
 
+    /** Encrypted only with TENANCY_ENCRYPT_PASSWORDS=true: another installation may read this table in plain text. */
     public function setDbPasswordAttribute($value): void
     {
-        $this->attributes['db_password'] = ($value === null || $value === '') ? $value : Crypt::encryptString((string)$value);
+        $this->attributes['db_password'] = ($value === null || $value === '' || !config('tenancy.encrypt_passwords'))
+            ? $value : Crypt::encryptString((string)$value);
     }
 
     /** Usable: active (rows made before the status column have no status and count as active). */

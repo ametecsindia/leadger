@@ -60,7 +60,7 @@ class Tenancy
             if (self::context() === ['tenant' => $context['tenant']]) {
                 return;
             }
-            $tenant = TenantSetup::on('mysql')->where('subdomain', $context['tenant'])->first();
+            $tenant = TenantSetup::query()->where('subdomain', $context['tenant'])->first();
             if (!$tenant) {
                 throw new \RuntimeException('The company of this job no longer exists.');
             }
@@ -124,16 +124,50 @@ class Tenancy
 
     /* ---------------------------------------------------------------- companies */
 
+    /**
+     * Connection of the companies list: "tenancy" when TENANCY_DB_DATABASE names another database than DB_DATABASE
+     * (e.g. app.leadger.in managing tenants_leadger), else this installation's own "mysql" connection.
+     */
+    public static function registry(): string
+    {
+        $db = trim((string)config('tenancy.database'));
+        return $db !== '' && $db !== (string)env('DB_DATABASE') ? 'tenancy' : 'mysql';
+    }
+
+    /** This installation only manages the companies list; another installation serves and processes them. */
+    public static function manageOnly(): bool
+    {
+        return (bool)config('tenancy.manage_only');
+    }
+
+    /** May manage the companies list: on the central company, a listed email or the "Super Admin" role. */
+    public static function isSuperAdmin($user): bool
+    {
+        if (!$user || !self::isCentral()) {
+            return false;
+        }
+        if (in_array(strtolower((string)$user->email), (array)config('tenancy.super_admin_emails', []), true)) {
+            return true;
+        }
+        return (string)optional($user->permissionsGroup)->name === 'Super Admin';
+    }
+
+    /** This installation serves the listed companies (their hosts, scheduled tasks, migrations). */
+    public static function servesCompanies(): bool
+    {
+        return !self::manageOnly() && self::hasTenantsTable();
+    }
+
     /** The company of a host (tenants table, central database), cached briefly; null = not a listed company. */
     public static function findTenant(string $host): ?TenantSetup
     {
         $host = strtolower(trim($host));
-        if ($host === '' || !self::hasTenantsTable()) {
+        if ($host === '' || !self::servesCompanies()) {
             return null;
         }
         $row = Cache::store('tenancy')->remember(self::lookupCacheKey($host), max(1, (int)config('tenancy.lookup_cache_seconds', 300)),
-            fn () => TenantSetup::on('mysql')->where('subdomain', $host)->first()?->getAttributes() ?: false);
-        return $row ? (new TenantSetup())->newFromBuilder($row, 'mysql') : null;
+            fn () => TenantSetup::query()->where('subdomain', $host)->first()?->getAttributes() ?: false);
+        return $row ? (new TenantSetup())->newFromBuilder($row, self::registry()) : null;
     }
 
     public static function lookupCacheKey(string $host): string
@@ -152,7 +186,7 @@ class Tenancy
     {
         static $has = null;
         try {
-            return $has ??= Schema::connection('mysql')->hasTable('tenants');
+            return $has ??= Schema::connection(self::registry())->hasTable('tenants');
         } catch (\Throwable $e) {
             return false;
         }
@@ -165,8 +199,8 @@ class Tenancy
     public static function companies(bool $activeOnly = true): array
     {
         $companies = [self::central()];
-        if (self::hasTenantsTable()) {
-            foreach (TenantSetup::on('mysql')->when($activeOnly, fn ($q) => $q->active())->orderBy('id')->pluck('subdomain') as $host) {
+        if (self::servesCompanies()) {
+            foreach (TenantSetup::query()->when($activeOnly, fn ($q) => $q->active())->orderBy('id')->pluck('subdomain') as $host) {
                 $companies[] = ['tenant' => $host];
             }
         }

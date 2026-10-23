@@ -64,6 +64,25 @@ return [
             ]) : [],
         ],
 
+        // The companies list (tenants table) when it lives in another database than this installation's own data,
+        // e.g. app.leadger.in (DB_DATABASE=Leadger_app2) managing tenants_leadger. Used only when
+        // TENANCY_DB_DATABASE is set (App\Support\Tenancy::registry()); same server and login unless overridden.
+        'tenancy' => [
+            'driver' => 'mysql',
+            'host' => env('TENANCY_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('TENANCY_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('TENANCY_DB_DATABASE', env('DB_DATABASE', '')),
+            'username' => env('TENANCY_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('TENANCY_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => env('TENANCY_DB_PREFIX', env('DB_TABLE_PREFIX')),
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),

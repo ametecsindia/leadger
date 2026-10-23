@@ -20,4 +20,21 @@ return [
 
     // Company databases are created with this prefix (leadger_co_<slug>)
     'database_prefix' => env('TENANCY_DATABASE_PREFIX', 'leadger_co_'),
+
+    // The companies list in another database than DB_DATABASE (connection "tenancy" in config/database.php), e.g.
+    // TENANCY_DB_DATABASE=tenants_leadger on app.leadger.in. Empty = the tenants table of DB_DATABASE.
+    'database' => env('TENANCY_DB_DATABASE'),
+
+    // true = this installation only MANAGES the companies list (Super Admin > Companies): it does not serve the
+    // companies' hosts, run their scheduled tasks or migrate their databases - another installation does that.
+    'manage_only' => (bool)env('TENANCY_MANAGE_ONLY', false),
+
+    // Who may open Configuration > Companies (company database access!): these login emails (comma separated),
+    // and users whose role is named "Super Admin". Only on the central company.
+    'super_admin_emails' => array_values(array_filter(array_map(fn ($e) => strtolower(trim($e)),
+        explode(',', (string)env('TENANCY_SUPER_ADMIN_EMAILS', ''))))),
+
+    // Store company database passwords encrypted (APP_KEY). Keep false while another installation or script reads
+    // the tenants table: it expects plain text.
+    'encrypt_passwords' => (bool)env('TENANCY_ENCRYPT_PASSWORDS', false),
 ];

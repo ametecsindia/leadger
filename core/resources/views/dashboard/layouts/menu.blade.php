@@ -41,7 +41,7 @@ if ($urlAfterRoot == '' || $urlAfterRoot == 'home' || strpos($urlAfterRoot, 'das
     $activeSection = 'calling';
 } elseif (strpos($urlAfterRoot, 'call-report') !== false || strpos($urlAfterRoot, 'callReport') !== false || strpos($urlAfterRoot, 'campaignStatus') !== false || strpos($urlAfterRoot, 'agentPerformance') !== false || strpos($urlAfterRoot, 'userLogs') !== false || strpos($urlAfterRoot, 'reports') !== false) {
     $activeSection = 'reports';
-} elseif (strpos($urlAfterRoot, 'calling-settings') !== false || strpos($urlAfterRoot, 'disposition') !== false || strpos($urlAfterRoot, 'setting') !== false || strpos($urlAfterRoot, 'webmaster') !== false || strpos($urlAfterRoot, 'users/' . (Auth::user()->id ?? 1) . '/edit') !== false) {
+} elseif (strpos($urlAfterRoot, 'companies') !== false || strpos($urlAfterRoot, 'calling-settings') !== false || strpos($urlAfterRoot, 'disposition') !== false || strpos($urlAfterRoot, 'setting') !== false || strpos($urlAfterRoot, 'webmaster') !== false || strpos($urlAfterRoot, 'users/' . (Auth::user()->id ?? 1) . '/edit') !== false) {
     $activeSection = 'configuration';
 } elseif (strpos($urlAfterRoot, 'sources') !== false || strpos($urlAfterRoot, 'segments') !== false || strpos($urlAfterRoot, 'productServices') !== false || strpos($urlAfterRoot, 'statuses') !== false || strpos($urlAfterRoot, 'substatuses') !== false) {
     $activeSection = 'masterdata';
@@ -288,6 +288,16 @@ try {
                             <span class="lg-sub-text">Profile</span>
                         </div>
                     </a>
+                    @if (\App\Support\Tenancy::isSuperAdmin(Auth::user()))
+                    <a href="{{ route('companies') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'companies') !== false ? 'active' : '' }}">
+                        <div class="lg-sub-left">
+                            <span class="lg-sub-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="13" x2="21" y2="13"/></svg>
+                            </span>
+                            <span class="lg-sub-text">Companies</span>
+                        </div>
+                    </a>
+                    @endif
                 </div>
             </li>
 

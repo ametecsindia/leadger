@@ -70,6 +70,14 @@ return [
             'days' => 14,
         ],
 
+        // Administrative actions (Configuration > Companies): always written, whatever LOG_LEVEL is; kept a year
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => 365,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

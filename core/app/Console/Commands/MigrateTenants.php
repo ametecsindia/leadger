@@ -28,6 +28,10 @@ class MigrateTenants extends Command
 
     public function handle(): int
     {
+        if (Tenancy::manageOnly()) {
+            $this->error('TENANCY_MANAGE_ONLY: the installation that serves these companies migrates their databases (run it there).');
+            return self::FAILURE;
+        }
         if (!Tenancy::hasTenantsTable()) {
             $this->info('No tenants table: only the central database exists (php artisan migrate).');
             return self::SUCCESS;
