@@ -688,10 +688,15 @@ class CallRecordingService
         if (!$real || stripos(basename($real), 'leadger_demo_call') !== false) {
             return false;
         }
-        $roots = array_filter([storage_path('app/recordings'), env('recordings_upload')]);
+        // this company's own folder only (the central company: storage/app/recordings without other companies' folders)
+        $roots = array_filter([\App\Support\Tenancy::path(storage_path('app/recordings')), env('recordings_upload')]);
+        $otherCompanies = realpath(storage_path('app/recordings') . DIRECTORY_SEPARATOR . 'tenants');
         foreach ($roots as $root) {
             $rootReal = realpath($root);
             if ($rootReal && stripos($real, rtrim($rootReal, '\\/') . DIRECTORY_SEPARATOR) === 0) {
+                if (\App\Support\Tenancy::storageKey() === '' && $otherCompanies && stripos($real, $otherCompanies . DIRECTORY_SEPARATOR) === 0) {
+                    return false;
+                }
                 return true;
             }
         }

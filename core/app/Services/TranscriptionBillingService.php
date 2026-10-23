@@ -114,7 +114,7 @@ class TranscriptionBillingService
                 $uploadBase ? "{$uploadBase}/{$crmId}/{$campaignId}/{$name}" : null,
                 $uploadBase ? "{$uploadBase}/{$campaignId}/{$name}" : null,
                 $uploadBase ? "{$uploadBase}/{$name}" : null,
-                storage_path('app/recordings/' . $name),
+                \App\Support\Tenancy::path(storage_path('app/recordings')) . DIRECTORY_SEPARATOR . $name,
             ]) as $candidate) {
                 if ($audioPath = CallRecordingService::realAudioPath($candidate)) {
                     break;

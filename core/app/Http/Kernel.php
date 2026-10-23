@@ -30,6 +30,28 @@ class Kernel extends HttpKernel
     ];
 
     /**
+     * Laravel's order, plus the per-host session cookie before the session starts and the company check of the
+     * session right after it - before authentication, also on routes that list 'auth' before 'web'.
+     *
+     * @var string[]
+     */
+    protected $middlewarePriority = [
+        \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \App\Http\Middleware\SetSessionCookie::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\TenantSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+        \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        \Illuminate\Routing\Middleware\ThrottleRequestsWithRedis::class,
+        \Illuminate\Contracts\Session\Middleware\AuthenticatesSessions::class,
+        \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        \Illuminate\Auth\Middleware\Authorize::class,
+    ];
+
+    /**
      * The application's route middleware groups.
      *
      * @var array<string, array<int, class-string|string>>
@@ -38,6 +60,7 @@ class Kernel extends HttpKernel
         'web' => [
             \App\Http\Middleware\SetSessionCookie::class,
             \Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\TenantSession::class,   // a session never crosses to another company
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,

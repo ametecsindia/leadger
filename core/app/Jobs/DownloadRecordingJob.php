@@ -93,7 +93,7 @@ class DownloadRecordingJob implements ShouldQueue
             $filename = "{$datePrefix}_{$recording->id}_{$cleanPhone}.{$extension}";
 
             // Standard project storage path
-            $storageDir = storage_path('app/recordings');
+            $storageDir = \App\Support\Tenancy::path(storage_path('app/recordings'));   // own folder per company
             if (!File::isDirectory($storageDir)) {
                 File::makeDirectory($storageDir, 0755, true, true);
             }

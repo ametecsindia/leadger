@@ -652,7 +652,7 @@ where 1=1 ";
 
             $candidatePaths = [
                 $filePath,
-                storage_path('app/recordings/' . basename($filePath)),
+                \App\Support\Tenancy::path(storage_path('app/recordings')) . DIRECTORY_SEPARATOR . basename($filePath),
                 storage_path('app/' . basename($filePath)),
                 public_path('assets/uploads/recordings/' . basename($filePath)),
                 public_path('uploads/recordings/' . basename($filePath)),
@@ -726,7 +726,7 @@ where 1=1 ";
                 $fullPath,
                 $callLog->file_path,
                 $callLog->recording,
-                storage_path('app/recordings/' . basename($callLog->recording)),
+                \App\Support\Tenancy::path(storage_path('app/recordings')) . DIRECTORY_SEPARATOR . basename($callLog->recording),
                 storage_path('app/' . basename($callLog->recording)),
                 public_path('assets/uploads/recordings/' . basename($callLog->recording)),
                 public_path('uploads/recordings/' . basename($callLog->recording)),

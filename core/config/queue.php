@@ -36,6 +36,9 @@ return [
 
         'database' => [
             'driver' => 'database',
+            // always the central database: the workers read it; the job's company travels in its payload
+            // (a company request would otherwise write its jobs into its own database, where no worker looks)
+            'connection' => 'mysql',
             'table' => 'jobs',
             'queue' => 'default',
             // Must exceed the longest job (TranscribeRecordingJob: 900s) or a long transcript is handed out twice

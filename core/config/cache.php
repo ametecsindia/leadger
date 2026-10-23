@@ -54,6 +54,13 @@ return [
             'path' => storage_path('framework/cache/data'),
         ],
 
+        // Central, never per company: host -> company lookups (App\Support\Tenancy). The default store is switched
+        // to a per-company folder / prefix while a company's request, job or scheduled task runs.
+        'tenancy' => [
+            'driver' => 'file',
+            'path' => storage_path('framework/cache/tenancy'),
+        ],
+
         'memcached' => [
             'driver' => 'memcached',
             'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),

@@ -50,15 +50,9 @@ class InboundCallsPullCommand extends Command
         return self::SUCCESS;
     }
 
-    /** The main database and every company of the tenants table, as Tenancy contexts. */
+    /** The central company and every active company of the tenants table, as Tenancy contexts. */
     public static function companies(): array
     {
-        $companies = [['database' => (string)config('database.connections.mysql.database')]];
-        if (Schema::connection('mysql')->hasTable('tenants')) {
-            foreach (TenantSetup::on('mysql')->pluck('subdomain') as $host) {
-                $companies[] = ['tenant' => $host];
-            }
-        }
-        return $companies;
+        return Tenancy::companies();
     }
 }

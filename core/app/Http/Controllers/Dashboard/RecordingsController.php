@@ -1003,7 +1003,7 @@ class RecordingsController extends Controller
             return response()->json(['success' => false, 'message' => 'Please select at most 500 recordings per download.'], 422);
         }
 
-        $dir = storage_path(self::ZIP_DIR);
+        $dir = \App\Support\Tenancy::path(storage_path(self::ZIP_DIR));
         File::ensureDirectoryExists($dir);
         foreach (glob($dir . DIRECTORY_SEPARATOR . '*.zip') ?: [] as $old) {
             if (@filemtime($old) < time() - 3600) {
@@ -1133,7 +1133,7 @@ class RecordingsController extends Controller
         $uploadBase = rtrim((string)env('recordings_upload'), '/\\');
         foreach ($stored as $p) {
             $base = basename(str_replace('\\', '/', $p));
-            array_push($candidates, $p, storage_path('app/recordings/' . $base), $uploadBase ? $uploadBase . '/' . $base : null);
+            array_push($candidates, $p, \App\Support\Tenancy::path(storage_path('app/recordings')) . DIRECTORY_SEPARATOR . $base, $uploadBase ? $uploadBase . '/' . $base : null);
         }
         foreach (array_filter($candidates) as $candidate) {
             $real = \App\Services\CallRecordingService::realAudioPath($candidate);

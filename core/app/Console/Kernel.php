@@ -16,14 +16,14 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // Poll the provider every minute for connected calls whose recording is still "Processing"
-        $schedule->command('recordings:fetch-pending')->everyMinute()->withoutOverlapping();
+        $schedule->command('tenants:each "recordings:fetch-pending"')->everyMinute()->withoutOverlapping(10);   // every company
         // Every 5 minutes also ask about recent calls that never got a recording row (state may be wrong)
-        $schedule->command('recordings:fetch-pending --sweep')->everyFiveMinutes()->withoutOverlapping();
+        $schedule->command('tenants:each "recordings:fetch-pending --sweep"')->everyFiveMinutes()->withoutOverlapping(20);
         // Nightly: anything from the last 24 hours that still has no recording
-        $schedule->command('recordings:fetch-pending --sweep --sweep-minutes=1440')->dailyAt('23:30')->withoutOverlapping();
+        $schedule->command('tenants:each "recordings:fetch-pending --sweep --sweep-minutes=1440"')->dailyAt('23:30')->withoutOverlapping(120);
         // Inbound Calls report: pull the provider's inbound call logs, and nightly link calls to leads / agents added later
         $schedule->command('inbound-calls:pull --hours=3')->everyFiveMinutes()->withoutOverlapping(10);   // a crashed run frees the lock after 10 min
-        $schedule->command('inbound-calls:rematch')->dailyAt('02:15')->withoutOverlapping();
+        $schedule->command('tenants:each "inbound-calls:rematch"')->dailyAt('02:15')->withoutOverlapping(120);
     }
 
     /**
