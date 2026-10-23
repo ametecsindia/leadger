@@ -823,30 +823,27 @@ class WebRTCController extends Controller
     public function webrtcData(Request $request)
     {
 
-        $limit = $request->input('length');
-        $start = $request->input('start');
-        $columns = $request->input('columns');
-        $dir = $request->input('order.0.dir');
-        $q = $request->input('find_q');
-        $order = $columns[$request->input('order.0.column')]['data'] ?? '';
-        if ($order == "") {
-            $order = "id";
-        }
-        
-        $sql = " FROM ".env('DB_TABLE_PREFIX')."users
-where webrtc_channel = 1 ";
+        // paging, sort and search come from the browser: whitelisted / bound, never pasted into the SQL
+        $limit = max(1, min(500, (int)$request->input('length', 10)));
+        $start = max(0, (int)$request->input('start', 0));
+        $columns = (array)$request->input('columns');
+        $dir = strtolower((string)$request->input('order.0.dir')) === 'asc' ? 'asc' : 'desc';
+        $q = trim((string)$request->input('find_q'));
+        $order = ($columns[$request->input('order.0.column')]['data'] ?? '') === 'name' ? 'name' : 'id';
 
-        if ($q != "") {
-            $sql .= " and (name like '%".$q."%' 
-                        or click_agent_number like '%".$q."%'  )";
+        $sql = " FROM " . env('DB_TABLE_PREFIX') . "users where webrtc_channel = 1 ";
+        $bindings = [];
+        if ($q !== '') {
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $sql .= " and (name like ? or click_agent_number like ?)";   // the number still finds a user
+            $bindings = [$like, $like];
         }
 
-        $totalData = DB::select("select count(*) as cnt ".$sql)[0]->cnt;
+        $totalData = DB::select("select count(*) as cnt " . $sql, $bindings)[0]->cnt;
         $totalFiltered = $totalData;
-//order, paginate
+        //order, paginate
         $Click2Call = DB::select("SELECT name,click_agent_number,id,webrtc_channel
-                    ".$sql." order by $order $dir,id asc limit $start,$limit
-                    ");
+                    " . $sql . " order by {$order} {$dir}, id asc limit {$start}, {$limit}", $bindings);
         
         $data = array();
         if ($totalFiltered > 0) {
@@ -858,7 +855,6 @@ where webrtc_channel = 1 ";
                 $nestedData['name'] = '<div class="lg-user-flex"><div class="lg-user-icon-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span style="font-weight: 600; color: #0F172A;">'.e($row->name).'</span></div>';
                 $nestedData['role'] = '<span style="font-size: 13px; color: #475569; font-weight: 500;">'.e($roleName).'</span>';
                 $nestedData['channel'] = '<span style="font-size: 13px; color: #475569; font-weight: 500;">Assigned</span>';
-                $nestedData['click_agent_number'] = '<span style="font-size: 13px; color: #475569; font-weight: 500;">'.e($row->click_agent_number ?: '-').'</span>';
 
                 $actionurl = route("webrtcEdit", ["id" => $row->id]);
                 if ($row->webrtc_channel == 1) {
@@ -903,7 +899,7 @@ where webrtc_channel = 1 ";
             "data" => $data,
             "statics" => $statics
         );
-        echo json_encode($json_data);
+        return response()->json($json_data);
     }
     public function webrtcToggle(Request $request, $id)
 {

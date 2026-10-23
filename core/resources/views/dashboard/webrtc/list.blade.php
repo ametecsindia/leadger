@@ -481,7 +481,7 @@
 
             <div class="lg-search-box">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="lgWebRTCSearch" class="lg-search-input-field" placeholder="Search user or mobile number…">
+                <input type="text" id="lgWebRTCSearch" class="lg-search-input-field" placeholder="Search user…">
             </div>
         </div>
 
@@ -496,11 +496,10 @@
             <table class="lg-webrtc-table" id="leads_table">
                 <thead>
                     <tr>
-                        <th style="width: 30%;">User</th>
-                        <th style="width: 20%;">Role</th>
-                        <th style="width: 18%;">Channel</th>
-                        <th style="width: 20%;">Agent Mobile Number</th>
-                        <th style="width: 12%; text-align: right;">Actions</th>
+                        <th style="width: 40%;">User</th>
+                        <th style="width: 24%;">Role</th>
+                        <th style="width: 22%;">Channel</th>
+                        <th style="width: 14%; text-align: right;">Actions</th>
                     </tr>
                 </thead>
             </table>
@@ -551,7 +550,7 @@
             "serverSide": true,
             "searching": false,
             "responsive": false,
-            "scrollX": true,
+            "scrollX": false,   // .lg-table-wrapper scrolls sideways; DataTables scrolling drew an empty second header row
             "pageLength": 10,
             "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
             "pagingType": "simple_numbers",
@@ -579,7 +578,6 @@
                 { "data": "name", "orderable": true },
                 { "data": "role", "orderable": false },
                 { "data": "channel", "orderable": false },
-                { "data": "click_agent_number", "orderable": true },
                 { "data": "options", "orderable": false }
             ],
             "order": [[0, "desc"]]

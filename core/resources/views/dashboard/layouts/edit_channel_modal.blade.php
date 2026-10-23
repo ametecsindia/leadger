@@ -311,8 +311,8 @@ select.lg-channel-control {
                     <div id="channel_user_error" class="lg-channel-error">Please select a user.</div>
                 </div>
 
-                <!-- AGENT NUMBER FIELD -->
-                <div class="lg-channel-form-group">
+                <!-- AGENT NUMBER FIELD (Click2Call only: WebRTC calls do not use an agent number) -->
+                <div class="lg-channel-form-group" id="lgChannelAgentGroup">
                     <label class="lg-channel-label" for="channel_click_agent_number">Agent Number</label>
                     <input type="text" 
                            id="channel_click_agent_number" 
@@ -364,7 +364,34 @@ function lgChannelSetMode(mode) {
     $('#channel_user').prop('disabled', false);
     $('#channel_click_agent_number').prop('readonly', false);
     $('#lgBtnSaveChannelModal').prop('disabled', false).text(isAdd ? 'Save' : 'Save Changes');
+    $('#lgChannelAgentGroup').css('display', '');
     lgChannelSaving = false;
+}
+
+// Agent number: Click2Call rings it; WebRTC calls do not use it (the field is hidden and not sent; the saved
+// number stays for Click2Call)
+function lgChannelUsesAgentNumber() {
+    return currentEditingChannelType !== 'webrtc';
+}
+
+// The user list is a Select2 box (selects are enhanced globally): show the selected user after filling it
+function lgChannelRefreshUserBox() {
+    var $sel = $('#channel_user');
+    if ($sel.hasClass('select2-hidden-accessible')) $sel.trigger('change.select2');
+}
+
+function lgChannelApplyChannelType() {
+    $('#lgChannelAgentGroup').css('display', lgChannelUsesAgentNumber() ? '' : 'none');
+}
+
+// A save / server message: under the agent number (Click2Call), in the notice area when that field is hidden
+function lgChannelShowMessage(message) {
+    if (lgChannelUsesAgentNumber()) {
+        $('#channel_click_agent_number_error').text(message).show();
+        $('#channel_click_agent_number').addClass('has-error');
+    } else {
+        $('#lgChannelModalNotice').text(message).prop('hidden', false);
+    }
 }
 
 function lgOpenEditChannelModal(id, channelType, triggerBtn) {
@@ -379,6 +406,7 @@ function lgOpenEditChannelModal(id, channelType, triggerBtn) {
 
     $('#lgChannelModalTitle').text(modalTitle);
     $('#lgEditChannelForm').attr('action', formAction);
+    lgChannelApplyChannelType();
 
     // Reset validations
     $('.lg-channel-error').hide().text('');
@@ -414,6 +442,7 @@ function lgOpenEditChannelModal(id, channelType, triggerBtn) {
         }));
     }
     $('#channel_click_agent_number').val(prefillNumber);
+    lgChannelRefreshUserBox();
 
     // Open Modal
     $('#lgEditChannelModal').addClass('active');
@@ -447,6 +476,7 @@ function lgOpenEditChannelModal(id, channelType, triggerBtn) {
                     }));
                 }
                 $('#channel_click_agent_number').val(u.click_agent_number || '');
+                lgChannelRefreshUserBox();
             }
         },
         error: function() {
@@ -455,7 +485,7 @@ function lgOpenEditChannelModal(id, channelType, triggerBtn) {
     });
 
     setTimeout(function() {
-        $('#channel_click_agent_number').focus();
+        (isWebRTC ? $userSelect : $('#channel_click_agent_number')).focus();
     }, 100);
 }
 
@@ -483,6 +513,7 @@ function lgOpenAddChannelModal(triggerBtn) {
 
     $('#lgChannelModalTitle').text('Add WebRTC Channel');
     $('#lgEditChannelForm').attr('action', "{{ route('webrtcStore') }}");
+    lgChannelApplyChannelType();
     $('.lg-channel-error').hide().text('');
     $('.lg-channel-control').removeClass('has-error');
 
@@ -508,6 +539,7 @@ function lgOpenAddChannelModal(triggerBtn) {
                 $userSelect.append($('<option>', { value: u.id, text: u.name }));
             });
             $userSelect.prop('disabled', false);
+            lgChannelRefreshUserBox();
             if (!res.available) {
                 lgChannelAddBlocked('No channels available');
             } else if (!(res.users || []).length) {
@@ -547,6 +579,7 @@ function lgChannelAddUserChanged() {
     var $hint = $('#channel_click_agent_number_hint');
     $('#channel_user').removeClass('has-error');
     $('#channel_user_error').hide();
+    if (!lgChannelUsesAgentNumber()) return;
     if (user && user.c2c && user.number) {
         $num.val(user.number).prop('readonly', true);
         $hint.text('This user\'s Click2Call agent number is used.').prop('hidden', false);
@@ -577,7 +610,9 @@ function lgSubmitAddChannelModal() {
 
     if (!userId) fieldError('channel_user', 'Please select a user.');
 
-    if (!agentNumber) {
+    if (!lgChannelUsesAgentNumber()) {
+        // WebRTC: no agent number
+    } else if (!agentNumber) {
         fieldError('channel_click_agent_number', 'Agent number is required.');
     } else if (!/^[0-9]+$/.test(agentNumber)) {
         fieldError('channel_click_agent_number', 'Use digits only.');
@@ -606,7 +641,9 @@ function lgSubmitAddChannelModal() {
     $.ajax({
         url: $('#lgEditChannelForm').attr('action'),
         type: 'POST',
-        data: { _token: "{{ csrf_token() }}", user: userId, click_agent_number: agentNumber },
+        data: lgChannelUsesAgentNumber()
+            ? { _token: "{{ csrf_token() }}", user: userId, click_agent_number: agentNumber }
+            : { _token: "{{ csrf_token() }}", user: userId },
         dataType: 'json',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
         success: function(res) {
@@ -632,7 +669,7 @@ function lgSubmitAddChannelModal() {
             var res = xhr.responseJSON;
             if (res && res.errors) {
                 if (res.errors.user) fieldError('channel_user', res.errors.user[0]);
-                if (res.errors.click_agent_number) fieldError('channel_click_agent_number', res.errors.click_agent_number[0]);
+                if (res.errors.click_agent_number && lgChannelUsesAgentNumber()) fieldError('channel_click_agent_number', res.errors.click_agent_number[0]);
             }
             lgChannelAddFailed(res && res.message);
         }
@@ -672,7 +709,7 @@ function lgSubmitEditChannelModal() {
         hasError = true;
     }
 
-    if (!agentNumber) {
+    if (!agentNumber && lgChannelUsesAgentNumber()) {
         $('#channel_click_agent_number_error').text('Agent number is required.').show();
         $('#channel_click_agent_number').addClass('has-error');
         hasError = true;
@@ -682,17 +719,16 @@ function lgSubmitEditChannelModal() {
 
     var $btn = $('#lgBtnSaveChannelModal');
     $btn.prop('disabled', true).text('Saving...');
+    $('#lgChannelModalNotice').prop('hidden', true).text('');
 
     var url = $('#lgEditChannelForm').attr('action');
+    var payload = { _token: "{{ csrf_token() }}", user: userId };
+    if (lgChannelUsesAgentNumber()) payload.click_agent_number = agentNumber;   // WebRTC: the saved number is kept
 
     $.ajax({
         url: url,
         type: 'POST',
-        data: {
-            _token: "{{ csrf_token() }}",
-            user: userId,
-            click_agent_number: agentNumber
-        },
+        data: payload,
         dataType: 'json',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -735,9 +771,7 @@ function lgSubmitEditChannelModal() {
                     }
                 }
             } else {
-                var msg = (res && res.message) ? res.message : 'Unable to update channel.';
-                $('#channel_click_agent_number_error').text(msg).show();
-                $('#channel_click_agent_number').addClass('has-error');
+                lgChannelShowMessage((res && res.message) ? res.message : 'Unable to update channel.');
             }
         },
         error: function(xhr) {
@@ -749,14 +783,10 @@ function lgSubmitEditChannelModal() {
                     $('#channel_user').addClass('has-error');
                 }
                 if (res.errors.click_agent_number) {
-                    $('#channel_click_agent_number_error').text(res.errors.click_agent_number[0]).show();
-                    $('#channel_click_agent_number').addClass('has-error');
+                    lgChannelShowMessage(res.errors.click_agent_number[0]);
                 }
-            } else if (res && res.message) {
-                $('#channel_click_agent_number_error').text(res.message).show();
-                $('#channel_click_agent_number').addClass('has-error');
             } else {
-                $('#channel_click_agent_number_error').text('An error occurred while saving. Please try again.').show();
+                lgChannelShowMessage((res && res.message) ? res.message : 'An error occurred while saving. Please try again.');
             }
         }
     });
@@ -802,9 +832,10 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#channel_user').on('change', function() {
         if (lgChannelMode === 'add') lgChannelAddUserChanged();
     }).on('keydown', function(e) {
-        if (lgChannelMode === 'add' && e.key === 'Enter') {
+        // Enter on the user saves in add mode, and in WebRTC edit (no agent number field to press Enter in)
+        if (e.key === 'Enter' && (lgChannelMode === 'add' || !lgChannelUsesAgentNumber())) {
             e.preventDefault();
-            lgSubmitAddChannelModal();
+            lgSubmitEditChannelModal();
         }
     });
 });
