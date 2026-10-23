@@ -321,6 +321,22 @@ html, body {
   display: block !important;
 }
 
+/* one icon at a time: eye (hidden password) or eye-off (shown password) */
+.lg-pwd-toggle svg[hidden] {
+  display: none !important;
+}
+
+.lg-pwd-toggle:focus-visible {
+  outline: 2px solid #0066FF !important;
+  outline-offset: 1px !important;
+}
+
+/* the browser's own reveal / clear button (Edge) on this field only: the app's eye button is the one toggle */
+#password::-ms-reveal,
+#password::-ms-clear {
+  display: none;
+}
+
 /* Validation messages */
 .lg-error-text {
   display: block;
