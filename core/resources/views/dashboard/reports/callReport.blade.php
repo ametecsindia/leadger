@@ -199,6 +199,7 @@
                     <th>Customer Name</th>
                     <th>Mobile</th>
                     <th>Duration</th>
+                    <th>Call Result</th>
                     <th>Status</th>
                     <th>Substatus</th>
                     <th>Call Type</th>
@@ -210,6 +211,9 @@
         </table>
         {{-- Export the calls for the current filters, search and sort (every matching row, not only this page) --}}
         <div class="cr-export-row">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#475569;cursor:pointer;" title="Add a column with the link of each call recording">
+                <input type="checkbox" id="crWithUrl"> Include recording URL
+            </label>
             <button type="button" class="cr-dl-btn cr-dl-excel" id="crExportXlsx" title="Download these calls as an Excel file">
                 <i class="fa fa-file-excel"></i> Excel
             </button>
@@ -384,7 +388,8 @@
         var label = labelFor(state.range, state.from_date, state.to_date);
         var period = ['today', 'yesterday', 'last7', 'thismonth'].indexOf(state.range) !== -1 ? label.split(' — ')[0] : label;
         var sub = n + ' call' + (n == 1 ? '' : 's') + (state.card !== 'all' && !state.scope ? ' · ' + CARD_LABEL[state.card] : '') + ' · ' + period
-            + ' · Campaign ' + d.campaign_calls + ' · Manual ' + d.manual_calls;
+            + ' · Campaign ' + d.campaign_calls + ' · Manual ' + d.manual_calls
+            + ' · Feedback saved ' + d.with_feedback + (d.without_feedback ? ' (' + d.without_feedback + ' without feedback)' : '');
         if (state.scope === 'agents') sub += ' · counted by Agent Performance';
         $('#crTableSub').text(sub);
         renderViewBar(d);
@@ -405,7 +410,14 @@
         { data: 'lead', name: 'customer', render: function (v) { return v && v !== '-' ? '<span style="font-weight:700">' + esc(v) + '</span>' : DASH; } },
         { data: 'mobile', name: 'mobile', render: function (v) { return '<span style="font-family:monospace">' + esc(v) + '</span>'; } },
         { data: 'duration', name: 'duration', render: function (v, t, r) {
-            return '<span style="font-variant-numeric:tabular-nums" title="' + esc('Start ' + r.start_time + ' · End ' + r.end_time) + '">' + esc(v) + '</span>';
+            return '<span style="font-variant-numeric:tabular-nums;white-space:nowrap" title="' + esc('Start ' + r.start_time + ' · End ' + r.end_time) + '">' + esc(v)
+                + ' <span style="color:#94A3B8">(' + (parseInt(r.seconds, 10) || 0) + 's)</span></span>';
+        } },
+        // Connected / not connected (busy, no answer, failed...) as the provider or the call reported it
+        { data: 'call_result', name: 'call_result', orderable: false, render: function (v) {
+            if (v === 'Connected') return '<span class="cr-badge" style="background:#DCFCE7;color:#166534;">Connected</span>';
+            if (v === 'In Progress') return '<span class="cr-badge" style="background:#F1F5F9;color:#475569;">In progress</span>';
+            return '<span class="cr-badge" style="background:#FEE2E2;color:#991B1B;">Not connected' + (v && v !== 'Not Connected' && v !== '-' ? ' · ' + esc(v) : '') + '</span>';
         } },
         // Status / Substatus = the Call Outcome the agent saved for this call, "-" when none was saved
         { data: 'status', name: 'status', render: function (v) { return v && v !== '-' ? '<span class="cr-badge cr-badge-outcome">' + esc(v) + '</span>' : DASH; } },
@@ -558,6 +570,7 @@
     /* ---- export: same filters, search, card view and sort as the table ---- */
     function exportCalls(format, btn) {
         var q = new URLSearchParams(requestParams());
+        if (document.getElementById('crWithUrl').checked) q.set('with_url', '1');
         if (table) {
             var ord = table.order()[0];
             if (ord) { q.set('sort', columns[ord[0]].name); q.set('dir', ord[1]); }

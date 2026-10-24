@@ -45,14 +45,27 @@ class ReportsController extends Controller
     {
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         $Campaigns = \App\Models\Campaign::orderBy('created_at', 'desc')->get();
-        $telecallerPermission = Permissions::where('name', 'Telecaller')->first();
-
-        $Telecallers = collect();
-        if ($telecallerPermission) {
-            $Telecallers = User::where('permissions_id', $telecallerPermission->id)->get();
-        }
+        $Telecallers = self::reportAgents(Auth::user());
 
         return view("dashboard.reports.callReport", compact("GeneralWebmasterSections", "Campaigns", "Telecallers"));
+    }
+
+    /**
+     * Agent filter of the Call Report: every active user who can make calls and whom the viewer may see (not only the
+     * Telecaller role): admins all users, managers / team leaders their teams' users, everyone else themselves.
+     */
+    public static function reportAgents($user)
+    {
+        $role = $user->permissionsGroup->name ?? '';
+        $q = User::where('status', 1)->orderBy('name');
+        if (in_array($role, ['Manager', 'Team Leader'], true)) {
+            $teams = array_values(array_filter(array_map('intval', explode(',', (string)$user->team_id)))) ?: [0];
+            $q->where(fn ($w) => $w->whereIn('id', DB::table('team_user')->whereIn('team_id', $teams)->select('user_id'))
+                ->orWhere('id', $user->id));
+        } elseif (!in_array($role, ['Super Admin', 'Admin', 'Webmaster'], true)) {
+            $q->where('id', $user->id);
+        }
+        return $q->get(['id', 'name']);
     }
 
     /**
@@ -112,16 +125,26 @@ class ReportsController extends Controller
         $sort = (string)$request->input('sort', 'time');
         $dir = (string)$request->input('dir', 'desc');
 
+        // with_url=1: a Recording URL column (link to play / download each recording); otherwise no recording column
+        $withUrl = $request->boolean('with_url');
         $headers = ['Lead ID', 'Time', 'Telecaller', 'Source', 'Campaign', 'Customer Name', 'Mobile Number', 'Duration',
-            'Status', 'Substatus', 'Call Type', 'Feedback', 'Recording', 'Date'];
-        $recording = function (array $r) {
-            $state = $r['recording']['state'] ?? 'none';
-            if ($state === 'available') return $r['recording_file'] ?: 'Available';
-            return ['processing' => 'Waiting for recording', 'unavailable' => 'Not available'][$state] ?? '';
-        };
+            'Duration (sec)', 'Call Result', 'Status', 'Substatus', 'Call Type', 'Feedback', 'Date'];
+        $types = ['text', 'time', 'text', 'text', 'text', 'text', 'text', 'text', 'int', 'text', 'text', 'text', 'text', 'text', 'date'];
+        $widths = [12, 11, 18, 10, 20, 22, 16, 10, 12, 14, 14, 18, 11, 36, 13];
+        if ($withUrl) {
+            $headers[] = 'Recording URL';
+            $types[] = 'text';
+            $widths[] = 60;
+        }
         $feedback = fn (array $r) => trim(($r['feedback'] !== '-' ? $r['feedback'] : '') . ($r['comments'] ? ' | ' . $r['comments'] : ''), ' |') ?: '-';
-        $line = fn (array $r) => [(string)($r['lead_id'] ?? '-'), $r['time'], $r['telecaller'], $r['source'], $r['campaign'], $r['lead'],
-            (string)$r['mobile'], $r['duration'], $r['status'], $r['substatus'], $r['call_type'], $feedback($r), $recording($r), $r['date']];
+        $line = function (array $r) use ($feedback, $withUrl) {
+            $l = [(string)($r['lead_id'] ?? '-'), $r['time'], $r['telecaller'], $r['source'], $r['campaign'], $r['lead'],
+                (string)$r['mobile'], $r['duration'], (int)$r['seconds'], $r['call_result'], $r['status'], $r['substatus'], $r['call_type'], $feedback($r), $r['date']];
+            if ($withUrl) {
+                $l[] = $r['recording_url'] ?: '-';
+            }
+            return $l;
+        };
         $f = $query->filters();
         $fileName = 'call-report-' . $f['from'] . '-to-' . $f['to'];
 
@@ -132,12 +155,10 @@ class ReportsController extends Controller
                     $at = \Carbon\Carbon::createFromFormat('d-M-Y h:i A', $r['date'] . ' ' . $r['time'], 'UTC');
                     $l = $line($r);
                     $l[1] = $at;
-                    $l[13] = $at;
+                    $l[14] = $at;
                     $lines[] = $l;
                 }
-                $path = \App\Services\SimpleXlsxWriter::write($headers, $lines,
-                    ['text', 'time', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'date'],
-                    [12, 11, 18, 10, 20, 22, 16, 10, 14, 18, 11, 36, 40, 13], 'Call Report');
+                $path = \App\Services\SimpleXlsxWriter::write($headers, $lines, $types, $widths, 'Call Report');
                 return response()->download($path, $fileName . '.xlsx', [
                     'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 ])->deleteFileAfterSend(true);
@@ -193,11 +214,12 @@ class ReportsController extends Controller
         $to_date = $request->input('to_date');
         $find_campaign = $request->input('find_campaign');
         $telecaller_id = $request->input('telecaller_id'); 
-        $order = $columns[$request->input('order.0.column')]['data'] ?? '';
-        if ($order == "") {
-            $order = "call_logs.created_at";
-            $dir="desc";
-        }
+        // the table's column names -> database columns (anything else: newest first)
+        $sortable = ['date_time' => 'call_logs.created_at', 'campaign' => 'campaigns.name', 'lead_name' => 'leads.name',
+            'number' => 'call_logs.phonenumber', 'agent' => 'users.name', 'call_type' => 'call_logs.call_type',
+            'status' => 'statuses.name', 'substatus' => 'substatuses.name', 'duration' => 'call_logs.duration'];
+        $order = $sortable[$columns[$request->input('order.0.column')]['data'] ?? ''] ?? 'call_logs.created_at';
+        $dir = strtolower((string)$dir) === 'asc' ? 'asc' : 'desc';
         
         $CallLogs = CallLog::select([
             'call_logs.*',
@@ -2029,11 +2051,12 @@ public function incomingVmnData(Request $request)
         $to_date = $request->input('to_date');
         $find_campaign = $request->input('find_campaign');
         $telecaller_id = $request->input('telecaller_id'); 
-        $order = $columns[$request->input('order.0.column')]['data'] ?? '';
-        if ($order == "") {
-            $order = "call_logs.created_at";
-            $dir="desc";
-        }
+        // the table's column names -> database columns (anything else: newest first)
+        $sortable = ['id' => 'call_logs.id', 'campaign_name' => 'campaigns.name', 'phonenumber' => 'call_logs.phonenumber',
+            'customer_name' => 'leads.name', 'call_type' => 'call_logs.call_type', 'duration' => 'call_logs.duration',
+            'called_by' => 'users.name'];
+        $order = $sortable[$columns[$request->input('order.0.column')]['data'] ?? ''] ?? 'call_logs.created_at';
+        $dir = strtolower((string)$dir) === 'asc' ? 'asc' : 'desc';
         
         $CallLogs = CallLog::select(['call_logs.*','users.name as called_by', 
             'campaigns.name as campaign_name', 'campaigns.id as campaign_id', 'leads.name as customer_name','call_logs.click_response'])

@@ -72,7 +72,8 @@ class CallReportQuery
         $talkExpr = $this->f['mode'] === 'agents' ? 'seconds' : 'CASE WHEN connected = 1 THEN seconds ELSE 0 END';
         $r = $this->outer(false)->selectRaw("COUNT(*) AS total, COALESCE(SUM(connected),0) AS connected, COALESCE(SUM($talkExpr),0) AS talk,
                 COALESCE(SUM(source = 'campaign'),0) AS campaign_calls, COALESCE(SUM(source = 'manual'),0) AS manual_calls,
-                COALESCE(SUM(connected = 1 AND seconds > 0),0) AS with_talk")->first();
+                COALESCE(SUM(connected = 1 AND seconds > 0),0) AS with_talk,
+                COALESCE(SUM(status_id IS NOT NULL AND status_id != 0),0) AS with_feedback")->first();
         $total = (int)$r->total;
         $connected = (int)$r->connected;
         $talk = (int)$r->talk;
@@ -87,6 +88,9 @@ class CallReportQuery
             'avg_duration' => Helper::formatDuration($avg),
             'campaign_calls' => (int)$r->campaign_calls,
             'manual_calls' => (int)$r->manual_calls,
+            // calls whose Call Outcome (feedback) was saved; the rest still wait for it
+            'with_feedback' => (int)$r->with_feedback,
+            'without_feedback' => $total - (int)$r->with_feedback,
             'view_count' => match ($this->f['view']) {
                 'connected' => $connected,
                 'not_connected' => $total - $connected,
@@ -237,7 +241,9 @@ class CallReportQuery
         $agents = $this->f['mode'] === 'agents';
         $q = DB::table('dialer_logs')
             ->leftJoin('users', 'users.id', '=', 'dialer_logs.created_by')
-            ->leftJoin('leads', 'leads.id', '=', 'dialer_logs.lead_id')
+            // the call's lead only when it has the dialled number (older calls were sometimes linked to the lead on screen)
+            ->leftJoin('leads', fn ($j) => $j->on('leads.id', '=', 'dialer_logs.lead_id')
+                ->whereRaw("(RIGHT({$tp}leads.phonenumber, 10) = RIGHT({$tp}dialer_logs.phone_number, 10) OR RIGHT({$tp}leads.phonenumber_2, 10) = RIGHT({$tp}dialer_logs.phone_number, 10))"))
             ->leftJoin('campaigns', 'campaigns.id', '=', 'dialer_logs.campaign_id')
             ->leftJoin('statuses', 'statuses.id', '=', 'dialer_logs.status_id')
             ->leftJoin('substatuses', 'substatuses.id', '=', 'dialer_logs.substatus_id')
@@ -262,7 +268,7 @@ class CallReportQuery
         if ($this->f['agent']) $q->where('dialer_logs.created_by', $this->f['agent']);
         $this->statusFilter($q, 'dialer_logs.status_id', $connected);
 
-        return $q->selectRaw("'manual' AS source, {$tp}dialer_logs.id AS id, {$tp}dialer_logs.lead_id AS lead_id,
+        return $q->selectRaw("'manual' AS source, {$tp}dialer_logs.id AS id, {$tp}leads.id AS lead_id,
             {$tp}dialer_logs.phone_number AS phone, {$tp}dialer_logs.call_type AS call_type, {$tp}dialer_logs.call_state AS call_state,
             {$tp}dialer_logs.created_at AS created_at, {$tp}dialer_logs.start_time AS start_time, {$tp}dialer_logs.end_time AS end_time,
             {$tp}dialer_logs.created_by AS agent_id, {$tp}users.name AS agent_name,
@@ -383,6 +389,7 @@ class CallReportQuery
             'call_type' => $callType,
             'duration' => Helper::formatDuration($seconds),
             'seconds' => $seconds,
+            'recording_url' => $recording['state'] === 'available' ? $recording['url'] : null,
             'status' => $saved && trim((string)$r->status_name) !== '' ? (string)$r->status_name : '-',
             'substatus' => $saved && trim((string)$r->substatus_name) !== '' ? (string)$r->substatus_name : '-',
             'feedback' => trim((string)$r->feedback) !== '' ? trim((string)$r->feedback) : '-',
