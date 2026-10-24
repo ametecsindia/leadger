@@ -1074,9 +1074,7 @@
                     <table class="lg-staff-table" id="lgStaffTable">
                         <thead>
                             <tr>
-                                <th style="width: 40px;">
-                                    <input id="checkAll" type="checkbox" style="cursor: pointer; width: 15px; height: 15px;">
-                                </th>
+                                <th style="width: 60px;">ID</th>
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Team</th>
@@ -1108,10 +1106,8 @@
                                     data-name="{{ strtolower($User->name ?? '') }}" 
                                     data-email="{{ strtolower($User->email ?? '') }}" 
                                     data-role="{{ strtolower($roleName) }}">
-                                    <td>
-                                        <input type="checkbox" name="ids[]" value="{{ $User->id }}" class="row-checkbox" style="cursor: pointer; width: 15px; height: 15px;">
-                                        {!! Form::hidden('row_ids[]', $User->id, array('class' => 'form-control row_no')) !!}
-                                    </td>
+                                    {{-- the user's ID: given once and never reused (a deleted user's number is not taken again) --}}
+                                    <td style="font-weight: 600; color: #475569; font-variant-numeric: tabular-nums;">{{ $User->id }}</td>
                                     <td>
                                         <div class="lg-name-flex">
                                             <div class="lg-user-avatar">
