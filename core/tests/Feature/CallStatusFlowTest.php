@@ -149,7 +149,10 @@ class CallStatusFlowTest extends TestCase
             $log->refresh();
             $this->assertSame($state, $log->call_state, "A={$a} B={$b}");
             $this->assertSame(0, (int)$log->time_taken, 'customer never talked: no talk time');
-            $this->assertNull($log->recording_id, 'no recording row for a call the customer never answered');
+            // the provider's recording of the ringing is kept (testing feedback, Oct 2026): playable / downloadable,
+            // while the call stays unanswered with no talk time
+            $this->assertNotNull($log->recording_id, "ringing recording kept, A={$a} B={$b}");
+            $this->assertSame('https://voip.example.test/rec/ring_' . $log->id . '.wav', \App\Models\Recording::find($log->recording_id)->recording_url);
         }
     }
 

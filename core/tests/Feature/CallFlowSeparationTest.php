@@ -199,6 +199,29 @@ class CallFlowSeparationTest extends TestCase
         }
     }
 
+    /** Customer did not answer but the provider recorded the ringing: the outcome stays and the audio is kept. */
+    public function test_unanswered_call_keeps_the_providers_ringing_recording()
+    {
+        $service = new CallRecordingService();
+        foreach ([$this->manualCall(), $this->campaignCall()] as $log) {
+            $url = 'https://voip.example.test/recordings/c2c/ringing-' . class_basename($log) . '-' . $log->id . '.wav';
+            $res = $service->processWebhook(['ref_id' => $log->reference_id, 'A_DIAL_STATUS' => 'Connected', 'B_DIAL_STATUS' => 'No Answer',
+                'EVENT_TYPE' => 'Call End', 'RecordVoice' => $url]);
+            $log->refresh();
+            $this->assertSame('success', $res['status']);
+            $this->assertSame('no-answer', $log->call_state, 'still an unanswered call');
+            $this->assertNotNull($log->recording_id, 'ringing recording kept on ' . class_basename($log));
+            $this->assertSame($url, Recording::find($log->recording_id)->recording_url);
+            $this->assertNull($log->answer_time, 'not marked as answered');
+        }
+        Queue::assertPushed(DownloadRecordingJob::class);
+
+        // agent did not answer: the provider sends no audio, so there is still none
+        $agentMissed = $this->manualCall();
+        $service->processWebhook(['ref_id' => $agentMissed->reference_id, 'A_DIAL_STATUS' => 'No Answer', 'B_DIAL_STATUS' => '', 'EVENT_TYPE' => 'Call End']);
+        $this->assertNull($agentMissed->fresh()->recording_id);
+    }
+
     public function test_campaign_event_never_lands_on_a_manual_call_to_the_same_number()
     {
         $manual = $this->manualCall();          // newer manual call to the same phone

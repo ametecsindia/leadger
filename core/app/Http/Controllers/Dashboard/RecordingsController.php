@@ -471,12 +471,19 @@ class RecordingsController extends Controller
                 $maskedPhone = \App\Helpers\Helper::number_masking($row->phonenumber, $row->number_masking ?? 0);
                 $nestedData['phonenumber'] = $maskedPhone;
 
-                // 6. File Name (real file, or the recording's processing state)
+                // 6. Call Status (the call's outcome when nobody answered, and the recording's state)
                 // Recording status: Waiting for recording (provider has not delivered / file still downloading) ->
                 // Ready (the audio file exists; playable and downloadable) | Not available (provider never delivered)
+                $unansweredState = strtolower((string)($row->call_state ?? ''));
+                $outcome = in_array($unansweredState, self::NOT_ANSWERED_STATES, true)
+                    ? "<span class='lg-status-badge gray' style='margin-right:6px;' title='The call was not answered'><span class='dot' style='background:#EF4444;'></span>"
+                        . (['busy' => 'Busy', 'failed' => 'Not answered', 'cancelled' => 'Cancelled'][$unansweredState] ?? 'No answer') . "</span>"
+                    : '';
                 if ($notAnswered) {
-                    $label = ['busy' => 'Busy', 'failed' => 'Not answered', 'cancelled' => 'Cancelled'][strtolower($row->call_state)] ?? 'No answer';
-                    $nestedData['recording'] = "<span class='lg-status-badge gray' title='The call was not answered, so there is no recording'><span class='dot' style='background:#EF4444;'></span>{$label}</span> <span class='text-muted'>No recording</span>";
+                    $nestedData['recording'] = $outcome . "<span class='text-muted' title='The provider sent no recording for this call'>No recording</span>";
+                } elseif ($outcome !== '' && $hasAudio) {
+                    // not answered, but the provider recorded the ringing: playable and downloadable
+                    $nestedData['recording'] = $outcome . "<span class='lg-status-badge green' title='Recording of the ringing: play or download it'><span class='dot'></span>Ringing recording</span>";
                 } elseif ($isProcessing || ($isPlaceholder && !$isUnavailable)) {
                     $waitTip = $recStatus === 'awaiting' ? 'The call provider has not delivered the recording yet' : 'The recording is being downloaded from the call provider';
                     $nestedData['recording'] = "<span class='lg-status-badge blue' title='{$waitTip}'><i class='fas fa-spinner fa-spin' style='font-size:10px;'></i> Waiting for recording</span>";

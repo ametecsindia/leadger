@@ -65,4 +65,16 @@ class RecordingsListFeedbackTest extends TestCase
 
         $this->assertNull($rows->first(fn ($r) => (int)$r['source_code'] === 2 && (int)$r['log_id'] === $open->id), 'a call still in progress is not listed');
     }
+
+    public function test_an_unanswered_call_with_a_ringing_recording_can_be_played()
+    {
+        $log = DialerLog::forceCreate(['phone_number' => '9000000601', 'created_by' => $this->admin->id, 'call_source' => 'manual',
+            'call_type' => 'click2call', 'call_state' => 'no-answer', 'time_taken' => 0, 'duration' => '00:00', 'end_time' => now(),
+            'click_recording_url' => 'https://voip.example.test/recordings/c2c/ringing-601.wav']);
+        $row = $this->rows()->first(fn ($r) => (int)$r['source_code'] === 2 && (int)$r['log_id'] === $log->id);
+
+        $this->assertStringContainsString('No answer', $row['recording']);
+        $this->assertStringContainsString('Ringing recording', $row['recording']);
+        $this->assertStringNotContainsString('disabled', $row['play'], 'play and download work');
+    }
 }

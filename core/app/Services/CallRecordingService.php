@@ -81,9 +81,28 @@ class CallRecordingService
         }
 
         if ($isExplicitFailure && !$isConnected) {
-            Log::info("[TelephonyWebhook] Call not connected (outcome: {$facts['outcome']}, B: {$bDialStatus}, A: {$aDialStatus}), no recording for call id: {$providerCallId}");
-            $this->updateCallLogResponseOnly($refId, $providerCallId, $phone, $payload, $rawInput);
+            $log = $this->updateCallLogResponseOnly($refId, $providerCallId, $phone, $payload, $rawInput);
 
+            // The customer did not answer but the provider recorded the call (the ringing): keep that audio, so it
+            // can be played and downloaded. No talk time and the outcome stays (no-answer / busy / failed).
+            if ($recordingUrl && $log) {
+                $log->click_recording_url = $recordingUrl;
+                $log->save();
+                $recording = self::storeOrUpdateRecording($log instanceof DialerLog ? 'Dialing' : 'Campaign Calling', $log, [
+                    'recording_url' => $recordingUrl,
+                    'call_status' => $log->call_state ?: 'not answered',
+                    'provider_call_id' => $providerCallId,
+                ]);
+                Log::info("[TelephonyWebhook] Call not connected (outcome: {$facts['outcome']}), ringing recording kept for call id: {$providerCallId}");
+                return [
+                    'status' => 'success',
+                    'code' => 200,
+                    'message' => 'Call was not answered. Ringing recording saved.',
+                    'recording_id' => $recording->id ?? null,
+                ];
+            }
+
+            Log::info("[TelephonyWebhook] Call not connected (outcome: {$facts['outcome']}, B: {$bDialStatus}, A: {$aDialStatus}), no recording for call id: {$providerCallId}");
             return [
                 'status' => 'ignored',
                 'code' => 200,
@@ -274,16 +293,16 @@ class CallRecordingService
     }
 
     /**
-     * Helper to update response on call log when call is not connected.
+     * Helper to update response on call log when call is not connected. Returns the call record (null when none).
      */
-    protected function updateCallLogResponseOnly(?string $refId, ?string $providerCallId, ?string $phone, array $payload, ?string $rawInput): void
+    protected function updateCallLogResponseOnly(?string $refId, ?string $providerCallId, ?string $phone, array $payload, ?string $rawInput)
     {
         $rawJson = is_string($rawInput) && !empty($rawInput) ? $rawInput : json_encode($payload);
 
         [$dialerLog, $callLog] = self::findCallRecord($refId, $providerCallId, $phone);
         $log = $dialerLog ?: $callLog;
         if (!$log) {
-            return;
+            return null;
         }
 
         $log->click_response = $rawJson;
@@ -308,6 +327,7 @@ class CallRecordingService
             }
         }
         $log->save();
+        return $log;
     }
 
     /**

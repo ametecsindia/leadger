@@ -1190,7 +1190,7 @@
                         <th>Mobile Number</th>
                         <th>Campaign</th>
                         <th>Type</th>
-                        <th>File Name</th>
+                        <th>Call Status</th>
                         <th>Duration</th>
                         <th>Date &amp; Time</th>
                         <th>Actions</th>
