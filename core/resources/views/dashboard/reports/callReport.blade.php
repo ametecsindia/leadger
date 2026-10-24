@@ -192,8 +192,7 @@
             <thead>
                 <tr>
                     <th>Lead ID</th>
-                    <th>Time</th>
-                    <th>Telecaller</th>
+                    <th>Agent</th>
                     <th>Source</th>
                     <th>Campaign</th>
                     <th>Customer Name</th>
@@ -206,6 +205,7 @@
                     <th>Feedback</th>
                     <th>Recording</th>
                     <th>Date</th>
+                    <th>Time</th>
                 </tr>
             </thead>
         </table>
@@ -401,7 +401,6 @@
             return /^\d+$/.test(String(v || ''))
                 ? '<a href="javascript:void(0)" class="lg-lead-id-pill lg-lead-id-link" data-lead-id="' + v + '" title="View lead ' + v + '">' + v + '</a>' : DASH;
         } },
-        { data: 'time', name: 'time', render: function (v) { return '<span style="color:#64748B">' + esc(v) + '</span>'; } },
         { data: 'telecaller', name: 'telecaller', render: function (v) { return '<span style="font-weight:600">' + esc(v) + '</span>'; } },
         { data: 'source', name: 'source', render: function (v) {
             return '<span class="cr-src ' + (v === 'Manual' ? 'is-manual' : 'is-campaign') + '">' + esc(v) + '</span>';
@@ -439,8 +438,11 @@
             if (rec.state === 'unavailable') return '<span class="cr-badge" style="background:#F1F5F9;color:#64748B;" title="The call provider did not deliver a recording">Not available</span>';
             return DASH;
         } },
-        { data: 'date', name: 'date', render: function (v) { return '<span style="white-space:nowrap">' + esc(v) + '</span>'; } }
+        { data: 'date', name: 'date', render: function (v) { return '<span style="white-space:nowrap">' + esc(v) + '</span>'; } },
+        { data: 'time', name: 'time', render: function (v) { return '<span style="color:#64748B;white-space:nowrap">' + esc(v) + '</span>'; } }
     ];
+    // a column's position by its name (sorting does not depend on the column order)
+    function colIndex(name) { return columns.findIndex(function (c) { return c.name === name; }); }
 
     function initTable() {
         table = $('#crCallsTable').DataTable({
@@ -450,7 +452,7 @@
             lengthChange: false,
             autoWidth: false,
             pageLength: 25,
-            order: CARD_VIEW[state.card] === 'with_talk_time' ? [[7, 'desc']] : [[1, 'desc']],   // newest first (talk-time cards: longest first)
+            order: CARD_VIEW[state.card] === 'with_talk_time' ? [[colIndex('duration'), 'desc']] : [[colIndex('time'), 'desc']],   // newest first (talk-time cards: longest first)
             ajax: {
                 url: '{{ route("callReportData") }}',
                 type: 'POST',
@@ -661,7 +663,7 @@
         if (state.scope) return;
         state.card = (card === state.card || card === 'all') ? 'all' : card;   // the selected card again (or Total Calls) clears the view
         // the talk-time cards list the longest calls first; the others newest first
-        if (table) table.order(CARD_VIEW[state.card] === 'with_talk_time' ? [[7, 'desc']] : [[1, 'desc']]);
+        if (table) table.order(CARD_VIEW[state.card] === 'with_talk_time' ? [[colIndex('duration'), 'desc']] : [[colIndex('time'), 'desc']]);
         renderCardStates();
         syncUrl(true);
         loadReport();
