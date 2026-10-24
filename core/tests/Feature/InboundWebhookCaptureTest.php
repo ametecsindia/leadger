@@ -83,6 +83,8 @@ class InboundWebhookCaptureTest extends TestCase
 
     public function test_payload_variants_and_number_formats()
     {
+        // the calls (17:12) happened before "now": a call time is never in the future
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse($this->today . ' 18:00:00', config('app.timezone')));
         $day = now()->format('d/m/Y');
         $variants = [
             'V-1' => ['CallSid' => 'V-1', 'CallFrom' => '+91 99588 87262', 'CallTo' => '0' . self::VMN, 'StartTime' => $day . ' 17:12:00'],

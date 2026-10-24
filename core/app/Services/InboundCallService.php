@@ -282,6 +282,12 @@ class InboundCallService
                 $t = Carbon::parse(sprintf('%s-%02d-%02d%s', $m[3], $m[2], $m[1], $m[4]), $tz);
             } else {
                 $t = Carbon::parse($v, $tz);
+                // The provider sends its local call times marked as UTC ("2026-10-24T11:28:45.000000Z" for 11:28
+                // India time). A call time cannot be in the future: a UTC-marked time that would be after now is
+                // read as the provider's local time instead (a correct UTC time is kept as it is).
+                if (preg_match('/(Z|[+-]00:?00)$/i', trim($v)) && $t->gt(Carbon::now()->addMinutes(2))) {
+                    $t = Carbon::parse(preg_replace('/(Z|[+-]00:?00)$/i', '', trim($v)), $tz);
+                }
             }
             return $t ? $t->setTimezone(config('app.timezone')) : null;
         } catch (\Throwable $e) {

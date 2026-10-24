@@ -103,6 +103,32 @@ class InboundCallsTest extends TestCase
         $this->assertStringNotContainsString('api_key', json_encode($c->raw_payload), 'secrets are never stored');
     }
 
+    /** The provider sends its India call times marked as UTC ("11:28:45Z" for 11:28 India time; seen on live). */
+    public function test_provider_local_times_marked_as_utc_are_not_shifted_and_real_utc_is_kept()
+    {
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-10-24 11:30:07', 'Asia/Kolkata'));
+        try {
+            $india = fn (string $id) => InboundCall::where('call_id', $id)->first()->start_time->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s');
+            $this->event(['call_id' => 'TZ-1', 'dni' => self::VMN, 'cli' => '9958887262', 'event' => 'ringing',
+                'a_start_time' => '2026-10-24T11:28:45.000000Z', 'updated_at' => '2026-10-24T05:58:46.000000Z'])->assertOk();
+            $this->assertSame('2026-10-24 11:28:45', $india('TZ-1'), 'not 16:58 (5:30 h in the future)');
+
+            $this->event(['call_id' => 'TZ-2', 'dni' => self::VMN, 'cli' => '9958887262', 'event' => 'ringing',
+                'a_start_time' => '2026-10-24T05:58:45.000000Z'])->assertOk();
+            $this->assertSame('2026-10-24 11:28:45', $india('TZ-2'), 'a correct UTC time is converted as before');
+
+            // calls saved before the fix: moved back by the timezone difference; correct ones untouched
+            $late = InboundCall::create(['call_id' => 'TZ-3', 'vmn' => self::VMN, 'customer_mobile' => '9958887262', 'status' => 'missed',
+                'start_time' => \Carbon\Carbon::parse('2026-10-24 16:58:45', 'Asia/Kolkata')]);
+            InboundCall::where('id', $late->id)->update(['created_at' => \Carbon\Carbon::parse('2026-10-24 11:30:07', 'Asia/Kolkata')]);
+            $this->artisan('inbound:fix-times')->assertSuccessful();
+            $this->assertSame('2026-10-24 11:28:45', $india('TZ-3'));
+            $this->assertSame('2026-10-24 11:28:45', $india('TZ-1'), 'already correct: kept');
+        } finally {
+            \Carbon\Carbon::setTestNow();
+        }
+    }
+
     public function test_duplicate_events_do_not_create_duplicates()
     {
         $e = ['call_id' => 'T-200', 'dni' => self::VMN, 'cli' => '9958887262', 'event' => 'ringing', 'start_time' => $this->today . ' 10:00:00'];
