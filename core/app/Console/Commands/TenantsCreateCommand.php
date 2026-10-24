@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\TenantSetup;
+use App\Services\SiteProvisioner;
 use App\Support\Tenancy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -17,8 +18,9 @@ use Illuminate\Support\Str;
  * 1. creates the database (refused when a database of that name already has tables);
  * 2. copies the table structure of the central database exactly (CREATE TABLE ... LIKE), no data;
  * 3. copies only the starting data a site needs to open (settings, roles, menus, statuses, countries ...);
- *    never users, leads, calls, recordings, VMNs or vouchers;
- * 4. creates one admin login (Webmaster role) - the password is printed once;
+ *    never leads, calls, recordings, VMNs or vouchers (App\Services\SiteProvisioner);
+ * 4. creates one admin login (Webmaster role) - the password is printed once - and copies the main site's Webmaster
+ *    logins (same email and password);
  * 5. adds the site to the companies list (tenants table), so its address opens its own database.
  * The central database is only read. A failure removes the half-made new database again. --dry-run only shows the plan.
  */
@@ -28,13 +30,6 @@ class TenantsCreateCommand extends Command
         {--admin-email= : login email of the site\'s admin} {--admin-name=Admin} {--admin-password= : default: a random one, printed once}
         {--dry-run : only show what would be done}';
     protected $description = 'Create a new site with its own empty database (structure + starting data from the central database)';
-
-    /** Starting data copied from the central database (everything else starts empty). */
-    public const STARTING_DATA = ['migrations', 'settings', 'webmaster_settings', 'webmaster_sections', 'webmaster_section_fields',
-        'menus', 'sidebar_menus', 'permissions', 'countries', 'languages', 'statuses', 'substatuses', 'client_types'];
-
-    /** Never copied, not even the structure (the companies list lives in the central database only; backups). */
-    private const SKIP = ['tenants'];
 
     public function handle(): int
     {
@@ -66,52 +61,38 @@ class TenantsCreateCommand extends Command
             return $this->fail2("{$host} is already in the companies list with database {$existing->db_name}.");
         }
 
-        $conn = DB::connection('mysql');
-        $prefix = (string)config('database.connections.mysql.prefix');
-        $dbExists = (bool)$conn->selectOne('SELECT 1 AS x FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?', [$db]);
-        $tablesThere = $dbExists ? (int)$conn->selectOne('SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?', [$db])->n : 0;
+        $provisioner = new SiteProvisioner();
+        $tablesThere = $provisioner->databaseExists($db) ? count($provisioner->tables($db)) : 0;
         if ($tablesThere > 0) {
             return $this->fail2("Database {$db} already has {$tablesThere} tables. Use a new name (an existing database is never changed).");
         }
-
-        $tables = collect($conn->select("SELECT TABLE_NAME AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME", [$central]))
-            ->pluck('n')
-            ->filter(fn ($t) => $prefix === '' || str_starts_with($t, $prefix))
-            ->reject(fn ($t) => in_array(substr($t, strlen($prefix)), self::SKIP, true) || preg_match('/(_bak_\d+|_backup)$/', $t))
-            ->values();
-        $starting = $tables->filter(fn ($t) => in_array(substr($t, strlen($prefix)), self::STARTING_DATA, true))->values();
+        $plan = $provisioner->plan($db);
 
         $this->line("Site:      {$host}");
-        $this->line("Database:  {$db}" . ($dbExists ? ' (exists, empty)' : ' (new)'));
-        $this->line("Structure: {$tables->count()} tables copied from {$central} (no data)");
-        $this->line('Starting data: ' . $starting->map(fn ($t) => substr($t, strlen($prefix)))->implode(', '));
-        $this->line("Admin:     {$email} (Webmaster)");
+        $this->line("Database:  {$db}" . ($plan['create_database'] ? ' (new)' : ' (exists, empty)'));
+        $this->line('Structure: ' . count($plan['tables']) . " tables copied from {$central} (no data)");
+        $this->line('Starting data: ' . count($plan['starting']) . ' tables (settings, roles, menus, statuses ...)');
+        $this->line("Admin:     {$email} (Webmaster)" . ($plan['admins'] ? ", plus the main site's {$plan['admins']} Webmaster login(s)" : ''));
         if ($this->option('dry-run')) {
             $this->info('Dry run: nothing was changed.');
             return self::SUCCESS;
         }
 
         $q = fn (string $name) => '`' . str_replace('`', '', $name) . '`';
-        $created = false;
+        $prefix = (string)config('database.connections.mysql.prefix');
         try {
-            if (!$dbExists) {
-                $conn->statement('CREATE DATABASE ' . $q($db) . ' CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-                $created = true;
-            }
-            foreach ($tables as $t) {
-                $conn->statement('CREATE TABLE ' . $q($db) . '.' . $q($t) . ' LIKE ' . $q($central) . '.' . $q($t));
-            }
-            foreach ($starting as $t) {
-                $conn->statement('INSERT INTO ' . $q($db) . '.' . $q($t) . ' SELECT * FROM ' . $q($central) . '.' . $q($t));
-            }
+            $provisioner->prepare($db);   // a database created here is removed again if this fails
 
+            $users = DB::connection('mysql')->table(DB::raw($q($db) . '.' . $q($prefix . 'users')));
             $password = (string)$this->option('admin-password') ?: Str::password(14, true, true, false);
-            $role = $conn->table(DB::raw($q($db) . '.' . $q($prefix . 'permissions')))->where('name', 'Webmaster')->value('id')
-                ?? $conn->table(DB::raw($q($db) . '.' . $q($prefix . 'permissions')))->orderBy('id')->value('id');
-            $conn->table(DB::raw($q($db) . '.' . $q($prefix . 'users')))->insert([
-                'name' => (string)$this->option('admin-name'), 'email' => $email, 'password' => Hash::make($password),
-                'permissions_id' => $role, 'status' => 1, 'created_at' => now(), 'updated_at' => now(),
-            ]);
+            if (!(clone $users)->where('email', $email)->exists()) {
+                $role = DB::connection('mysql')->table(DB::raw($q($db) . '.' . $q($prefix . 'permissions')))->where('name', 'Webmaster')->value('id')
+                    ?? DB::connection('mysql')->table(DB::raw($q($db) . '.' . $q($prefix . 'permissions')))->orderBy('id')->value('id');
+                (clone $users)->insert(['name' => (string)$this->option('admin-name'), 'email' => $email, 'password' => Hash::make($password),
+                    'permissions_id' => $role, 'status' => 1, 'created_at' => now(), 'updated_at' => now()]);
+            } else {
+                $password = null;   // the main site's login with this email was copied: its own password works
+            }
 
             $mysql = config('database.connections.mysql');
             if (!$existing) {
@@ -120,15 +101,12 @@ class TenantsCreateCommand extends Command
             }
             Cache::store('tenancy')->forget(Tenancy::lookupCacheKey($host));
         } catch (\Throwable $e) {
-            if ($created) {
-                try { $conn->statement('DROP DATABASE IF EXISTS ' . $q($db)); } catch (\Throwable $ignored) {}
-            }
-            return $this->fail2('Not created: ' . $e->getMessage() . ($created ? " (the new database {$db} was removed again)" : ''));
+            return $this->fail2('Not created: ' . $e->getMessage());
         }
 
         $this->info("Site {$host} is ready: open https://{$host}");
         $this->line("Admin login: {$email}");
-        if (!$this->option('admin-password')) {
+        if ($password !== null && !$this->option('admin-password')) {
             $this->warn("Admin password (shown once, change it after logging in): {$password}");
         }
         $this->line('nginx must send this address to this installation (same root as the main site), with an SSL certificate.');

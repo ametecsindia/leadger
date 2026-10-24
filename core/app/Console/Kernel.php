@@ -25,6 +25,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('inbound-calls:pull --hours=3')->everyMinute()->withoutOverlapping(10);   // new calls within a minute; a crashed run frees the lock after 10 min
         // copy of the companies list in TENANCY_COPY_DATABASE (master: TENANCY_DB_DATABASE) - nothing to do without one
         $schedule->command('tenants:sync-copy')->everyMinute()->withoutOverlapping(5);
+        // a site added to the companies list (SQLyog / Configuration > Companies) gets its database ready within a minute
+        $schedule->command('tenants:sync-sites')->everyMinute()->withoutOverlapping(10);
         $schedule->command('tenants:each "inbound-calls:rematch"')->dailyAt('02:15')->withoutOverlapping(120);
     }
 
