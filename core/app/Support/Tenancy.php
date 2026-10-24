@@ -201,7 +201,9 @@ class Tenancy
         $companies = [self::central()];
         if (self::servesCompanies()) {
             foreach (TenantSetup::query()->orderBy('id')->pluck('subdomain') as $host) {
-                $companies[] = ['tenant' => $host];
+                if (trim((string)$host) !== '') {   // a row without an address (e.g. an empty row saved in a DB tool) is no company
+                    $companies[] = ['tenant' => $host];
+                }
             }
         }
         return $companies;
