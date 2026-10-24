@@ -1087,7 +1087,7 @@
                 <div class="lg-filter-col lg-col-date">
                     <label class="lg-filter-label" for="from_date">From Date</label>
                     <div class="lg-date-wrap">
-                        <input type="text" id="from_date" class="lg-input-date" placeholder="From Date" autocomplete="off" readonly value="{{ now()->subDays(7)->toDateString() }}">
+                        <input type="text" id="from_date" class="lg-input-date" placeholder="From Date" autocomplete="off" readonly value="{{ now()->toDateString() }}">
                         <span class="lg-date-clear-btn" id="from_date_clear" title="Clear Date">&times;</span>
                         <span class="lg-date-icon" id="from_date_icon" title="Open Calendar">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1109,9 +1109,9 @@
 
                 <!-- 8 & 9. Action Buttons -->
                 <div class="lg-filter-col lg-col-actions">
-                    <button type="button" class="lg-btn-primary-filter" id="search-btn" title="Filter recordings">
+                    <button type="button" class="lg-btn-primary-filter" id="search-btn" title="Search recordings">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <span>Filter</span>
+                        <span>Search</span>
                     </button>
                     <button type="button" class="lg-btn-secondary-reset" id="reset-btn" title="Reset Filters">
                         <i class="fas fa-rotate-left"></i>
@@ -1811,7 +1811,7 @@
                         toPicker.set("minDate", null);
                         $('#date-range-error').hide();
                     }
-                    dataTable.draw();
+                    // dates apply when Search is pressed
                 }
             });
 
@@ -1840,7 +1840,7 @@
                         $('#to_date_clear').hide();
                         $('#date-range-error').hide();
                     }
-                    dataTable.draw();
+                    // dates apply when Search is pressed
                 }
             });
 
@@ -1861,14 +1861,14 @@
                 $('#from_date_clear').hide();
                 toPicker.set("minDate", null);
                 $('#date-range-error').hide();
-                dataTable.draw();
+                // dates apply when Search is pressed
             });
             $('#to_date_clear').on('click', function(e) {
                 e.stopPropagation();
                 toPicker.clear();
                 $('#to_date_clear').hide();
                 $('#date-range-error').hide();
-                dataTable.draw();
+                // dates apply when Search is pressed
             });
 
             // Filter button click
@@ -1939,8 +1939,8 @@
                 $('#telecaller_id').val('');
                 clearAllEmployees();
                 lgClearSelection();
-                // back to the default range: the last 7 days and today
-                fromPicker.setDate('{{ now()->subDays(7)->toDateString() }}', false);
+                // back to the default: today
+                fromPicker.setDate('{{ now()->toDateString() }}', false);
                 toPicker.setDate('{{ now()->toDateString() }}', false);
                 toPicker.set("minDate", $('#from_date').val());
                 $('#from_date_clear, #to_date_clear').show();

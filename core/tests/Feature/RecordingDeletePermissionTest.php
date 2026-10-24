@@ -233,7 +233,7 @@ class RecordingDeletePermissionTest extends TestCase
         $this->assertFalse(Helper::isDeletePermissionEnabled(), 'non-admin could not enable it');
     }
 
-    /** Call Recordings table: Lead ID / Campaign / Type come from the call, and the table Search box filters. */
+    /** Call Recordings table: Campaign / Type come from the call (no Lead ID for manual dial), and the table Search box filters. */
     public function test_table_shows_lead_manual_dial_and_call_type_and_searches()
     {
         $this->setPermission(true);
@@ -244,13 +244,14 @@ class RecordingDeletePermissionTest extends TestCase
         $this->actAs($this->admin);
 
         $row = $this->rowFor($log);
-        $this->assertStringContainsString("<span>{$lead->id}</span>", $row['id'], 'Lead ID (digits only), not the recording id');
+        // Lead ID is shown for campaign calls only (testing feedback, Oct 2026): a manual dial call shows a dash
+        $this->assertStringNotContainsString("<span>{$lead->id}</span>", $row['id']);
+        $this->assertStringContainsString('—', $row['id']);
         $this->assertSame('Manual Dial', strip_tags($row['campaign_name']));
         $this->assertStringContainsString('Click2Call', strip_tags($row['source_type']));
         $this->assertStringContainsString('lgDlPlay(this)', $row['play']);
         $this->assertStringContainsString("data-url='/admin/reports/download-recordings/{$log->id}/2'", $row['play']);
 
-        $this->assertStringContainsString("<span>{$otherLead->id}</span>", $this->rowFor($noLeadLog)['id'], 'falls back to the recording lead');
 
         $req = Request::create('/x', 'POST', ['draw' => 1, 'start' => 0, 'length' => 200, 'search' => ['value' => (string)$lead->id],
             'columns' => [['data' => 'created_at']], 'order' => [['column' => 0, 'dir' => 'desc']]]);

@@ -24,6 +24,8 @@ use Illuminate\Support\Facades\Validator;
 
 class RecordingsController extends Controller
 {
+    /** Final call states of a call that was not answered (customer or agent): listed without a recording. */
+    public const NOT_ANSWERED_STATES = ['no-answer', 'busy', 'failed', 'cancelled'];
 
 
 
@@ -107,7 +109,9 @@ class RecordingsController extends Controller
                     $sq->whereNotNull('call_logs.recording')->where('call_logs.recording', '!=', '');
                 })->orWhere(function($sq) {
                     $sq->whereNotNull('call_logs.click_recording_url')->where('call_logs.click_recording_url', '!=', '');
-                })->orWhereNotNull('call_logs.recording_id');
+                })->orWhereNotNull('call_logs.recording_id')
+                  // calls nobody answered (customer or agent, Click2Call and WebRTC) are listed too, without audio
+                  ->orWhereIn('call_logs.call_state', self::NOT_ANSWERED_STATES);
             })
             // Recordings deleted by an Admin are hidden (the call itself stays in its logs)
             ->where(function($q) {
@@ -190,7 +194,8 @@ class RecordingsController extends Controller
             DB::raw("COALESCE({$tp}call_ai_analyses.status, 'none') as ai_status"),
             DB::raw("{$tp}call_ai_analyses.id as ai_analysis_id"),
             DB::raw("{$tp}call_ai_analyses.error_message as ai_error"),
-            DB::raw("{$tp}recordings.download_status as rec_status")
+            DB::raw("{$tp}recordings.download_status as rec_status"),
+            'call_logs.call_state as call_state',
         ]);
 
         // 2. Manual dial calls (Dialing, dialer_logs)
@@ -208,7 +213,9 @@ class RecordingsController extends Controller
                     $sq->whereNotNull('dialer_logs.file_path')->where('dialer_logs.file_path', '!=', '');
                 })->orWhere(function($sq) {
                     $sq->whereNotNull('dialer_logs.click_recording_url')->where('dialer_logs.click_recording_url', '!=', '');
-                })->orWhereNotNull('dialer_logs.recording_id');
+                })->orWhereNotNull('dialer_logs.recording_id')
+                  // calls nobody answered (customer or agent, Click2Call and WebRTC) are listed too, without audio
+                  ->orWhereIn('dialer_logs.call_state', self::NOT_ANSWERED_STATES);
             })
             // Recordings deleted by an Admin are hidden (the call itself stays in its logs)
             ->where(function($q) {
@@ -265,7 +272,7 @@ class RecordingsController extends Controller
 
         $dialerLogs->select([
             'dialer_logs.id as log_id',
-            'leads.id as lead_id',
+            DB::raw("NULL as lead_id"),   // Lead ID only for campaign calls; manual dial calls show "-"
             DB::raw("COALESCE({$tp}leads.name, '—') as customer_name"),
             DB::raw("'Dialing' as source_type"),
             DB::raw(self::callMethodSortSql("{$tp}dialer_logs") . " as type_sort"),
@@ -284,7 +291,8 @@ class RecordingsController extends Controller
             DB::raw("COALESCE({$tp}call_ai_analyses.status, 'none') as ai_status"),
             DB::raw("{$tp}call_ai_analyses.id as ai_analysis_id"),
             DB::raw("{$tp}call_ai_analyses.error_message as ai_error"),
-            DB::raw("{$tp}recordings.download_status as rec_status")
+            DB::raw("{$tp}recordings.download_status as rec_status"),
+            'dialer_logs.call_state as call_state',
         ]);
 
         // 3. Standalone Recordings (Direct Telephony)
@@ -346,7 +354,7 @@ class RecordingsController extends Controller
 
         $orphanRecordings->select([
             'recordings.id as log_id',
-            'recordings.lead_id as lead_id',
+            DB::raw("CASE WHEN {$tp}campaigns.id IS NOT NULL AND LOWER({$tp}campaigns.name) != 'manual dial' THEN {$tp}recordings.lead_id END as lead_id"),
             'leads.name as customer_name',
             DB::raw("'Direct Telephony' as source_type"),
             DB::raw("'~' as type_sort"),   // no call record: method unknown, sorts last
@@ -364,7 +372,8 @@ class RecordingsController extends Controller
             DB::raw("COALESCE({$tp}call_ai_analyses.status, 'none') as ai_status"),
             DB::raw("{$tp}call_ai_analyses.id as ai_analysis_id"),
             DB::raw("{$tp}call_ai_analyses.error_message as ai_error"),
-            DB::raw("{$tp}recordings.download_status as rec_status")
+            DB::raw("{$tp}recordings.download_status as rec_status"),
+            DB::raw("CAST(NULL AS CHAR) as call_state"),
         ]);
 
         // Combine queries based on find_source filter
@@ -423,6 +432,8 @@ class RecordingsController extends Controller
                 $isProcessing = $recStatus === 'awaiting' || ($isDownloading && !$hasProviderUrl);
                 $isUnavailable = $recStatus === 'unavailable';
                 $hasAudio = !$isPlaceholder && !$isProcessing && !$isUnavailable;
+                // a call nobody answered (no audio will ever come): shown with its outcome instead of "Waiting"
+                $notAnswered = $isPlaceholder && !$isProcessing && in_array(strtolower((string)($row->call_state ?? '')), self::NOT_ANSWERED_STATES, true);
                 // Transcription sends the local audio file to Sarvam, so it waits for the download to finish
                 $isPreparingAudio = $hasAudio && $isDownloading;
                 $canTranscribeRow = $canTranscribe && $hasAudio && !$isPreparingAudio && $durationSec > 0;
@@ -463,7 +474,10 @@ class RecordingsController extends Controller
                 // 6. File Name (real file, or the recording's processing state)
                 // Recording status: Waiting for recording (provider has not delivered / file still downloading) ->
                 // Ready (the audio file exists; playable and downloadable) | Not available (provider never delivered)
-                if ($isProcessing || ($isPlaceholder && !$isUnavailable)) {
+                if ($notAnswered) {
+                    $label = ['busy' => 'Busy', 'failed' => 'Not answered', 'cancelled' => 'Cancelled'][strtolower($row->call_state)] ?? 'No answer';
+                    $nestedData['recording'] = "<span class='lg-status-badge gray' title='The call was not answered, so there is no recording'><span class='dot' style='background:#EF4444;'></span>{$label}</span> <span class='text-muted'>No recording</span>";
+                } elseif ($isProcessing || ($isPlaceholder && !$isUnavailable)) {
                     $waitTip = $recStatus === 'awaiting' ? 'The call provider has not delivered the recording yet' : 'The recording is being downloaded from the call provider';
                     $nestedData['recording'] = "<span class='lg-status-badge blue' title='{$waitTip}'><i class='fas fa-spinner fa-spin' style='font-size:10px;'></i> Waiting for recording</span>";
                 } elseif ($isUnavailable) {
@@ -508,6 +522,8 @@ class RecordingsController extends Controller
                     $ai = "<span class='lg-status-badge gray' title='" . e(\App\Services\SarvamKeyService::notSetUpMessage()) . "'><span class='dot'></span>Not set up</span>";
                 } elseif ($canTranscribeRow) {
                     $ai = "<button type='button' class='lg-transcribe-btn' onclick='lgTranscribeOne({$rowArgs}, this)' title='" . e($transcribeTip) . "' data-toggle='tooltip'><i class='fas fa-file-alt'></i> Transcribe</button>";
+                } elseif ($notAnswered) {
+                    $ai = "<span class='lg-status-badge gray' title='The call was not answered'><span class='dot'></span>No recording</span>";
                 } elseif (!$hasAudio) {
                     $ai = "<span class='lg-status-badge gray' title='Transcription starts once the recording audio has arrived'><span class='dot'></span>Waiting for recording</span>";
                 } else {
@@ -526,7 +542,7 @@ class RecordingsController extends Controller
                     . " data-agent='" . e($row->called_by) . "' data-number='" . e($maskedPhone) . "'"
                     . " data-date='" . e(date('d-M-Y h:i A', strtotime($row->created_at))) . "'"
                     . " data-duration='" . e(\App\Helpers\Helper::formatDuration($durationSec)) . "'";
-                $off = $hasAudio ? '' : " disabled style='opacity:.45;cursor:not-allowed;' title='Recording not available yet'";
+                $off = $hasAudio ? '' : " disabled style='opacity:.45;cursor:not-allowed;' title='" . ($notAnswered ? 'The call was not answered: no recording' : 'Recording not available yet') . "'";
                 $actions = "<div class='lg-dl-actions'>"
                     . "<button type='button' class='lg-dl-act lg-dl-act-download' {$attrs} onclick='lgDlDownload(this)'" . ($off ?: " title='Download recording'") . " aria-label='Download recording'><i class='fas fa-download'></i></button>"
                     . "<button type='button' class='lg-dl-act lg-dl-act-play' {$attrs} onclick='lgDlPlay(this)'" . ($off ?: " title='Play recording'") . " aria-label='Play recording'><i class='fas fa-play'></i></button>";
@@ -543,7 +559,7 @@ class RecordingsController extends Controller
                     $actions .= "<a href='{$detailPath}' class='lg-dl-act' title='View AI analysis' aria-label='View AI analysis' style='color:#7C3AED;border-color:#DDD6FE;text-decoration:none;'><i class='fas fa-brain'></i></a>";
                 }
 
-                if ($canDeleteRec) {
+                if ($canDeleteRec && !$notAnswered) {   // nothing to delete for an unanswered call
                     $actions .= "<button type='button' class='lg-dl-act lg-dl-act-delete' onclick='deleteRecording({$row->log_id}, {$row->source_code})' title='Delete recording' aria-label='Delete recording'><i class='fas fa-trash-alt'></i></button>";
                 }
 
