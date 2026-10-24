@@ -186,7 +186,7 @@ class InboundCallService
         return $lead ? (int)$lead->id : null;
     }
 
-    /** The user whose mobile or Click2Call agent number is this number. */
+    /** The user whose mobile, Click2Call agent number or WebRTC agent ID (smartping_user_id, e.g. 100266) is this number. */
     public static function findUserId(string $normalized): ?int
     {
         if ($normalized === '') return null;
@@ -194,12 +194,14 @@ class InboundCallService
         $users = DB::table('users')
             ->where(function ($q) use ($tp, $normalized) {
                 $q->whereRaw("REGEXP_REPLACE({$tp}users.mobile, '[^0-9]', '') LIKE ?", ['%' . $normalized])
-                    ->orWhereRaw("REGEXP_REPLACE({$tp}users.click_agent_number, '[^0-9]', '') LIKE ?", ['%' . $normalized]);
+                    ->orWhereRaw("REGEXP_REPLACE({$tp}users.click_agent_number, '[^0-9]', '') LIKE ?", ['%' . $normalized])
+                    ->orWhere('users.smartping_user_id', $normalized);
             })
             ->orderByDesc('status')
             ->orderBy('id')
-            ->get(['id', 'mobile', 'click_agent_number']);
-        $user = $users->first(fn ($u) => self::normalizeMobile($u->mobile) === $normalized || self::normalizeMobile($u->click_agent_number) === $normalized);
+            ->get(['id', 'mobile', 'click_agent_number', 'smartping_user_id']);
+        $user = $users->first(fn ($u) => self::normalizeMobile($u->mobile) === $normalized || self::normalizeMobile($u->click_agent_number) === $normalized
+            || trim((string)$u->smartping_user_id) === $normalized);
         return $user ? (int)$user->id : null;
     }
 

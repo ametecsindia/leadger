@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Pull the inbound call logs of the last few hours from the provider and upsert them into inbound_calls by call_id,
  * for the main database and every company in the tenants table (App\Services\InboundCallPuller). Scheduled every
- * 5 minutes; the webhook delivers the same calls live. Also removes inbound_webhook_events older than 30 days.
+ * minute; the webhook delivers the same calls live. Also removes inbound_webhook_events older than 30 days.
  */
 class InboundCallsPullCommand extends Command
 {

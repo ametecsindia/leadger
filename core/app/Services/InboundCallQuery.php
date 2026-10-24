@@ -80,10 +80,40 @@ class InboundCallQuery
             'customer_mobile' => $dash($r->customer_mobile),
             'vmn' => $dash($r->vmn),
             'start_time' => $r->start_time ? Carbon::parse($r->start_time, config('app.timezone'))->setTimezone(self::reportTimezone())->format('d M Y, h:i A') : '-',
+            'call_type' => $this->callType($r),
             'agent_number' => $dash($r->agent_number),
-            // the agent who answered; "-" for a missed call or a number of no known user
-            'agent_name' => $r->status === 'answered' ? $dash($r->agent_name) : '-',
+            // the agent of this number / WebRTC ID; with no agent, the user the lead is allocated to
+            'agent_name' => trim((string)$r->agent_name) !== '' ? (string)$r->agent_name
+                : (trim((string)($r->owner_name ?? '')) !== '' ? $r->owner_name . ' (allocated)' : '-'),
         ];
+    }
+
+    /**
+     * Click2Call or WebRTC: a WebRTC agent ID (the user's smartping_user_id, or a short extension such as 100266) is a
+     * WebRTC call, an agent mobile number a Click2Call call; with no agent, the VMN's channel when it has only one.
+     */
+    /** @var array<string, array{0: bool, 1: bool}>|null this report's VMNs: [click2call, webrtc] */
+    private ?array $vmnChannels = null;
+
+    public function callType(object $r): string
+    {
+        $agent = InboundCallService::normalizeMobile($r->agent_number ?? '');
+        if ($agent !== '') {
+            if ((trim((string)($r->agent_webrtc_id ?? '')) !== '' && trim((string)$r->agent_webrtc_id) === $agent) || strlen($agent) < 10) {
+                return 'WebRTC';
+            }
+            return 'Click2Call';
+        }
+        if ($this->vmnChannels === null) {
+            $this->vmnChannels = [];
+            if (\Illuminate\Support\Facades\Schema::hasTable('obd_did')) {
+                foreach (DB::table('obd_did')->get(['virtual_number', 'click2call', 'webrtc']) as $d) {
+                    $this->vmnChannels[InboundCallService::normalizeMobile($d->virtual_number)] = [(int)$d->click2call === 1, (int)$d->webrtc === 1];
+                }
+            }
+        }
+        [$c2c, $web] = $this->vmnChannels[InboundCallService::normalizeMobile($r->vmn ?? '')] ?? [false, false];
+        return $web && !$c2c ? 'WebRTC' : ($c2c && !$web ? 'Click2Call' : '-');
     }
 
     /* ------------------------------------------------------------------ */
@@ -104,7 +134,11 @@ class InboundCallQuery
         return $this->base()
             ->select('inbound_calls.id', 'inbound_calls.lead_id', 'inbound_calls.call_id', 'inbound_calls.customer_mobile',
                 'inbound_calls.customer_mobile_normalized', 'inbound_calls.vmn',
-                'inbound_calls.start_time', 'inbound_calls.agent_number', 'inbound_calls.status', 'users.name as agent_name')
+                'inbound_calls.start_time', 'inbound_calls.agent_number', 'inbound_calls.status', 'users.name as agent_name',
+                'users.smartping_user_id as agent_webrtc_id', 'owners.name as owner_name')
+            // the lead's allocated user: shown when no agent took the call
+            ->leftJoin('leads as call_leads', 'call_leads.id', '=', 'inbound_calls.lead_id')
+            ->leftJoin('users as owners', 'owners.id', '=', 'call_leads.assigned_to')
             ->orderBy(self::SORTABLE[$sort] ?? 'inbound_calls.start_time', strtolower($dir) === 'asc' ? 'asc' : 'desc')
             ->orderBy('inbound_calls.start_time', 'desc')
             ->orderBy('inbound_calls.id', 'desc');

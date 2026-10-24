@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
 /** Reports > Inbound Calls: calls to the company's VMNs (inbound_calls), table + KPI cards + Excel / CSV export. */
 class InboundCallsController extends Controller
 {
-    public const COLUMNS = ['Lead ID', 'Call ID', 'Customer Mobile', 'VMN', 'Start Time', 'Agent Number', 'Agent Name'];
+    public const COLUMNS = ['Lead ID', 'Customer Mobile', 'VMN', 'Call Type', 'Start Time', 'Agent Number', 'Agent Name'];
     public const MAX_DAYS = 92;
 
     public function __construct()
@@ -131,7 +131,7 @@ class InboundCallsController extends Controller
         $dir = $v['dir'] ?? 'desc';
         $f = $query->filters();
         $fileName = 'inbound-calls-' . $f['from'] . ($f['to'] !== $f['from'] ? '-to-' . $f['to'] : '');
-        $line = fn (array $r) => [$r['lead_id'] ? (string)$r['lead_id'] : '-', $r['call_id'], $r['customer_mobile'], $r['vmn'],
+        $line = fn (array $r) => [$r['lead_id'] ? (string)$r['lead_id'] : '-', $r['customer_mobile'], $r['vmn'], $r['call_type'],
             $r['start_time'], $r['agent_number'], $r['agent_name']];
 
         if ($format === 'xlsx') {
@@ -141,7 +141,7 @@ class InboundCallsController extends Controller
                     $lines[] = $line($r);
                 }
                 $path = \App\Services\SimpleXlsxWriter::write(self::COLUMNS, $lines, array_fill(0, 7, 'text'),
-                    [10, 24, 16, 14, 21, 15, 22], 'Inbound Calls');
+                    [10, 16, 14, 12, 21, 15, 24], 'Inbound Calls');
                 return response()->download($path, $fileName . '.xlsx', [
                     'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 ])->deleteFileAfterSend(true);

@@ -142,7 +142,7 @@
                 </label>
                 <div class="cr-search">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="search" id="icSearch" placeholder="Lead ID, call ID, mobile, VMN or agent" autocomplete="off" aria-label="Search inbound calls" maxlength="100">
+                    <input type="search" id="icSearch" placeholder="Lead ID, mobile, VMN or agent" autocomplete="off" aria-label="Search inbound calls" maxlength="100">
                 </div>
             </div>
         </div>
@@ -150,9 +150,9 @@
             <thead>
                 <tr>
                     <th>Lead ID</th>
-                    <th>Call ID</th>
                     <th>Customer Mobile</th>
                     <th>VMN</th>
+                    <th>Call Type</th>
                     <th>Start Time</th>
                     <th>Agent Number</th>
                     <th>Agent Name</th>
@@ -258,13 +258,19 @@
             return /^\d+$/.test(String(v || ''))
                 ? '<a href="javascript:void(0)" class="lg-lead-id-pill lg-lead-id-link" data-lead-id="' + v + '" title="View lead ' + v + '">' + v + '</a>' : DASH;
         } },
-        { data: 'call_id', name: 'call_id', render: function (v) { return cell(v, 'ic-mono ic-muted'); } },
         // a real link (Ctrl / middle click: new tab): the server picks the campaign lead calling page or Manual Dial
         { data: 'customer_mobile', name: 'customer_mobile', render: function (v, t, r) {
             if (!v || v === '-' || !r.call_url) return cell(v, 'ic-mono');
             return '<a href="' + esc(r.call_url) + '" class="ic-call-link" data-kind="' + esc(r.call_kind) + '" title="' + esc(r.call_title) + '">' + PHONE_ICON + '<span class="ic-mono">' + esc(v) + '</span></a>';
         } },
         { data: 'vmn', name: 'vmn', render: function (v) { return cell(v, 'ic-mono'); } },
+        // Click2Call / WebRTC (from the agent ID or number, else the VMN's channel)
+        { data: 'call_type', name: 'call_type', orderable: false, render: function (v) {
+            if (!v || v === '-') return DASH;
+            var web = v === 'WebRTC';
+            return '<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;'
+                + (web ? 'background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;' : 'background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;') + '">' + esc(v) + '</span>';
+        } },
         { data: 'start_time', name: 'start_time', render: function (v) { return cell(v, 'ic-muted'); } },
         { data: 'agent_number', name: 'agent_number', render: function (v) { return cell(v, 'ic-mono'); } },
         { data: 'agent_name', name: 'agent_name', render: function (v) { return v && v !== '-' ? '<span style="font-weight:600">' + esc(v) + '</span>' : DASH; } }
@@ -494,6 +500,14 @@
     toPicker.setDate(init.to, false);
     document.getElementById('icPeriodLabel').textContent = periodLabel();
     initTable();
+
+    // New calls show up without reloading the page: while the range includes today, the table refreshes every
+    // 20 seconds (same page, filters and sort; skipped while the tab is hidden or a request is still running)
+    setInterval(function () {
+        if (!table || document.hidden || state.to_date < getDates('today').to) return;
+        if (table.settings()[0].jqXHR && table.settings()[0].jqXHR.readyState !== 4) return;
+        table.ajax.reload(null, false);
+    }, 20000);
 })();
 </script>
 @if($pipeline)

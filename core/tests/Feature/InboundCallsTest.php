@@ -129,6 +129,24 @@ class InboundCallsTest extends TestCase
         }
     }
 
+    /** WebRTC agent IDs (users.smartping_user_id, e.g. 100266) name the agent; Call Type; allocated user when no agent. */
+    public function test_webrtc_agent_ids_call_type_and_allocated_user()
+    {
+        $webrtcAgent = $this->makeUser('Telecaller', 'WebRTC Agent', '9000000777', '901');
+        DB::table('users')->where('id', $webrtcAgent)->update(['smartping_user_id' => '100266']);
+        DB::table('leads')->where('id', $this->leadId)->update(['assigned_to' => $this->otherAgentId]);
+
+        $this->inbound('W-1', '09:00:00', '100266');        // WebRTC agent ID
+        $this->inbound('W-2', '09:05:00', '9123456780');    // agent mobile: Click2Call
+        $this->inbound('W-3', '09:10:00', null);            // missed: VMN is a Click2Call number
+
+        $rows = collect($this->report($this->admin)['data'])->keyBy('call_id');
+        $this->assertSame(['WebRTC', 'WebRTC Agent'], [$rows['W-1']['call_type'], $rows['W-1']['agent_name']]);
+        $this->assertSame(['Click2Call', 'Inbound Agent One'], [$rows['W-2']['call_type'], $rows['W-2']['agent_name']]);
+        $this->assertSame(['Click2Call', 'Inbound Agent Two (allocated)'], [$rows['W-3']['call_type'], $rows['W-3']['agent_name']]);
+        $this->assertSame($webrtcAgent, InboundCall::where('call_id', 'W-1')->value('agent_user_id'));
+    }
+
     public function test_duplicate_events_do_not_create_duplicates()
     {
         $e = ['call_id' => 'T-200', 'dni' => self::VMN, 'cli' => '9958887262', 'event' => 'ringing', 'start_time' => $this->today . ' 10:00:00'];
@@ -316,7 +334,7 @@ class InboundCallsTest extends TestCase
         $this->assertSame(\App\Http\Controllers\Dashboard\InboundCallsController::COLUMNS, $lines[0]);
         $this->assertCount(13, $lines, 'all 12 rows, not only one page');
         foreach ($table as $i => $r) {
-            $this->assertSame([(string)($r['lead_id'] ?? '-'), $r['call_id'], $r['customer_mobile'], $r['vmn'], $r['start_time'], $r['agent_number'], $r['agent_name']], $lines[$i + 1]);
+            $this->assertSame([(string)($r['lead_id'] ?? '-'), $r['customer_mobile'], $r['vmn'], $r['call_type'], $r['start_time'], $r['agent_number'], $r['agent_name']], $lines[$i + 1]);
         }
 
         $xlsx = $this->get(route('inboundCallsExport', ['format' => 'xlsx'] + $params));
@@ -326,7 +344,7 @@ class InboundCallsTest extends TestCase
         $this->assertTrue($zip->open($xlsx->baseResponse->getFile()->getPathname()));
         $sheet = $zip->getFromName('xl/worksheets/sheet1.xml') . $zip->getFromName('xl/sharedStrings.xml');
         $zip->close();
-        foreach (['Lead ID', 'Agent Name', 'E-12', 'E-01'] as $text) {
+        foreach (['Lead ID', 'Call Type', 'Agent Name', 'Inbound Agent One'] as $text) {   // no Call ID column (removed on request)
             $this->assertStringContainsString($text, $sheet);
         }
     }
