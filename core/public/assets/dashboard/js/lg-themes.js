@@ -1,5 +1,5 @@
 /*
- * LeadGER admin themes: the picker next to the bell, saving the choice, and mapping hard-coded colors.
+ * LeadGER admin themes: the Light / Dark switch next to the bell, saving the choice, and mapping hard-coded colors.
  *
  * Original (default) is the unchanged look: nothing here touches the page while it is active.
  * For Executive Slate / Professional Green / Midnight Dark, the pages' own hard-coded colors are mapped to the
@@ -271,59 +271,25 @@
         });
     }
 
-    /* ---------- picker ---------- */
-    var btn, menu;
-    function options() { return menu ? Array.prototype.slice.call(menu.querySelectorAll('.lg-theme-opt, .lg-theme-reset')) : []; }
+    /* ---------- Light / Dark switch ---------- */
+    // off = Original (light, the default), on = Midnight Dark. Slate / Green, chosen earlier, count as light.
+    var btn;
     function syncPicker(theme) {
-        if (!menu) return;
-        menu.querySelectorAll('.lg-theme-opt').forEach(function (o) {
-            o.setAttribute('aria-checked', o.getAttribute('data-theme-value') === theme ? 'true' : 'false');
-        });
-    }
-    function openMenu() {
-        menu.hidden = false;
-        btn.setAttribute('aria-expanded', 'true');
-        var on = menu.querySelector('.lg-theme-opt[aria-checked="true"]') || options()[0];
-        if (on) on.focus();
-    }
-    function closeMenu(focusBtn) {
-        if (!menu || menu.hidden) return;
-        menu.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-        if (focusBtn) btn.focus();
+        if (!btn) return;
+        var dark = theme === 'dark';
+        btn.setAttribute('aria-checked', dark ? 'true' : 'false');
+        btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     }
     function choose(theme) {
-        closeMenu(true);
         if (theme === current()) return;
         apply(theme, true);
         save(theme);
     }
     function initPicker() {
-        btn = document.getElementById('lgThemeBtn');
-        menu = document.getElementById('lgThemeMenu');
-        if (!btn || !menu) return;
+        btn = document.getElementById('lgThemeToggle');
+        if (!btn) return;
         syncPicker(current());
-        btn.addEventListener('click', function (e) { e.stopPropagation(); menu.hidden ? openMenu() : closeMenu(false); });
-        btn.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMenu(); }
-        });
-        menu.addEventListener('click', function (e) {
-            var o = e.target.closest('.lg-theme-opt');
-            if (o) choose(o.getAttribute('data-theme-value'));
-            else if (e.target.closest('#lgThemeReset')) choose('original');
-            e.stopPropagation();
-        });
-        menu.addEventListener('keydown', function (e) {
-            var list = options(), i = list.indexOf(document.activeElement);
-            if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length].focus(); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus(); }
-            else if (e.key === 'Home') { e.preventDefault(); list[0].focus(); }
-            else if (e.key === 'End') { e.preventDefault(); list[list.length - 1].focus(); }
-            else if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
-            else if (e.key === 'Tab') { closeMenu(false); }
-        });
-        document.addEventListener('click', function (e) { if (!e.target.closest('#lgThemePicker')) closeMenu(false); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(true); });
+        btn.addEventListener('click', function () { choose(current() === 'dark' ? 'original' : 'dark'); });
     }
 
     function init() {
@@ -333,7 +299,7 @@
         observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
         // A choice that did not reach the server last time
         try {
-            var pending = btn ? localStorage.getItem('lg_theme_pending') : null;   // signed-out pages have no picker
+            var pending = btn ? localStorage.getItem('lg_theme_pending') : null;   // signed-out pages have no switch
             if (pending && ALLOWED.indexOf(pending) !== -1) save(pending, 1);
         } catch (e) {}
         // Same-origin stylesheets added later (page styles pushed at the end): refresh the generated rules once

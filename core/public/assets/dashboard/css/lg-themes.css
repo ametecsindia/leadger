@@ -255,6 +255,11 @@ html[data-theme="dark"] .dataTables_scrollHead { background-color: var(--t-bg-al
 html[data-theme="dark"] .table td,
 html[data-theme="dark"] .table th { border-color: var(--t-border) !important; }
 html[data-theme="dark"] table.dataTable tbody tr { background-color: var(--t-bg-card); }
+/* Fixed (sticky) first columns: lg-sticky-tables.js stores the light background in --lg-sticky-bg when it marks them */
+html[data-theme="dark"] table tbody td.lg-sticky-col:not(#lg-x):not(#lg-y),
+html[data-theme="dark"] table tfoot td.lg-sticky-col:not(#lg-x):not(#lg-y) { background-color: var(--t-bg-card) !important; }
+html[data-theme="dark"] table tbody tr:hover td.lg-sticky-col:not(#lg-x):not(#lg-y) { background-color: #22304D !important; }
+html[data-theme="dark"] .lg-scrolled-x table .lg-sticky-col-last:not(#lg-x):not(#lg-y) { box-shadow: inset -1px 0 0 var(--t-border), 6px 0 8px -6px rgba(0, 0, 0, 0.5) !important; }
 html[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd),
 html[data-theme="dark"] table.dataTable.stripe tbody tr.odd { background-color: var(--t-bg-alt) !important; }
 html[data-theme="dark"] .table-hover tbody tr:hover,
@@ -312,36 +317,39 @@ html.lg-theme-anim, html.lg-theme-anim * {
 }
 
 /* --------------------------------------------------------------------------
-   Theme picker (header, left of the bell) - uses the tokens so it fits every theme
+   Light / Dark switch (header, left of the bell): off = Original (light, default), on = Midnight Dark.
+   The header is dark in both themes, so the switch has fixed colors.
    -------------------------------------------------------------------------- */
 .lg-theme-picker { position: relative; display: flex; align-items: center; height: 100%; flex-shrink: 0; }
-.lg-theme-btn {
-  height: 38px; width: 38px; min-width: 38px; display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #FFFFFF; cursor: pointer; padding: 0; transition: background 0.15s ease; box-sizing: border-box;
+.lg-theme-toggle {
+  position: relative; width: 62px; height: 32px; padding: 0; flex-shrink: 0; cursor: pointer; box-sizing: border-box;
+  border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.10);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-.lg-theme-btn:hover, .lg-theme-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.14); }
-.lg-theme-btn:focus { outline: none; }
-.lg-theme-btn:focus-visible { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
-.lg-theme-menu {
-  position: absolute; top: calc(100% + 8px); right: 0; width: 280px; z-index: 1065;
-  background: var(--t-bg-card); border: 1px solid var(--t-border); border-radius: 14px;
-  box-shadow: var(--t-shadow-pop); padding: 10px; color: var(--t-text-body);
+.lg-theme-toggle:hover { background: rgba(255, 255, 255, 0.16); }
+.lg-theme-toggle[aria-checked="true"] { background: #1464F4; border-color: #3B82F6; }
+.lg-theme-toggle[aria-checked="true"]:hover { background: #1D6FFF; }
+.lg-theme-toggle:focus { outline: none; }
+.lg-theme-toggle:focus-visible { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
+/* the track shows the sun (left) and the moon (right); the knob slides over the one not chosen */
+.lg-theme-toggle .lg-tt-icon { position: absolute; top: 50%; width: 14px; height: 14px; margin-top: -7px; color: rgba(255, 255, 255, 0.75); pointer-events: none; }
+.lg-theme-toggle .lg-tt-sun { left: 9px; }
+.lg-theme-toggle .lg-tt-moon { right: 9px; }
+.lg-theme-toggle .lg-tt-knob {
+  position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); transition: transform 0.2s ease; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; color: #F59E0B;
 }
-.lg-theme-menu[hidden] { display: none; }
-.lg-theme-menu-title { font-size: 12px; font-weight: 700; color: var(--t-text-muted); text-transform: uppercase; letter-spacing: .04em; padding: 4px 8px 8px; }
-.lg-theme-opt {
-  width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: none; border-radius: 10px;
-  background: transparent; color: var(--t-text); font-size: 13.5px; font-weight: 600; cursor: pointer; text-align: left;
+.lg-theme-toggle[aria-checked="true"] .lg-tt-knob { transform: translateX(30px); color: #1464F4; }
+.lg-theme-toggle .lg-tt-knob svg { width: 14px; height: 14px; }
+.lg-theme-toggle .lg-tt-knob .lg-tt-moon-k { display: none; }
+.lg-theme-toggle[aria-checked="true"] .lg-tt-knob .lg-tt-sun-k { display: none; }
+.lg-theme-toggle[aria-checked="true"] .lg-tt-knob .lg-tt-moon-k { display: block; }
+@media (max-width: 576px) {
+  .lg-theme-toggle { width: 52px; height: 28px; }
+  .lg-theme-toggle .lg-tt-knob { width: 20px; height: 20px; }
+  .lg-theme-toggle[aria-checked="true"] .lg-tt-knob { transform: translateX(24px); }
+  .lg-theme-toggle .lg-tt-icon { width: 12px; height: 12px; margin-top: -6px; }
+  .lg-theme-toggle .lg-tt-sun { left: 7px; } .lg-theme-toggle .lg-tt-moon { right: 7px; }
 }
-.lg-theme-opt:hover, .lg-theme-opt:focus-visible { background: var(--t-bg-alt); outline: none; }
-.lg-theme-opt[aria-checked="true"] { background: var(--t-accent-soft); }
-.lg-theme-dots { display: inline-flex; gap: 3px; flex-shrink: 0; }
-.lg-theme-dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.12); display: inline-block; }
-.lg-theme-name { flex: 1; }
-.lg-theme-default { font-size: 10.5px; font-weight: 700; color: var(--t-text-muted); border: 1px solid var(--t-border); border-radius: 999px; padding: 1px 7px; }
-.lg-theme-check { width: 16px; color: var(--t-accent); visibility: hidden; }
-.lg-theme-opt[aria-checked="true"] .lg-theme-check { visibility: visible; }
-.lg-theme-reset { display: block; margin: 6px 8px 2px; padding: 0; border: none; background: none; font-size: 12.5px; font-weight: 600; color: var(--t-accent); cursor: pointer; }
-html[data-theme="dark"] .lg-theme-reset { color: var(--t-accent-hover); }
-.lg-theme-reset:hover { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .lg-theme-toggle, .lg-theme-toggle .lg-tt-knob { transition: none; } }

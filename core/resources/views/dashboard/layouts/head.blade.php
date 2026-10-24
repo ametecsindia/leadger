@@ -66,5 +66,5 @@
 @endif
 @stack('after-styles')
 {{-- Executive Slate / Professional Green / Midnight Dark (inactive for the original theme). Loaded last so it wins. --}}
-<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-themes.css') }}?v=2" type="text/css"/>
-<script src="{{ asset('assets/dashboard/js/lg-themes.js') }}?v=2" defer></script>
+<link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-themes.css') }}?v=4" type="text/css"/>
+<script src="{{ asset('assets/dashboard/js/lg-themes.js') }}?v=3" defer></script>

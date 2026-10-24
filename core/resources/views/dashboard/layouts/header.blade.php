@@ -61,28 +61,14 @@ $headerCampaignCount = $headerCampaigns->count();
             <script type="module" src="{{ asset('js/webrtc-init.js') }}"></script>
         @endif
 
-        <!-- Theme picker (left of the bell): Original (default) / Executive Slate / Professional Green / Midnight Dark -->
+        <!-- Light / Dark switch (left of the bell): off = light (Original, the default), on = dark (Midnight Dark).
+             Saved per user (users.theme); applied before the page draws (layouts/head). -->
         <div class="lg-theme-picker" id="lgThemePicker">
-            <button type="button" class="lg-theme-btn" id="lgThemeBtn" title="Theme" aria-label="Theme" aria-haspopup="true" aria-expanded="false" aria-controls="lgThemeMenu">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+            <button type="button" class="lg-theme-toggle" id="lgThemeToggle" role="switch" aria-checked="false" aria-label="Dark mode" title="Dark mode">
+                <svg class="lg-tt-icon lg-tt-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                <svg class="lg-tt-icon lg-tt-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span class="lg-tt-knob"><svg class="lg-tt-sun-k" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><svg class="lg-tt-moon-k" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
             </button>
-            <div class="lg-theme-menu" id="lgThemeMenu" role="menu" aria-label="Theme" hidden>
-                <div class="lg-theme-menu-title">Theme</div>
-                @foreach([
-                    'original' => ['Original', ['#0F172A', '#1464F4', '#F7F8FA'], true],
-                    'slate' => ['Executive Slate', ['#2B3340', '#4A6FA5', '#F5F6F8'], false],
-                    'green' => ['Professional Green', ['#0F3D2E', '#12805A', '#F2F8F5'], false],
-                    'dark' => ['Midnight Dark', ['#070D1C', '#3B82F6', '#0F172A'], false],
-                ] as $themeKey => [$themeName, $themeDots, $themeDefault])
-                    <button type="button" class="lg-theme-opt" role="menuitemradio" aria-checked="false" data-theme-value="{{ $themeKey }}" tabindex="-1">
-                        <span class="lg-theme-dots" aria-hidden="true">@foreach($themeDots as $dot)<i style="background: {{ $dot }};"></i>@endforeach</span>
-                        <span class="lg-theme-name">{{ $themeName }}</span>
-                        @if($themeDefault)<span class="lg-theme-default">Default</span>@endif
-                        <svg class="lg-theme-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                    </button>
-                @endforeach
-                <button type="button" class="lg-theme-reset" id="lgThemeReset" tabindex="-1">Reset to default</button>
-            </div>
         </div>
 
         <!-- 2. Standalone Notification Bell Button -->
