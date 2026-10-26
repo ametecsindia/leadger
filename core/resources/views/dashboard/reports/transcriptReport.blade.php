@@ -136,7 +136,7 @@
             <div class="cr-stat-card-label">Processing / Pending</div>
             <div class="cr-stat-card-value" id="trKpiWaiting"><span class="cr-loading-spin"></span></div>
         </div>
-        <div class="cr-stat-card" title="Confirmed charges of completed transcripts (billed from the real audio length)">
+        <div class="cr-stat-card" title="Tracked usage of completed transcripts: real audio minutes × your configured rate (not Sarvam billing)">
             <div class="cr-stat-card-icon icon-talk"><i class="fa-solid fa-coins"></i></div>
             <div class="cr-stat-card-label">Total Credits Used</div>
             <div class="cr-stat-card-value" id="trKpiCredits"><span class="cr-loading-spin"></span></div>
@@ -253,9 +253,12 @@
             return '<span class="tr-status ' + cls + '"><i class="fa ' + (STATUS_ICON[v] || '') + '" style="font-size:10px"></i>' + esc(v) + '</span>' + note;
         } },
         { data: 'credits_confirmed', name: 'credits', render: function (v, t, r) {
+            // Tracked = real audio minutes x the configured rate (LeadGER's record; Sarvam does not report charges per request)
             var html = '';
-            if (Number(v) > 0 || !Number(r.credits_estimated)) html += '<span title="Confirmed charge">' + money(v, r.currency) + '</span>';
-            if (Number(r.credits_estimated) > 0) html += '<small title="Estimated: charged when the transcript completes">est. ' + money(r.credits_estimated, r.currency) + '</small>';
+            if (Number(v) > 0) html += '<span title="Tracked usage: real audio minutes × your configured rate (not Sarvam billing)">' + money(v, r.currency) + '</span>';
+            else if (r.recordings > 0) html += '<span style="color:#94A3B8" title="No usage amount was recorded for this request">Not available</span>';
+            else if (!Number(r.credits_estimated)) html += money(0, r.currency);
+            if (Number(r.credits_estimated) > 0) html += '<small title="Estimated from the configured rate; tracked when the transcript completes">Estimated ' + money(r.credits_estimated, r.currency) + '</small>';
             return '<div class="tr-credit">' + html + '</div>';
         } },
         { data: 'date', name: 'date', render: function (v, t, r) { return '<span style="white-space:nowrap">' + esc(v) + '</span><div style="color:#64748B;font-size:12px">' + esc(r.time) + '</div>'; } },
@@ -275,7 +278,7 @@
         $('#trKpiCompleted').text(k.completed || 0);
         $('#trKpiWaiting').text(k.waiting || 0);
         $('#trKpiCredits').text(money(k.credits || 0, k.currency));
-        $('#trKpiEstimated').text(Number(k.estimated) > 0 ? '+ ' + money(k.estimated, k.currency) + ' estimated (not completed yet)' : 'Confirmed charges');
+        $('#trKpiEstimated').text(Number(k.estimated) > 0 ? '+ ' + money(k.estimated, k.currency) + ' estimated (not completed yet)' : 'Tracked usage · selected period');
         var f = json.filters || {};
         $('#trPeriod').text(f.from === f.to ? f.from : (f.from + ' to ' + f.to));
         $('#trTableSub').text((json.recordsFiltered || 0) + ' request' + (json.recordsFiltered == 1 ? '' : 's') + ' · ' + (k.recordings || 0) + ' recording' + (k.recordings == 1 ? '' : 's') + ' transcribed');

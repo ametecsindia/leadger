@@ -755,6 +755,7 @@ Route::get('/settings/sarvam-key', [\App\Http\Controllers\Dashboard\SarvamKeyCon
 Route::post('/settings/sarvam-key/test', [\App\Http\Controllers\Dashboard\SarvamKeyController::class, 'test'])->middleware('throttle:10,1')->name('sarvamKeyTest');
 Route::post('/settings/sarvam-key', [\App\Http\Controllers\Dashboard\SarvamKeyController::class, 'save'])->middleware('throttle:10,1')->name('sarvamKeySave');
 Route::delete('/settings/sarvam-key', [\App\Http\Controllers\Dashboard\SarvamKeyController::class, 'destroy'])->middleware('throttle:10,1')->name('sarvamKeyDelete');
+Route::post('/settings/sarvam-key/credits/refresh', [\App\Http\Controllers\Dashboard\SarvamKeyController::class, 'refreshCredits'])->middleware('throttle:10,1')->name('sarvamCreditsRefresh');
 Route::get('/settings/ai-usage', [AiCallIntelligenceController::class, 'aiUsage'])->name('aiUsage');
 Route::post('/settings/ai-usage/data', [AiCallIntelligenceController::class, 'aiUsageData'])->name('aiUsageData');
 

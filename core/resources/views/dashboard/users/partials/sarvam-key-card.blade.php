@@ -57,6 +57,16 @@
 .lg-sv-modal-card h4 { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: #0F172A; }
 .lg-sv-modal-card p { margin: 0 0 18px; font-size: 13.5px; color: #475569; }
 .lg-sv-section-gap > * + * { margin-top: 18px; }
+/* Sarvam credits: Total / Used / Remaining (provider values are not available through an API; usage is tracked) */
+.lg-sv-credits-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.lg-sv-credits-title { font-size: 13px; font-weight: 700; color: #0F172A; }
+.lg-sv-credits .lg-sv-stat-value.is-na { font-size: 13.5px; font-weight: 700; color: #64748B; margin-top: 8px; }
+.lg-sv-stat-note { font-size: 11.5px; color: #64748B; margin-top: 4px; line-height: 1.4; }
+.lg-sv-stat-note a { color: var(--lg-accent, #1464F4); font-weight: 600; text-decoration: none; }
+.lg-sv-credits-status { font-size: 12.5px; color: #475569; margin-top: 10px; }
+.lg-sv-credits-status.is-bad { color: #B91C1C; }
+.lg-sv-btn-sm { height: 34px !important; padding: 0 14px !important; font-size: 13px !important; }
+@media (max-width: 640px) { .lg-sv-stats { grid-template-columns: 1fr; } }
 </style>
 
 <div class="lg-card-section lg-sv-card" id="sarvamKeyCard">
@@ -139,6 +149,36 @@
                 <div class="lg-sv-stat"><div class="lg-sv-stat-label">Audio processed</div><div class="lg-sv-stat-value"><span id="svUseMin">{{ $svState['usage']['minutes'] }}</span> <small style="font-size:12px;font-weight:600;color:#64748B">min</small></div></div>
                 <div class="lg-sv-stat"><div class="lg-sv-stat-label">Failed</div><div class="lg-sv-stat-value" id="svUseFailed">{{ $svState['usage']['failed'] }}</div></div>
             </div>
+
+            {{-- Sarvam credits. Sarvam has no API for the balance: Total / Remaining are not available from the provider;
+                 Credits Used is LeadGER's Tracked Usage (real audio minutes x the configured rate), not Sarvam billing. --}}
+            <div class="lg-sv-credits" id="svCredits" {{ $svState['masked_key'] ? '' : 'hidden' }}>
+                <div class="lg-sv-credits-head">
+                    <div class="lg-sv-credits-title">Sarvam credits</div>
+                    <button type="button" class="lg-btn-outline-primary lg-sv-btn-sm" id="svCreditsBtn" title="Ask Sarvam whether the key works and the account has credits">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        <span>Refresh Credits</span>
+                    </button>
+                </div>
+                <div class="lg-sv-stats">
+                    <div class="lg-sv-stat">
+                        <div class="lg-sv-stat-label">Total Credits</div>
+                        <div class="lg-sv-stat-value is-na">Not available from provider</div>
+                        <div class="lg-sv-stat-note">Sarvam shows the balance only on its dashboard. <a href="{{ \App\Services\SarvamCreditService::DASHBOARD_URL }}" target="_blank" rel="noopener">Open Sarvam dashboard</a></div>
+                    </div>
+                    <div class="lg-sv-stat">
+                        <div class="lg-sv-stat-label">Credits Used <span style="text-transform:none;font-weight:600">(Tracked Usage)</span></div>
+                        <div class="lg-sv-stat-value" id="svCreditsUsed">-</div>
+                        <div class="lg-sv-stat-note" id="svCreditsUsedNote"></div>
+                    </div>
+                    <div class="lg-sv-stat">
+                        <div class="lg-sv-stat-label">Remaining Credits</div>
+                        <div class="lg-sv-stat-value is-na">Not available</div>
+                        <div class="lg-sv-stat-note">Needs the total from Sarvam, which its API does not provide.</div>
+                    </div>
+                </div>
+                <div class="lg-sv-credits-status" id="svCreditsStatus" role="status"></div>
+            </div>
         </div>
 
         <div class="lg-sv-actions">
@@ -204,6 +244,41 @@
                     delete btn.dataset.html;
                 }
             }
+            // Sarvam credits: Tracked Usage (LeadGER) and the last answer Sarvam gave to Refresh Credits
+            function money(v, cur) { return (cur === 'INR' ? '₹' : (cur ? cur + ' ' : '')) + (Number(v) || 0).toFixed(2); }
+            function renderCredits(c) {
+                var t = c.tracked || {};
+                $('svCreditsUsed').textContent = money(t.all_time, t.currency);
+                $('svCreditsUsedNote').textContent = 'All time · this month ' + money(t.this_month, t.currency) + ' · ' + (t.transcripts || 0) + ' transcripts, '
+                    + (t.minutes || 0) + ' min. Audio minutes × your configured rate, not Sarvam billing.'
+                    + (Number(t.pending_estimate) > 0 ? ' + ' + money(t.pending_estimate, t.currency) + ' estimated (in progress).' : '');
+                var p = c.provider, box = $('svCreditsStatus');
+                box.className = 'lg-sv-credits-status' + (p && (p.state === 'out_of_credits' || p.state === 'invalid') ? ' is-bad' : '');
+                box.textContent = p
+                    ? p.message + ' Last synced with Sarvam: ' + (p.synced_at || 'never') + (p.synced_at !== p.checked_at ? ' (last attempt ' + p.checked_at + ')' : '') + '.'
+                    : 'Not refreshed yet. Refresh Credits asks Sarvam whether the key works and the account has credits (a free check).';
+            }
+            var creditsBusy = false;
+            $('svCreditsBtn').addEventListener('click', function () {
+                if (creditsBusy) return;   // one refresh at a time
+                creditsBusy = true;
+                var btn = this;
+                busy(btn, true, 'Refreshing…');
+                fetch(@json(route('sarvamCreditsRefresh')), { method: 'POST', credentials: 'same-origin',
+                    headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json().catch(function () { return { success: false, message: 'The server did not answer.' }; }); })
+                    .then(function (j) {
+                        if (j.credits) renderCredits(j.credits);
+                        var st = j.credits && j.credits.provider ? j.credits.provider.state : null;
+                        if (j.success && st === 'valid') toast('success', 'Credits refreshed');
+                        else if (j.success) toast('warning', j.message);
+                        else toast('error', j.message || 'Could not refresh credits.');
+                    })
+                    .catch(function () { toast('error', 'Could not refresh credits. Check the connection and try again.'); })
+                    .finally(function () { busy(btn, false); creditsBusy = false; });
+            });
+            if (state && state.credits) renderCredits(state.credits);
+
             // Render the card from the server state (never contains the key)
             function render(s) {
                 state = s;
@@ -220,6 +295,8 @@
                 el.verified.textContent = s.verified_at ? 'Verified on ' + s.verified_at : (s.status === 'invalid' ? 'Sarvam rejected this key' : 'Not verified yet');
                 el.verified.className = 'lg-sv-verified' + (s.verified_at && s.status !== 'invalid' ? '' : ' is-unverified');
                 el.usage.hidden = !hasKey;
+                $('svCredits').hidden = !hasKey;
+                if (s.credits) renderCredits(s.credits);
                 if (s.usage) {
                     $('svUseCalls').textContent = s.usage.transcribed;
                     $('svUseMin').textContent = s.usage.minutes;

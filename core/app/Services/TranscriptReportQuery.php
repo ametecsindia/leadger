@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  *    (speaker-separated conversation), Detailed Conversation (full transcript text).
  *  - Status: Processing (a job running) > Pending (queued / waiting for the API key) > Completed (at least one
  *    recording done) > Failed.
- *  - Credits: confirmed = actual_cost of completed jobs (billed from the real audio length); estimated =
+ *  - Credits: tracked = actual_cost of completed jobs (real audio minutes x the configured rate; Sarvam does not
+ *    report charges per request, see SarvamCreditService); estimated =
  *    estimated_cost of jobs not completed yet. Currency from the jobs (company setting).
  * Estimates that were never confirmed (PENDING_CONFIRMATION) and cancelled jobs are not transcription requests.
  */

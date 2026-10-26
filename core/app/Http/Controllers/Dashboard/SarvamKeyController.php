@@ -155,6 +155,19 @@ class SarvamKeyController extends Controller
         return response()->json(['success' => true, 'message' => 'Sarvam key removed. Transcription has stopped for this company.'] + self::state($settings->fresh()));
     }
 
+    /**
+     * POST: Refresh Credits. Asks Sarvam (free key check) whether the key works and the account has credits; the
+     * balance itself is not available from Sarvam's API. A failed attempt is reported as failed, never as success.
+     */
+    public function refreshCredits()
+    {
+        if ($deny = $this->denyUnlessAdmin()) return $deny;
+        $r = \App\Services\SarvamCreditService::refresh();
+        $code = !empty($r['busy']) ? 429 : ($r['ok'] ? 200 : 503);
+        if (!$r['ok'] && $r['message'] === 'Add a Sarvam API key first.') $code = 422;
+        return response()->json(['success' => $r['ok'], 'message' => $r['message'], 'credits' => \App\Services\SarvamCreditService::summary()], $code);
+    }
+
     /* ------------------------------------------------------------------ */
 
     /** What the card shows. Never the key. */
@@ -169,6 +182,8 @@ class SarvamKeyController extends Controller
             'auto_transcribe' => (bool)$s->auto_transcribe,
             'verified_at' => $s->sarvam_key_verified_at ? $s->sarvam_key_verified_at->format('d M Y, h:i A') : null,
             'usage' => SarvamKeyService::usage(),
+            // Total / Used / Remaining credits (provider values are not available through an API; usage is tracked)
+            'credits' => \App\Services\SarvamCreditService::summary(),
         ];
     }
 
