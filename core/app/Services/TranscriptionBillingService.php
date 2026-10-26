@@ -530,6 +530,9 @@ class TranscriptionBillingService
                 ]
             );
 
+            // transcript options waiting for this transcript are generated from it now
+            TranscriptOptionService::afterTranscript($sourceCode, $logId, true, null, $job->id);
+
             return [
                 'success' => true,
                 'job_id' => $job->id,
@@ -558,6 +561,8 @@ class TranscriptionBillingService
         $analysis->status = 'failed';
         $analysis->error_message = $errorMsg;
         $analysis->save();
+        // transcript options waiting for this transcript fail with the same reason (a completed one is kept)
+        TranscriptOptionService::afterTranscript($sourceCode, $logId, false, $errorMsg, $job->id);
 
         return [
             'success' => false,

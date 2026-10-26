@@ -663,6 +663,36 @@ class SarvamAiService
     }
 
     /**
+     * One JSON answer from Sarvam's chat model (the same request, key and retries as analyzeConversation), for the
+     * transcript options. Returns [data|null, error|null, model, total tokens|null]; never throws.
+     */
+    public function chatJson(string $system, string $user, int $maxTokens = 4000): array
+    {
+        $model = env('SARVAM_ANALYSIS_MODEL', 'sarvam-105b');
+        if (!$this->isConfigured()) {
+            return [null, self::NOT_CONFIGURED_MESSAGE, $model, null];
+        }
+        [, $res, $err] = $this->sarvamJson('POST', '/v1/chat/completions', [
+            'model' => $model,
+            'temperature' => 0.1,
+            'reasoning_effort' => 'low',
+            'max_tokens' => $maxTokens,
+            'response_format' => ['type' => 'json_object'],
+            'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $user]],
+        ], 180);
+        $tokens = isset($res['usage']['total_tokens']) ? (int)$res['usage']['total_tokens'] : null;
+        if ($err) {
+            return [null, $err, $model, $tokens];
+        }
+        $content = $res['choices'][0]['message']['content'] ?? '';
+        $data = json_decode(trim(preg_replace('/^```(?:json)?|```$/m', '', (string)$content)), true);
+        if (!is_array($data)) {
+            return [null, 'The AI service returned an unreadable answer (finish reason ' . ($res['choices'][0]['finish_reason'] ?? 'unknown') . ').', $model, $tokens];
+        }
+        return [$data, null, $model, $tokens];
+    }
+
+    /**
      * Process Call Transcription & Analysis end-to-end, on the REAL recording file only.
      *
      * @param int $logId

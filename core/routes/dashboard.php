@@ -657,6 +657,10 @@ Route::post('/reports/recordings/transcript/retry/{id}/{source_code}', [Recordin
 Route::post('/reports/recordings/transcription/estimate', [RecordingsController::class, 'estimateTranscriptionCost'])->name('recordingsTranscriptionEstimate');
 Route::post('/reports/recordings/transcription/jobs', [RecordingsController::class, 'startTranscriptionJobs'])->name('recordingsTranscriptionStartJobs');
 Route::get('/reports/recordings/transcription/status/{batch_id}', [RecordingsController::class, 'getBatchStatus'])->name('recordingsTranscriptionBatchStatus');
+// Transcript options (Summary / Agent and Customer / Description): saved results, polling status, download
+Route::get('/reports/recordings/transcript-options/status', [RecordingsController::class, 'transcriptOptionStatus'])->name('recordingTranscriptOptionStatus');
+Route::get('/reports/recordings/transcript-options/{id}/{source_code}', [RecordingsController::class, 'transcriptOptions'])->name('recordingTranscriptOptions');
+Route::get('/reports/recordings/transcript-options/{id}/{source_code}/download', [RecordingsController::class, 'transcriptOptionDownload'])->name('recordingTranscriptOptionDownload');
 Route::get('/reports/allocations', [ReportsController::class, 'allocations'])->name('allocations');
 Route::get('/lead-allocation', [ReportsController::class, 'allocations'])->name('lead_allocation');
 Route::post('/reports/allocationsData', [ReportsController::class, 'allocationsData'])->name('allocationsData');

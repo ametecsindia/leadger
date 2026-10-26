@@ -1202,6 +1202,32 @@
 </div>
 
 <!-- Transcription Cost Calculation & Confirmation Modal -->
+{{-- Transcript option results (Call Summary / Agent & Customer Conversation Analysis / Detailed Call Conversation):
+     the saved result of each option, read from the database; switching tabs never regenerates anything --}}
+<div id="lg-option-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="lg-option-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 820px;">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 25px 60px rgba(15,23,42,0.25); overflow: hidden; background: #FFFFFF;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--lg-accent-hover) 0%, var(--lg-accent) 100%); color: #FFFFFF; padding: 16px 24px; border: none;">
+                <div>
+                    <h5 class="modal-title font-weight-bold" id="lg-option-title" style="font-size: 17px; margin: 0; color: #FFFFFF;">Call Summary</h5>
+                    <small id="lg-option-meta" style="opacity: 0.9; font-size: 12px; color: #DBEAFE;"></small>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 0.9; font-size: 24px; color: #FFFFFF; background: transparent; border: none;"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div style="display: flex; gap: 6px; padding: 12px 24px 0; border-bottom: 1px solid #E2E8F0; flex-wrap: wrap;" id="lg-option-tabs" role="tablist"></div>
+            <div class="modal-body" id="lg-option-body" style="padding: 20px 24px; font-size: 13.5px; color: #334155; min-height: 160px;"></div>
+            <div class="modal-footer" style="padding: 12px 24px; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                <small id="lg-option-foot" style="color: #64748B;"></small>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-light border" id="lg-option-copy" style="font-size: 13px; font-weight: 600; border-radius: 8px;"><i class="fas fa-copy me-1"></i> Copy</button>
+                    <a class="btn btn-light border" id="lg-option-download" href="#" style="font-size: 13px; font-weight: 600; border-radius: 8px;"><i class="fas fa-download me-1"></i> Download</a>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal" style="background: var(--lg-accent); border-color: var(--lg-accent); font-size: 13px; font-weight: 600; border-radius: 8px;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="lg-cost-estimate-modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 680px;">
         <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 25px 60px rgba(15,23,42,0.25); overflow: hidden; background: #FFFFFF;">
@@ -1259,6 +1285,17 @@
                                 <div id="modal-unit-rate" style="font-size: 14.5px; font-weight: 700; color: #059669; margin-top: 4px;">₹0.15 / min</div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Transcript Option: which result to generate from the recording's transcript -->
+                    <div style="margin-bottom: 16px;">
+                        <label for="lg-transcript-option" style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Transcript Option</label>
+                        <select id="lg-transcript-option" class="form-control" style="height: 40px; border-radius: 8px; font-size: 13.5px; border-color: #CBD5E1;">
+                            <option value="summary">Summary — short summary of the call</option>
+                            <option value="agent_customer">Agent and Customer — what each side said, asked and explained</option>
+                            <option value="description">Description — detailed transcript of the complete conversation</option>
+                        </select>
+                        <div id="lg-transcript-option-note" style="font-size: 11.5px; color: #64748B; margin-top: 6px;"></div>
                     </div>
 
                     <!-- Estimated Cost Highlight Card -->
@@ -2831,7 +2868,7 @@
                     $('#lg-cost-loading').hide();
                     if (res.status === 'success' && res.data) {
                         var d = res.data;
-                        $('#modal-recording-count').text(d.recording_count);
+                        $('#modal-recording-count, #modal-rec-count').text(d.recording_count);
                         $('#modal-total-duration').text(d.formatted_duration);
                         $('#modal-unit-rate').text(d.currency_symbol + Number(d.price_per_unit).toFixed(4) + ' / ' + d.pricing_unit);
                         $('#modal-billable-minutes').text(Number(d.billable_minutes).toFixed(2));
@@ -2848,6 +2885,20 @@
                             '</tr>';
                         });
                         $('#lg-breakdown-tbody').html(tbodyHtml);
+
+                        // Recordings with a saved transcript are not transcribed (or charged) again: only the option runs
+                        var recs = d.recordings || [], saved = recs.filter(function (r) { return r.already_transcribed; });
+                        if (saved.length) {
+                            var fresh = recs.filter(function (r) { return !r.already_transcribed; });
+                            var cost = fresh.reduce(function (s, r) { return s + Number(r.estimated_cost || 0); }, 0);
+                            var mins = fresh.reduce(function (s, r) { return s + Number(r.billable_minutes || 0); }, 0);
+                            $('#modal-estimated-cost').text(d.currency_symbol + cost.toFixed(2));
+                            $('#modal-billable-minutes').text(mins.toFixed(2));
+                            $('#lg-transcript-option-note').html('<i class="fas fa-info-circle me-1"></i>' + saved.length + ' of ' + recs.length
+                                + ' recording(s) already have a saved transcript: it is reused, so no audio is transcribed or charged again for them.');
+                        } else {
+                            $('#lg-transcript-option-note').text('The recording is transcribed once; the selected option is generated from that transcript.');
+                        }
 
                         $('#lg-cost-content').show();
                     } else {
@@ -2904,10 +2955,12 @@
                 url: url,
                 data: {
                     _token: "{{ csrf_token() }}",
-                    recordings: currentEstimateBatch
+                    recordings: currentEstimateBatch,
+                    option: $('#lg-transcript-option').val()
                 },
                 dataType: "json",
                 success: function(res) {
+                    if (res.option) { lgOptionStarted(res); return; }
                     var b = res.data || res;
                     var isSuccess = (res.status === 'success') || (b && b.status === 'success');
 
@@ -2944,6 +2997,155 @@
                 }
             });
         }
+
+        /* ---------- Transcript options: Summary / Agent and Customer / Description ---------- */
+        var LG_OPTION_URL = window.location.origin + '/admin/reports/recordings/transcript-options/';
+        var lgOptionPoll = null, lgOptionCurrent = null;
+
+        // After Confirm: saved results open at once; the others are polled until ready (no endless spinner)
+        function lgOptionStarted(res) {
+            var keys = Object.keys(res.results || {}), option = res.option, startedAt = Date.now();
+            var label = $('#lg-transcript-option option[value="' + option + '"]').text().split(' —')[0];
+            var finish = function (results) {
+                clearInterval(lgOptionPoll); lgOptionPoll = null;
+                if (dataTable) dataTable.ajax.reload(null, false);
+                var done = keys.filter(function (k) { return results[k] && results[k].status === 'completed'; });
+                var failed = keys.filter(function (k) { return results[k] && results[k].status === 'failed'; });
+                if (keys.length === 1 && done.length === 1) {
+                    $('#lg-cost-estimate-modal').modal('hide');
+                    var p = keys[0].split('_');
+                    setTimeout(function () { lgOpenOptions(p[1], p[0], option); }, 350);
+                    return;
+                }
+                $('#lg-batch-progress-bar, #lg-cost-progress-bar').css('width', '100%');
+                $('#lg-progress-title').text(label + ': ' + done.length + ' ready' + (failed.length ? ', ' + failed.length + ' failed' : ''));
+                $('#lg-progress-desc').html(keys.map(function (k) {
+                    var r = results[k] || {}, p = k.split('_');
+                    return '<div style="margin:3px 0">Recording ' + escapeHtmlText(k) + ': '
+                        + (r.status === 'completed' ? '<a href="javascript:void(0)" onclick="$(\'#lg-cost-estimate-modal\').modal(\'hide\'); setTimeout(function(){ lgOpenOptions(' + p[1] + ', ' + p[0] + ', \'' + option + '\'); }, 350)">View</a>'
+                            : '<span style="color:#B91C1C">' + escapeHtmlText(r.error || 'failed') + '</span>') + '</div>';
+                }).join(''));
+                $('#lg-cost-completed-footer').show();
+            };
+            $('#lg-progress-title').text('Generating ' + label + '...');
+            $('#lg-progress-desc').text(res.message || '');
+            $('#lg-batch-progress-bar, #lg-cost-progress-bar').css('width', '40%');
+            var check = function () {
+                $.getJSON(LG_OPTION_URL + 'status', { option: option, keys: keys }).done(function (s) {
+                    var r = s.results || {}, ready = keys.filter(function (k) { return r[k] && ['completed', 'failed', 'none'].indexOf(r[k].status) !== -1; }).length;
+                    $('#lg-batch-progress-bar, #lg-cost-progress-bar').css('width', Math.max(40, Math.round(ready / keys.length * 100)) + '%');
+                    $('#lg-progress-status-text, #modal-proc-status-text').text(ready + ' of ' + keys.length + ' ready');
+                    if (s.finished) finish(r);
+                    else if (Date.now() - startedAt > 15 * 60 * 1000) {
+                        clearInterval(lgOptionPoll); lgOptionPoll = null;
+                        $('#lg-progress-title').text('Still being generated');
+                        $('#lg-progress-desc').text('It continues in the background. Close this window and open the result from the recording later.');
+                        $('#lg-cost-completed-footer').show();
+                    }
+                });
+            };
+            check();
+            lgOptionPoll = setInterval(check, 2500);
+        }
+
+        function lgList(title, items) {
+            return items && items.length ? '<div style="font-weight:700;color:#0F172A;margin:12px 0 4px">' + title + '</div><ul style="margin:0 0 0 18px;padding:0">'
+                + items.map(function (i) { return '<li>' + escapeHtmlText(i) + '</li>'; }).join('') + '</ul>' : '';
+        }
+        function lgRow(label, value) {
+            return '<div style="margin:6px 0"><span style="font-weight:700;color:#0F172A">' + label + ':</span> ' + escapeHtmlText(value) + '</div>';
+        }
+        function lgOptionHtml(o) {
+            var r = o.result;
+            if (o.option === 'summary') {
+                return lgRow('Purpose', r.purpose) + lgList('Customer requirements', r.customer_requirements) + lgList('Key discussion points', r.key_points)
+                    + lgRow('Customer interest level', r.interest_level) + lgRow('Call outcome', r.call_outcome) + lgRow('Recommended next action', r.next_action);
+            }
+            if (o.option === 'agent_customer') {
+                return '<div style="font-size:12.5px;color:#64748B;margin-bottom:6px">' + escapeHtmlText(r.role_basis) + (r.roles_confirmed ? '' : ' Speakers whose role is not clear are shown as Speaker 1 / Speaker 2.') + '</div>'
+                    + r.speakers.map(function (s) {
+                        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;margin:10px 0"><div style="font-weight:800;color:#0F172A">' + escapeHtmlText(s.label) + '</div>'
+                            + lgList('Statements', s.statements) + lgList('Questions', s.questions) + lgList('Information explained', s.information_given)
+                            + lgList('Requirements', s.requirements) + lgList('Objections', s.objections) + '</div>';
+                    }).join('') + lgRow('Customer interest level', r.customer_interest_level);
+            }
+            var html = r.turns.length ? '<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;max-height:360px;overflow-y:auto">' + r.turns.map(function (t) {
+                return '<div style="margin:3px 0">' + (t.time ? '<span style="color:#94A3B8">[' + t.time + ']</span> ' : '') + '<b style="color:#0F172A">' + escapeHtmlText(t.speaker) + ':</b> ' + escapeHtmlText(t.text) + '</div>';
+            }).join('') + '</div>' : (r.english ? '<div style="white-space:pre-wrap">' + escapeHtmlText(r.english) + '</div>' : '');
+            if (r.original) html += '<div style="font-weight:700;color:#0F172A;margin:14px 0 4px">Original language transcript' + (r.language ? ' (' + escapeHtmlText(r.language) + ')' : '') + '</div><div style="white-space:pre-wrap;background:#F8FAFC;border-radius:10px;padding:12px 14px;max-height:200px;overflow-y:auto">' + escapeHtmlText(r.original) + '</div>';
+            return html;
+        }
+
+        // The result popup of one recording: the three saved options as tabs; a missing one can be generated from here
+        function lgOpenOptions(id, sc, option) {
+            if ($('#lg-option-modal').parent().is(':not(body)')) $('#lg-option-modal').appendTo('body');
+            $('#lg-option-body').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading…</div>');
+            $('#lg-option-modal').modal('show');
+            $.getJSON(LG_OPTION_URL + id + '/' + sc).done(function (res) {
+                lgOptionCurrent = { id: id, sc: sc, data: res, option: option || 'summary' };
+                lgRenderOption();
+            }).fail(function (xhr) {
+                $('#lg-option-body').html('<div class="text-danger">' + escapeHtmlText((xhr.responseJSON && xhr.responseJSON.message) || 'The results could not be loaded.') + '</div>');
+            });
+        }
+        function lgRenderOption() {
+            var c = lgOptionCurrent, d = c.data, o = d.options[c.option], m = d.meta;
+            $('#lg-option-title').text(o.title);
+            $('#lg-option-meta').text('Recording ' + m.recording_id + ' · Agent: ' + m.agent_name + ' · Customer: ' + m.customer_number + ' · Duration: ' + m.duration + ' · Option: ' + o.label);
+            $('#lg-option-tabs').html(Object.keys(d.options).map(function (k) {
+                var t = d.options[k], on = k === c.option;
+                var dot = { completed: '#16A34A', failed: '#DC2626', pending: '#D97706', processing: '#2563EB' }[t.status] || '#CBD5E1';
+                return '<button type="button" role="tab" aria-selected="' + on + '" class="btn btn-sm" data-opt="' + k + '" style="border-radius:8px 8px 0 0;font-weight:600;font-size:12.5px;'
+                    + (on ? 'background:#EFF6FF;color:var(--lg-accent);border:1px solid #BFDBFE;border-bottom:none' : 'background:transparent;color:#64748B;border:1px solid transparent') + '">'
+                    + '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + dot + ';margin-right:6px"></span>' + escapeHtmlText(t.label) + '</button>';
+            }).join(''));
+            var ready = o.status === 'completed' && o.result;
+            $('#lg-option-copy').prop('disabled', !ready);
+            $('#lg-option-download').toggleClass('disabled', !ready).attr('aria-disabled', !ready)
+                .attr('href', ready ? LG_OPTION_URL + c.id + '/' + c.sc + '/download?option=' + c.option : '#');
+            $('#lg-option-foot').text(ready ? 'Saved ' + (o.completed_at || '') + (o.model ? ' · ' + o.model : ' · from the saved transcript (no AI call)') : '');
+            if (ready) {
+                $('#lg-option-body').html(lgOptionHtml(o));
+                c.text = null;   // the saved text, loaded now so Copy works straight from the click
+                $.get(LG_OPTION_URL + c.id + '/' + c.sc + '/download', { option: c.option }).done(function (t) { if (lgOptionCurrent === c) c.text = t; });
+                return;
+            }
+            var msg = { pending: 'Queued — it starts in a moment.', processing: 'Being generated…' }[o.status];
+            if (msg) { $('#lg-option-body').html('<div class="text-center py-4" style="color:#64748B"><i class="fas fa-spinner fa-spin"></i> ' + msg + '</div>'); setTimeout(function () { if ($('#lg-option-modal').is(':visible')) lgOpenOptions(c.id, c.sc, c.option); }, 3000); return; }
+            var html = o.status === 'failed' ? '<div class="text-danger" style="margin-bottom:12px"><i class="fas fa-exclamation-circle me-1"></i>' + escapeHtmlText(o.error || 'Generation failed.') + '</div>'
+                : '<div style="color:#64748B;margin-bottom:12px">' + escapeHtmlText(o.label) + ' has not been generated for this recording yet.</div>';
+            if (d.can_generate) {
+                html += '<button type="button" class="btn btn-primary" id="lg-option-generate" style="background:var(--lg-accent);border-color:var(--lg-accent);font-size:13px;font-weight:600;border-radius:8px">'
+                    + (o.status === 'failed' ? 'Try again' : 'Generate ' + escapeHtmlText(o.label)) + '</button>'
+                    + (d.has_transcript ? '<div style="font-size:12px;color:#64748B;margin-top:6px">Uses the saved transcript: the audio is not transcribed again.</div>'
+                        : '<div style="font-size:12px;color:#64748B;margin-top:6px">The recording is transcribed first (charged as shown in the cost estimate).</div>');
+            }
+            $('#lg-option-body').html(html);
+        }
+        $(document).on('click', '#lg-option-tabs [data-opt]', function () { lgOptionCurrent.option = $(this).data('opt'); lgRenderOption(); });
+        $(document).on('click', '#lg-option-generate', function () {
+            var c = lgOptionCurrent, btn = $(this).prop('disabled', true);
+            if (!c.data.has_transcript) {   // a new transcript: show the cost estimate first, with this option chosen
+                $('#lg-option-modal').modal('hide');
+                $('#lg-transcript-option').val(c.option);
+                setTimeout(function () { requestSingleTranscription(c.id, c.sc); }, 350);
+                return;
+            }
+            $.post(window.location.origin + '/admin/reports/recordings/transcription/jobs', { _token: "{{ csrf_token() }}", recordings: [c.sc + '_' + c.id], option: c.option })
+                .done(function () { lgOpenOptions(c.id, c.sc, c.option); })
+                .fail(function (xhr) { btn.prop('disabled', false); lgToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Could not start it.'); });
+        });
+        $('#lg-option-copy').on('click', function () {
+            var text = lgOptionCurrent && lgOptionCurrent.text;
+            if (!text) { lgToast('info', 'The result is still loading. Try again in a moment.'); return; }
+            var done = function () { lgToast('success', 'Copied'); }, fail = function () { lgToast('error', 'Could not copy. Use Download instead.'); };
+            var legacy = function () {
+                var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(ta); ok ? done() : fail();
+            };
+            if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, legacy); else legacy();
+        });
 
         var batchPollTimer = null;
 

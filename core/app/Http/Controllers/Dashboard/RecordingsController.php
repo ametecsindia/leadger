@@ -560,6 +560,11 @@ class RecordingsController extends Controller
                     $actions .= "<button type='button' class='lg-dl-act' onclick='openTranscriptModal({$rowArgs})' title='View transcript' aria-label='View transcript' style='" . ($done ? 'color:#059669;border-color:#A7F3D0;' : 'color:#64748B;') . "'><i class='fas fa-file-alt'></i></button>";
                 }
 
+                // Transcript options (Summary / Agent and Customer / Description): the saved results, or generate one
+                if ($st === 'completed') {
+                    $actions .= "<button type='button' class='lg-dl-act' onclick='lgOpenOptions({$rowArgs})' title='Summary, Agent and Customer, Description' aria-label='Transcript options' style='color:#1D4ED8;border-color:#BFDBFE;'><i class='fas fa-list-ul'></i></button>";
+                }
+
                 // AI Analysis detail page (if completed)
                 if (!empty($row->ai_analysis_id) && $st === 'completed' && $companySettings->ai_enabled) {
                     $detailPath = parse_url(route('aiAnalysisDetail', $row->ai_analysis_id), PHP_URL_PATH);
@@ -884,6 +889,15 @@ class RecordingsController extends Controller
             }
         }
 
+        // Transcript Option chosen in the confirm popup (Summary / Agent and Customer / Description)
+        $option = (string)$request->input('option', '');
+        if ($option !== '') {
+            if (!isset(\App\Models\TranscriptResult::OPTIONS[$option])) {
+                return response()->json(['status' => 'error', 'message' => 'Choose a transcript option.'], 422);
+            }
+            return $this->startTranscriptOption($recordingKeys, $option, (int)$user->id);
+        }
+
         $service = new \App\Services\TranscriptionBillingService();
 
         try {
@@ -905,6 +919,101 @@ class RecordingsController extends Controller
             'message' => "Transcript started for {$status['total']} recording(s)."
                 . (count($batch['skipped']) ? ' ' . count($batch['skipped']) . ' skipped: ' . $batch['skipped'][0]['reason'] : ''),
         ]);
+    }
+
+    /**
+     * One transcript option for the selected recordings. A saved result is shown again (no AI call, no charge); a
+     * recording with a saved transcript only runs the option; the others are transcribed first (existing billing)
+     * and the option follows. Returns per recording: completed | in_progress | queued | needs_transcript | failed.
+     */
+    private function startTranscriptOption(array $keys, string $option, int $userId)
+    {
+        $options = new \App\Services\TranscriptOptionService();
+        $states = $options->request($keys, $option, $userId);
+        $needs = array_keys(array_filter($states, fn ($s) => $s['state'] === 'needs_transcript'));
+        $batchId = null;
+        if ($needs) {
+            $billing = new \App\Services\TranscriptionBillingService();
+            $skipped = [];
+            try {
+                $batch = $billing->createTranscriptionJobs($needs, 1, $userId, true);
+                $billing->dispatchBatch($batch['batch_id']);
+                $batchId = $batch['batch_id'];
+                $skipped = $batch['skipped'];
+            } catch (\Exception $e) {
+                $skipped = array_map(fn ($k) => ['key' => $k, 'reason' => $e->getMessage()], $needs);
+            }
+            foreach ($skipped as $s) {
+                $key = $s['key'] ?? null;
+                if (!$key || !isset($states[$key])) continue;
+                [$sc, $lid] = array_map('intval', explode('_', $key));
+                $running = \App\Models\CallAiAnalysis::findFor($sc, $lid);
+                if ($running && in_array($running->status, ['pending', 'processing', 'waiting_key'], true)) {
+                    continue;   // its transcript is already being made: the option follows it
+                }
+                \App\Models\TranscriptResult::where('id', $states[$key]['id'])->where('status', '!=', 'completed')
+                    ->update(['status' => 'failed', 'error_message' => $s['reason'], 'updated_at' => now()]);
+                $states[$key]['state'] = 'failed';
+                $states[$key]['error'] = $s['reason'];
+            }
+        }
+        $label = \App\Models\TranscriptResult::OPTIONS[$option];
+        $counts = array_count_values(array_column($states, 'state'));
+        $parts = array_filter([
+            ($counts['completed'] ?? 0) ? ($counts['completed'] . ' already saved (shown again, no new charge)') : null,
+            (($counts['queued'] ?? 0) + ($counts['needs_transcript'] ?? 0) + ($counts['in_progress'] ?? 0)) ? (($counts['queued'] ?? 0) + ($counts['needs_transcript'] ?? 0) + ($counts['in_progress'] ?? 0)) . ' being generated' : null,
+            ($counts['failed'] ?? 0) ? ($counts['failed'] . ' could not start') : null,
+        ]);
+        return response()->json(['status' => 'success', 'option' => $option, 'batch_id' => $batchId, 'results' => $states,
+            'message' => $label . ': ' . implode(', ', $parts) . '.']);
+    }
+
+    /** GET: the three transcript options of one recording (saved results, statuses), for the result popup. */
+    public function transcriptOptions($id, $source_code)
+    {
+        $sc = (int)$source_code;
+        $logId = (int)$id;
+        if ($err = $this->rowAccessError($sc, $logId)) {
+            return response()->json(['status' => 'error', 'message' => $err], str_starts_with($err, 'Unauthorized') ? 403 : 404);
+        }
+        $service = new \App\Services\TranscriptOptionService();
+        return response()->json(['status' => 'success', 'meta' => $service->meta($sc, $logId), 'options' => $service->forRecording($sc, $logId),
+            'has_transcript' => (bool)\App\Services\TranscriptOptionService::transcriptOf($sc, $logId), 'can_generate' => self::canRequestTranscript()]);
+    }
+
+    /** GET ?keys[]=2_15&option=summary : status of an option on several recordings (polled while generating). */
+    public function transcriptOptionStatus(Request $request)
+    {
+        $option = (string)$request->input('option');
+        $keys = \App\Services\TranscriptionBillingService::normalizeKeys((array)$request->input('keys', []));
+        abort_unless(isset(\App\Models\TranscriptResult::OPTIONS[$option]) && $keys && count($keys) <= 200, 422);
+        $out = [];
+        $service = new \App\Services\TranscriptOptionService();
+        foreach ($keys as $key) {
+            [$sc, $lid] = array_map('intval', explode('_', $key));
+            if ($this->rowAccessError($sc, $lid)) continue;
+            $o = $service->forRecording($sc, $lid)[$option];
+            $out[$key] = ['status' => $o['status'], 'error' => $o['error']];
+        }
+        $final = count(array_filter($out, fn ($r) => in_array($r['status'], ['completed', 'failed', 'none'], true)));
+        return response()->json(['status' => 'success', 'results' => $out, 'finished' => $final === count($out)]);
+    }
+
+    /** GET ?option= : download a saved option result as a text file (no AI call). */
+    public function transcriptOptionDownload(Request $request, $id, $source_code)
+    {
+        $sc = (int)$source_code;
+        $logId = (int)$id;
+        $option = (string)$request->input('option');
+        if ($this->rowAccessError($sc, $logId) || !isset(\App\Models\TranscriptResult::OPTIONS[$option])) {
+            abort(404);
+        }
+        $service = new \App\Services\TranscriptOptionService();
+        $o = $service->forRecording($sc, $logId)[$option];
+        abort_unless($o['status'] === 'completed' && is_array($o['result']), 404, 'This option has not been generated yet.');
+        $text = \App\Services\TranscriptOptionService::asText($option, $o['result'], $service->meta($sc, $logId));
+        $name = str_replace(' ', '-', strtolower(\App\Models\TranscriptResult::TITLES[$option])) . '-' . $sc . '_' . $logId . '.txt';
+        return response($text, 200, ['Content-Type' => 'text/plain; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="' . $name . '"']);
     }
 
     /**
