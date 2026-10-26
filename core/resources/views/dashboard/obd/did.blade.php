@@ -790,6 +790,56 @@ body > .modal.lg-modal.in {
         width: 100%;
     }
 }
+
+/* Edit DID > Assigned Groups / Teams: selected teams as tags in one box (Select2), list opens in place below it */
+.lg-did-teams { position: relative; }
+.lg-did-teams .select2-container { width: 100% !important; display: block; }
+/* !important: leadger-theme.css gives every Select2 box a fixed 40px height, border and background with !important */
+.lg-did-teams .select2-container .select2-selection--multiple {
+    height: auto !important; min-height: 42px !important; padding: 5px 34px 5px 8px !important;
+    border: 1px solid var(--t-border-strong, #CBD5E1) !important; border-radius: 8px !important;
+    background-color: var(--t-bg-input, #FFFFFF) !important; cursor: pointer; box-shadow: none !important; transition: border-color .15s, box-shadow .15s;
+}
+.lg-did-teams .select2-container--focus .select2-selection--multiple,
+.lg-did-teams .select2-container--open .select2-selection--multiple {
+    border-color: var(--t-accent, #1464F4) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-accent, #1464F4) 15%, transparent) !important;
+}
+.lg-did-teams .select2-selection--multiple .select2-selection__rendered {
+    display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 !important; margin: 0; list-style: none; line-height: 1.2;
+}
+.lg-did-teams .select2-selection--multiple .select2-selection__choice {
+    display: inline-flex; align-items: center; gap: 5px; margin: 0 !important; padding: 3px 8px 3px 9px; float: none;
+    font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--t-accent, #1464F4);
+    background: var(--t-accent-soft, #EFF6FF); border: 1px solid var(--t-accent-border, #BFDBFE); border-radius: 6px; max-width: 100%;
+}
+.lg-did-teams .select2-selection__choice__remove {
+    order: 2; margin: 0 !important; float: none; font-size: 14px; font-weight: 700; line-height: 1; color: var(--t-accent, #1464F4);
+    opacity: .7; cursor: pointer;
+}
+.lg-did-teams .select2-selection__choice__remove:hover { opacity: 1; color: var(--t-danger, #DC2626); }
+.lg-did-teams .select2-search--inline { flex: 1 1 40px; float: none; min-width: 40px; }
+.lg-did-teams .select2-search--inline .select2-search__field {
+    width: 100% !important; min-width: 40px; height: 26px !important; min-height: 0 !important; margin: 0 !important; padding: 0 2px !important;
+    border: 0 !important; box-shadow: none !important; background: transparent !important; font-size: 13px; color: var(--t-text, #0F172A);
+}
+.lg-did-teams-arrow {
+    position: absolute; top: 0; right: 0; width: 34px; height: 42px; border: 0; background: none; padding: 0;
+    display: flex; align-items: center; justify-content: center; color: var(--t-text-muted, #64748B); cursor: pointer;
+}
+.lg-did-teams-arrow svg { transition: transform .15s; }
+.lg-did-teams.is-open .lg-did-teams-arrow svg { transform: rotate(180deg); }
+/* the list opens in the form below the box (never over Cancel / Save Changes) */
+.lg-did-teams-drop > .select2-container { position: static !important; top: auto !important; left: auto !important; display: block; }
+.lg-did-teams-drop .select2-dropdown {
+    position: relative !important; top: 0 !important; left: 0 !important; width: 100% !important; margin-top: 4px;
+    border: 1px solid var(--t-border, #E2E8F0) !important; border-radius: 8px !important; overflow: hidden;
+    background: var(--t-bg-card, #FFFFFF); box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+}
+.lg-did-teams-drop .select2-results__options { max-height: 180px !important; overflow-y: auto; }
+.lg-did-teams-drop .select2-results__option { padding: 7px 12px; font-size: 13px; color: var(--t-text-body, #334155); }
+.lg-did-teams-drop .select2-results__option[aria-selected=true] { background: var(--t-accent-soft, #EFF6FF); color: var(--t-accent, #1464F4); font-weight: 600; }
+.lg-did-teams-drop .select2-results__option[aria-selected=true]::after { content: '\2713'; float: right; }
+.lg-did-teams-drop .select2-results__option--highlighted[aria-selected] { background: var(--t-accent, #1464F4); color: #FFFFFF; }
 </style>
 @endpush
 
@@ -1119,16 +1169,23 @@ body > .modal.lg-modal.in {
                             <input type="text" class="lg-form-control" value="{{ $Row->virtual_number }}" disabled>
                         </div>
                         <div class="lg-form-group">
-                            <label class="lg-form-label">Assigned Groups / Teams</label>
-                            <select name="team_id[]" class="lg-form-select" multiple size="4" required>
-                                @php $selectedTeams = !empty($Row->team_id) ? explode(',', $Row->team_id) : []; @endphp
-                                @foreach($teams as $t)
-                                    <option value="{{ $t->id }}" {{ in_array($t->id, $selectedTeams) ? 'selected' : '' }}>
-                                        {{ $t->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small style="font-size: 11.5px; color: #64748B; margin-top: 4px; display: block;">Hold Ctrl / Cmd to select multiple groups.</small>
+                            <label class="lg-form-label" for="didTeams{{ $Row->id }}">Assigned Groups / Teams</label>
+                            {{-- tags in one box (Select2, set up by lgDidTeams below); the select stays the form value --}}
+                            <div class="lg-did-teams">
+                                <select name="team_id[]" id="didTeams{{ $Row->id }}" class="lg-form-select lg-did-teams-select" multiple required>
+                                    @php $selectedTeams = !empty($Row->team_id) ? explode(',', $Row->team_id) : []; @endphp
+                                    @foreach($teams as $t)
+                                        <option value="{{ $t->id }}" {{ in_array($t->id, $selectedTeams) ? 'selected' : '' }}>
+                                            {{ $t->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="lg-did-teams-arrow" tabindex="-1" aria-label="Show teams">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+                                <div class="lg-did-teams-drop"></div>
+                            </div>
+                            <small style="font-size: 11.5px; color: #64748B; margin-top: 4px; display: block;">Pick one or more teams; × removes a team.</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1583,6 +1640,36 @@ function openSmart31Details(groupName) {
 document.addEventListener('DOMContentLoaded', function() {
     $('.modal.lg-modal').appendTo('body');
     renderDidPagination();
+});
+
+/* Edit DID > Assigned Groups / Teams: Select2 (already loaded on every page; app.js gives every select a plain one)
+   with the selected teams as tags in one box, the list kept open while picking and shown in place below the box. */
+function lgDidTeams(select) {
+    const $sel = $(select);
+    if (!$.fn.select2 || $sel.data('lgDidTeams')) return;
+    if ($sel.data('select2')) $sel.select2('destroy');
+    const $wrap = $sel.closest('.lg-did-teams');
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Select groups / teams',
+        closeOnSelect: false,
+        dropdownParent: $wrap.find('.lg-did-teams-drop')
+    });
+    $sel.data('lgDidTeams', true);
+    $sel.on('select2:open', function () { $wrap.addClass('is-open'); })
+        .on('select2:close', function () { $wrap.removeClass('is-open'); })
+        // removing a tag with its x must not open the list
+        .on('select2:unselecting', function () { $sel.data('lgNoOpen', true); })
+        .on('select2:opening', function (e) { if ($sel.data('lgNoOpen')) { $sel.removeData('lgNoOpen'); e.preventDefault(); } });
+    $wrap.find('.lg-did-teams-arrow').on('click', function () {
+        $sel.select2($wrap.hasClass('is-open') ? 'close' : 'open');
+    });
+}
+$(document).on('shown.bs.modal', '.modal', function () {
+    $(this).find('select.lg-did-teams-select').each(function () { lgDidTeams(this); });
+});
+$(document).on('hide.bs.modal', '.modal', function () {
+    $(this).find('select.lg-did-teams-select').each(function () { if ($(this).data('select2')) $(this).select2('close'); });
 });
 </script>
 @endpush
