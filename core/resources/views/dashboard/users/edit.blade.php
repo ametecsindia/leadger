@@ -2959,7 +2959,11 @@ html[data-theme="dark"] #lgRoleModal .lg-rp-row-label, html[data-theme="dark"] #
                 success: function(response) {
                     $licModal.prop('hidden', true);
                     showLgToast(response.message || 'License deleted.');
-                    setTimeout(function () { window.location.reload(); }, 1200);
+                    // the server has ended the session: go to the login page (replace: Back does not return here)
+                    setTimeout(function () {
+                        if (response.logged_out) { window.location.replace(response.redirect || '/login'); }
+                        else { window.location.reload(); }
+                    }, 1200);
                 },
                 error: function(xhr) {
                     $btn.prop('disabled', false).html('<span>Delete License</span>');

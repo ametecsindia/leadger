@@ -1882,8 +1882,17 @@ class UsersController extends Controller
             \Log::error('[DeleteLicense] ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => 'The license could not be deleted. Please try again.'], 500);
         }
+        // signed out only when the license is really gone; otherwise the admin stays signed in
+        if (\App\Services\LicenseService::hasLicense()) {
+            \Log::error('[DeleteLicense] the license is still stored after the delete');
+            return response()->json(['status' => 'error', 'message' => 'The license could not be deleted. Please try again.'], 500);
+        }
         \Log::info('AUDIT LOG: License deleted by user #' . Auth::id() . ($result['env_cleared'] ? ' (installation license key cleared)' : ''));
-        return response()->json(['status' => 'success', 'message' => $result['message'], 'env_cleared' => $result['env_cleared']]);
+        // without a license this company cannot be used: end this session now (the other sessions of this company
+        // are ended on their next request by App\Http\Middleware\RequireLicense)
+        app(\App\Http\Controllers\Auth\LoginController::class)->endSession($request);
+        return response()->json(['status' => 'success', 'message' => $result['message'] . ' You have been signed out.',
+            'env_cleared' => $result['env_cleared'], 'logged_out' => true, 'redirect' => url('/login')]);
     }
 
     /** License actions are for the Admin role only. */

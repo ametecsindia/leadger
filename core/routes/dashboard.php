@@ -49,7 +49,7 @@ use App\Http\Controllers\Dashboard\FileManagerController;
 use Illuminate\Support\Facades\Route;
 
 // Admin Home
-Route::middleware(['auth','web','permission'])->group(function () {   // permission: config/permissions.php
+Route::middleware(['auth','web','license','permission'])->group(function () {   // permission: config/permissions.php
 Route::get('/', [DashboardController::class, 'index'])->name('adminHome');
 Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('adminDashboard');
 //Search

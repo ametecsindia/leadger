@@ -76,5 +76,15 @@
 @endif
 <script>
     window.LG_PERMS = @json($lgPerms);
+    // the company's license was deleted (App\Http\Middleware\RequireLicense signed this session out): any AJAX call
+    // of an open page goes to the login page
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.jQuery) return;
+        jQuery(document).ajaxError(function (e, xhr) {
+            if (xhr.status === 401 && xhr.responseJSON && xhr.responseJSON.logged_out) {
+                window.location.replace(xhr.responseJSON.redirect || '/login');
+            }
+        });
+    });
     window.lgCan = function (key) { return !!(window.LG_PERMS && (window.LG_PERMS.full || window.LG_PERMS.keys.indexOf(key) !== -1)); };
 </script>

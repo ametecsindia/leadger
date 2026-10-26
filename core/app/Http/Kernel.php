@@ -100,6 +100,7 @@ class Kernel extends HttpKernel
         'LanguageSwitcher' => \App\Http\Middleware\LanguageSwitcher::class,
         'lg.permission' => \App\Http\Middleware\RequireRolePermission::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
+        'license' => \App\Http\Middleware\RequireLicense::class,
         
 
 

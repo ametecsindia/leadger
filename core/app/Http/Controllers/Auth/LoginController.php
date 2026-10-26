@@ -248,6 +248,18 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $this->endSession($request);
+
+        return redirect('/login');
+    }
+
+    /**
+     * Ends the signed-in session: closes the open user log, SmartPing SSO logout, guard logout, session
+     * invalidated and a new CSRF token. Also used when the company's license is deleted (UsersController,
+     * App\Http\Middleware\RequireLicense).
+     */
+    public function endSession(Request $request): void
+    {
         $user = auth()->user();
         if ($user) {
             $userLogs = UserLogs::where('user_id', $user->id)
@@ -269,8 +281,6 @@ class LoginController extends Controller
         $this->guard()->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect('/login');
     }
     public function ssoLogout(Request $request)
     {

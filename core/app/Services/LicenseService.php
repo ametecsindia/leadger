@@ -26,6 +26,15 @@ class LicenseService
     }
 
     /**
+     * This company has a stored license (the same test as the login: settings.full_response is not empty).
+     * Each company has its own settings table, so this never looks at another company.
+     */
+    public static function hasLicense(): bool
+    {
+        return DB::table('settings')->whereNotNull('full_response')->where('full_response', '!=', '')->exists();
+    }
+
+    /**
      * Sync Did:
      *  1. DIDs: the DID voucher is checked with the license server; DIDs the server reports as removed are deleted
      *     (a DID whose voucher no longer exists here is removed, as before).
