@@ -64,10 +64,10 @@ $isConfigurationActive  = ($activeSection === 'configuration');
 
 // Master Data Active Flags & Routes
 $isMasterDataActive     = ($activeSection === 'masterdata');
-$isLeadSetupRoute       = (strpos($urlAfterRoot, 'sources') !== false || strpos($urlAfterRoot, 'segments') !== false || strpos($urlAfterRoot, 'productServices') !== false);
-$isLeadStatusRoute      = (strpos($urlAfterRoot, 'statuses') !== false || strpos($urlAfterRoot, 'substatuses') !== false);
+// Lead Setup: Products, Sources, Segments and Status (substatuses are managed in the Status popup)
+$isLeadSetupRoute       = (strpos($urlAfterRoot, 'sources') !== false || strpos($urlAfterRoot, 'segments') !== false || strpos($urlAfterRoot, 'productServices') !== false
+                           || strpos($urlAfterRoot, 'statuses') !== false || strpos($urlAfterRoot, 'substatuses') !== false);
 $isLeadSetupActive      = ($isMasterDataActive && $isLeadSetupRoute);
-$isLeadStatusActive     = ($isMasterDataActive && $isLeadStatusRoute);
 $isPeopleActive         = ($activeSection === 'people');
 
 // Master Data Permission Checks
@@ -96,9 +96,8 @@ if ($userGroup) {
     }
 }
 
-$canViewLeadSetup  = ($canViewProducts || $canViewSources || $canViewSegments);
-$canViewLeadStatus = $canViewStatus; // substatuses are managed inside the Status popup (no separate menu)
-$canViewMasterData = ($canViewLeadSetup || $canViewLeadStatus);
+$canViewLeadSetup  = ($canViewProducts || $canViewSources || $canViewSegments || $canViewStatus);
+$canViewMasterData = $canViewLeadSetup;
 
 try {
     $totalLeads = \App\Models\Lead::count();
@@ -301,7 +300,7 @@ try {
                 </div>
             </li>
 
-            <!-- 6. MASTER DATA (Lead Setup + Lead Status) -->
+            <!-- 6. MASTER DATA (Lead Setup: Products, Sources, Segments, Status) -->
             @if ($canViewMasterData)
             <li class="lg-nav-item has-sub {{ $isMasterDataActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isMasterDataActive ? 'active' : '' }}"
@@ -317,7 +316,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
-                    <!-- 6a. LEAD SETUP (Products, Sources, Segments) -->
+                    <!-- 6a. LEAD SETUP (Products, Sources, Segments, Status) -->
                     @if ($canViewLeadSetup)
                     <div class="lg-nested-channel-group {{ $isLeadSetupRoute ? 'open' : '' }}" id="lgSidebarLeadSetupGroup">
                         <div class="lg-sub-link lg-nested-channel-header {{ $isLeadSetupActive ? 'active-parent' : '' }}" 
@@ -336,7 +335,7 @@ try {
                             </span>
                         </div>
 
-                        <!-- Nested Items: Products, Sources, Segments -->
+                        <!-- Nested Items: Products, Sources, Segments, Status -->
                         <div class="lg-nested-channel-list" id="lgSidebarLeadSetupList">
                             @if ($canViewProducts)
                             <a href="{{ route('productServices') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'productServices') !== false ? 'active' : '' }}">
@@ -370,31 +369,8 @@ try {
                                 </div>
                             </a>
                             @endif
-                        </div>
-                    </div>
-                    @endif
 
-                    <!-- 6b. LEAD STATUS (Status, Substatus) -->
-                    @if ($canViewLeadStatus)
-                    <div class="lg-nested-channel-group {{ $isLeadStatusRoute ? 'open' : '' }}" id="lgSidebarLeadStatusGroup">
-                        <div class="lg-sub-link lg-nested-channel-header {{ $isLeadStatusActive ? 'active-parent' : '' }}" 
-                             id="lgSidebarLeadStatusHeader"
-                             onclick="toggleSidebarLeadStatus(event)"
-                             role="button" tabindex="0">
-                            <div class="lg-sub-left">
-                                <span class="lg-sub-icon">
-                                    <!-- Check-circle icon -->
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                </span>
-                                <span class="lg-sub-text">Lead Status</span>
-                            </div>
-                            <span class="lg-nested-arrow" id="lgSidebarLeadStatusArrow">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                            </span>
-                        </div>
-
-                        <!-- Nested Items: Status (substatuses are managed in the Status popup) -->
-                        <div class="lg-nested-channel-list" id="lgSidebarLeadStatusList">
+                            <!-- Status (substatuses are managed in the Status popup) -->
                             @if ($canViewStatus)
                             <a href="{{ route('statuses') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'statuses') !== false && strpos($urlAfterRoot, 'substatuses') === false) ? 'active' : '' }}">
                                 <div class="lg-sub-left">
@@ -632,17 +608,6 @@ function toggleSidebarLeadSetup(event) {
         event.stopPropagation();
     }
     const group = document.getElementById('lgSidebarLeadSetupGroup');
-    if (group) {
-        group.classList.toggle('open');
-    }
-}
-
-function toggleSidebarLeadStatus(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-    const group = document.getElementById('lgSidebarLeadStatusGroup');
     if (group) {
         group.classList.toggle('open');
     }
