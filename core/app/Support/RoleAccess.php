@@ -78,13 +78,21 @@ class RoleAccess
             return array_keys(self::keys());
         }
         $memo = config('cache.default') . ':' . $role->id;   // the cache is per company (App\Support\Tenancy)
-        return self::$memo[$memo] ??= Cache::remember(self::cacheKey($role->id), (int)config('permissions.cache_seconds', 600), function () use ($role) {
-            if (!(int)($role->permissions_managed ?? 0) || !Schema::hasTable('role_permissions')) {
-                return self::legacyKeys($role);
-            }
-            $saved = DB::table('role_permissions')->where('role_id', $role->id)->pluck('permission_key')->all();
-            return array_values(array_filter(array_keys(self::keys()), fn ($k) => in_array($k, $saved, true) && !self::isAdminOnly($k)));
-        });
+        return self::$memo[$memo] ??= Cache::remember(self::cacheKey($role->id), (int)config('permissions.cache_seconds', 600),
+            fn () => self::savedKeys($role));
+    }
+
+    /** The keys of a role from the database, without the cache (console commands run as another user than the web server). */
+    public static function savedKeys($role): array
+    {
+        if (self::isFullAccessRole($role)) {
+            return array_keys(self::keys());
+        }
+        if (!(int)($role->permissions_managed ?? 0) || !Schema::hasTable('role_permissions')) {
+            return self::legacyKeys($role);
+        }
+        $saved = DB::table('role_permissions')->where('role_id', $role->id)->pluck('permission_key')->all();
+        return array_values(array_filter(array_keys(self::keys()), fn ($k) => in_array($k, $saved, true) && !self::isAdminOnly($k)));
     }
 
     public static function allows($user, string $key): bool

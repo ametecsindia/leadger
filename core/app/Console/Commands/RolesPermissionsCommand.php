@@ -32,7 +32,8 @@ class RolesPermissionsCommand extends Command
                 continue;
             }
             // before the migration: what the migration will save; afterwards: what is saved (or today's access if never saved)
-            $keys = $migrated ? RoleAccess::roleKeys($role) : RoleAccess::legacyKeys($role);
+            // never through the cache: the cache files belong to the web server user
+            $keys = $migrated ? RoleAccess::savedKeys($role) : RoleAccess::legacyKeys($role);
             $this->info("#{$role->id} {$role->name} ({$users} users): " . count($keys) . ' of ' . count($grantable) . ' permissions');
             if ($this->option('keys')) {
                 $this->line('   granted: ' . implode(', ', $keys));
