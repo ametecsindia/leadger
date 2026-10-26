@@ -11,6 +11,7 @@ use App\Http\Controllers\Dashboard\CustomersController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DialerController;
 use App\Http\Controllers\Dashboard\AutoDialerController;
+use App\Http\Controllers\Dashboard\TranscriptReportController;
 use App\Http\Controllers\Dashboard\EmailController;
 use App\Http\Controllers\Dashboard\ImapController;
 use App\Http\Controllers\Dashboard\FlexiDialerController;
@@ -626,6 +627,11 @@ Route::post('/reports/responsedData', [ReportsController::class, 'notSavedData']
 Route::get('/reports/call-report', [ReportsController::class, 'callReport'])->name('callReport');
 Route::post('/reports/call-report-data', [ReportsController::class, 'callReportData'])->name('callReportData');
 Route::get('/reports/call-report/export/{format}', [ReportsController::class, 'callReportExport'])->name('callReportExport')->whereIn('format', ['xlsx', 'csv']);
+// Reports > Transcript Report (who requested call transcripts, recordings, status, credits); View / Download read saved text
+Route::get('/reports/transcript-report', [TranscriptReportController::class, 'index'])->name('transcriptReport');
+Route::post('/reports/transcript-report/data', [TranscriptReportController::class, 'data'])->name('transcriptReportData');
+Route::get('/reports/transcript-report/{batch}', [TranscriptReportController::class, 'show'])->name('transcriptReportShow');
+Route::get('/reports/transcript-report/{batch}/download', [TranscriptReportController::class, 'download'])->name('transcriptReportDownload');
 Route::get('/reports/rmi-report', [ReportsController::class, 'rmiReport'])->name('rmiReport');
 Route::get('/reports/rmi', [ReportsController::class, 'rmiReport'])->name('rmi');
 Route::get('/reports/rmi-analysis', [ReportsController::class, 'rmiAnalysisPage'])->name('rmiAnalysis');
