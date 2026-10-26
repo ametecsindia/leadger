@@ -24,9 +24,7 @@ class ProductsServicesController extends Controller
     {
         $this->middleware('auth');
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
-        $this->middleware('lg.permission:add')->only(['create', 'store']);
-        $this->middleware('lg.permission:edit')->only(['edit', 'update']);
-        $this->middleware('lg.permission:delete')->only(['destroy']);
+        // Create / Edit / Delete: role permissions master_data.* (config/permissions.php, CheckPermission middleware)
     }
 
     /**
@@ -262,7 +260,7 @@ class ProductsServicesController extends Controller
      */
     public function destroy($id, Request $request)
     {
-        if (!\App\Helpers\Helper::canDelete()) {
+        if (!\App\Helpers\Helper::canDelete('master_data.products')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
         }
         $ProductService = ProductService::find($id);

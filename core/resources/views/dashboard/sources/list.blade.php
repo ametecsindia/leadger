@@ -802,7 +802,7 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
             <p class="lg-sources-subtitle">Manage and organize your lead sources.</p>
         </div>
 
-        @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.create'))
             <div>
                 <a class="lg-sources-btn-add" href="{{ route('sourcesCreate') }}">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -887,7 +887,7 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
                             <th style="width: 5%;">#</th>
                             <th style="width: 35%;">SOURCE NAME</th>
                             <th style="width: 45%;">DESCRIPTION</th>
-                            @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                            @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.delete'))
                                 <th class="text-right" style="width: 15%; text-align: right; padding-right: 24px;">OPTIONS</th>
                             @endif
                         </tr>
@@ -912,7 +912,7 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
                                 <td>
                                     <span class="lg-source-desc-text" id="lgSourceDesc_{{ $Source->id }}">{!! $Source->description ? $Source->description : '—' !!}</span>
                                 </td>
-                                @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                                @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.delete'))
                                     <td class="text-right" style="text-align: right; padding-right: 24px;">
                                         <div class="lg-sources-actions">
                                             <button type="button" 
@@ -940,7 +940,7 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                                     <span>Edit</span>
                                                 </div>
-                                                @if(Helper::canDelete())
+                                                @if(Helper::canDelete('master_data.sources'))
                                                     <div class="lg-action-dropdown-item danger" data-id="{{ $Source->id }}" data-name="{{ $Source->name }}" onclick="lgDeleteSource(this)">
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                                         <span>Delete</span>
@@ -978,7 +978,7 @@ if (!function_exists('lgGetSourceBadgeDetails')) {
                 </div>
                 <div class="lg-sources-empty-title">No sources found</div>
                 <div class="lg-sources-empty-desc">Create your first lead source to start tracking incoming leads effectively.</div>
-                @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.sources.create'))
                     <a class="lg-sources-btn-add" href="{{ route('sourcesCreate') }}">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/>

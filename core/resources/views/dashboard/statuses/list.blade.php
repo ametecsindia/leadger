@@ -626,7 +626,7 @@ textarea.lg-modal-control { height: auto; min-height: 96px; padding: 12px 16px; 
             </div>
         </div>
 
-        @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.create'))
             <div>
                 <a href="{{ route('statusesCreate') }}" class="lg-btn-add-status" onclick="lgOpenStatusModal(); return false;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -692,7 +692,7 @@ textarea.lg-modal-control { height: auto; min-height: 96px; padding: 12px 16px; 
                     <tr>
                         <th style="width: 30%;">Status</th>
                         <th style="width: 50%;">Substatus</th>
-                        @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.delete'))
                             <th class="text-right" style="width: 20%; text-align: right; padding-right: 24px;">Options</th>
                         @endif
                     </tr>
@@ -729,7 +729,7 @@ textarea.lg-modal-control { height: auto; min-height: 96px; padding: 12px 16px; 
                                     <span class="lg-status-subs-none">—</span>
                                 @endif
                             </td>
-                            @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                            @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.delete'))
                                 <td class="text-right" style="text-align: right; padding-right: 24px;">
                                     <button type="button" 
                                             class="lg-btn-edit-action" 

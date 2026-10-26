@@ -60,10 +60,10 @@ class TranscriptReportQuery
         return $this->f;
     }
 
-    /** Who may open the report: the roles that may request transcripts. */
+    /** Who may open the report: role permission reports.transcript_report.view (config/permissions.php). */
     public static function canView($user): bool
     {
-        return in_array($user->permissionsGroup->name ?? '', ['Super Admin', 'Admin', 'Webmaster', 'Manager'], true);
+        return \App\Support\RoleAccess::allows($user, 'reports.transcript_report.view');
     }
 
     /** Admins see every request (also the automatic ones); a Manager the requests of their teams' users and their own. */

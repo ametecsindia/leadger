@@ -173,7 +173,7 @@ public function did()
         }
 
         if ($request->action == 'delete') {
-            if (!Helper::canDelete()) {
+            if (!Helper::canDelete('campaigns.add_voucher')) {
                 return redirect()->action('Dashboard\ObdController@did')->with('errorMessage', 'Unauthorized: Delete operations are restricted.');
             }
             ObdDID::whereIn('id', $ids)->delete();

@@ -34,6 +34,12 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrap();
         Schema::defaultStringLength(191);
 
+        // Role permissions (config/permissions.php): @canperm('reports.call_report.export') ... @endcanperm,
+        // @canpermany('reports') for a whole group or item, Gate "perm" for policies and $user->can('perm', $key)
+        \Illuminate\Support\Facades\Blade::if('canperm', fn (string $key) => \App\Support\RoleAccess::allows(auth()->user(), $key));
+        \Illuminate\Support\Facades\Blade::if('canpermany', fn (string $prefix) => \App\Support\RoleAccess::allowsAnyIn(auth()->user(), $prefix));
+        \Illuminate\Support\Facades\Gate::define('perm', fn ($user, string $key) => \App\Support\RoleAccess::allows($user, $key));
+
         // Every queued job runs for the company that queued it: the payload carries the company (a host or database
         // name, never credentials); the worker switches to it before the job and back to the previous company after
         // (with the sync driver the job runs inside a request, which must keep its own company).

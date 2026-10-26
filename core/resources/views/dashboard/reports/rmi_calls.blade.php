@@ -102,10 +102,10 @@
         {{-- Export (left) | record info + pagination (right) --}}
         <div class="lg-rc-pager">
             <div class="lg-rc-export">
-                <button type="button" class="lg-rc-xbtn excel" id="rcExportXlsx" data-format="xlsx" title="Download all matching records as Excel" disabled>
+                <button type="button" class="lg-rc-xbtn excel" id="rcExportXlsx" data-lg-perm="recordings.rmi_analysis.export" data-format="xlsx" title="Download all matching records as Excel" disabled>
                     <i class="fas fa-file-excel"></i> <span>Excel</span>
                 </button>
-                <button type="button" class="lg-rc-xbtn csv" id="rcExportCsv" data-format="csv" title="Download all matching records as CSV" disabled>
+                <button type="button" class="lg-rc-xbtn csv" id="rcExportCsv" data-lg-perm="recordings.rmi_analysis.export" data-format="csv" title="Download all matching records as CSV" disabled>
                     <i class="fas fa-file-csv"></i> <span>CSV</span>
                 </button>
             </div>

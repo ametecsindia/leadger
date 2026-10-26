@@ -561,7 +561,7 @@
             </div>
         </div>
         <div class="lg-header-right">
-            @if(@Auth::user()->permissionsGroup->name != 'Auditor')
+            @if(\App\Support\RoleAccess::allows(Auth::user(), 'leads.lead_list.create'))
                 <a href="{{ route('leadsCreate', ['id' => $id]) }}" class="lg-btn-primary">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -571,7 +571,7 @@
                 </a>
             @endif
 
-            @if(in_array(Auth::user()->permissionsGroup->name, ['Webmaster', 'Admin', 'Manager']))
+            @if(\App\Support\RoleAccess::allows(Auth::user(), 'leads.lead_list.export'))
                 <button type="button" class="lg-btn-icon" id="excel_btn" title="Export to Excel" onclick="print_as('excel')">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>

@@ -38,6 +38,38 @@ class UsersController extends Controller
         $this->middleware('auth');
     }
 
+    /**
+     * Opening / saving a user: the own profile needs configuration.profile.view / .edit, another user
+     * people.staff.edit (config/permissions.php).
+     */
+    private function profileDenied($id, string $action): bool
+    {
+        $own = (int)Auth::id() === (int)$id;
+        return !\App\Support\RoleAccess::allows(Auth::user(), $own ? "configuration.profile.{$action}" : 'people.staff.edit');
+    }
+
+    /**
+     * A user may not give anyone a full-access role (Admin, Webmaster) unless they have one, may not change the
+     * role of a full-access user unless they have one, and may not take full access away from themselves.
+     * Returns the reason, or null when allowed.
+     */
+    private function roleChangeDenied(?User $target, $newRoleId): ?string
+    {
+        $new = Permissions::find($newRoleId);
+        if (!$new) {
+            return 'Please select a role.';
+        }
+        $me = Auth::user();
+        $iAmFull = \App\Support\RoleAccess::isFullAccess($me);
+        if (!$iAmFull && (\App\Support\RoleAccess::isFullAccessRole($new) || ($target && \App\Support\RoleAccess::isFullAccess($target)))) {
+            return 'Only the Admin can give or change an Admin role.';
+        }
+        if ($target && (int)$target->id === (int)$me->id && $iAmFull && !\App\Support\RoleAccess::isFullAccessRole($new)) {
+            return 'You cannot remove your own Admin access. Ask another Admin to change your role.';
+        }
+        return null;
+    }
+
     /** Admin color themes a user can pick (header palette button); "original" is the default look. */
     public const THEMES = ['original', 'slate', 'green', 'dark'];
 
@@ -62,7 +94,7 @@ class UsersController extends Controller
     public function index()
     {
         // Check Permissions
-        if (!@Auth::user()->permissionsGroup->settings_status) {
+        if (!\App\Support\RoleAccess::allows(Auth::user(), 'people.staff.view')) {
             return redirect()->route('adminHome');
         }
 
@@ -114,7 +146,7 @@ class UsersController extends Controller
     public function create()
     {
         // Check Permissions
-        if (!@Auth::user()->permissionsGroup->settings_status) {
+        if (!\App\Support\RoleAccess::allows(Auth::user(), 'people.staff.create')) {
             return redirect()->route('NoPermission');
         }
 
@@ -144,7 +176,7 @@ class UsersController extends Controller
     public function store(Request $request)
     {
         // Check Permissions
-        if (!@Auth::user()->permissionsGroup->settings_status) {
+        if (!\App\Support\RoleAccess::allows(Auth::user(), 'people.staff.create')) {
             return redirect()->route('NoPermission');
         }
         
@@ -193,6 +225,9 @@ class UsersController extends Controller
             $request->file($formFileName)->move($path, $fileFinalName_ar);
         }
       
+        if ($why = $this->roleChangeDenied(null, $request->permissions_id)) {
+            return redirect()->back()->withErrors(['permissions_id' => $why])->withInput();
+        }
         $User = new User;
         $User->name = $request->name;
         $User->email = $request->email;
@@ -312,7 +347,7 @@ class UsersController extends Controller
     public function edit($id)
     {
         // Check Permissions
-        if (!@Auth::user()->permissionsGroup->settings_status && @Auth::user()->id != $id) {
+        if ($this->profileDenied($id, 'view')) {
             return redirect()->route('NoPermission');
         }
         // General for all pages
@@ -397,7 +432,7 @@ class UsersController extends Controller
            
         ], ['mobile.regex' => 'Enter a valid mobile number: 10 to 15 digits, optionally starting with +.']);
        
-        if (!@Auth::user()->permissionsGroup->settings_status && @Auth::user()->id != $id) {
+        if ($this->profileDenied($id, 'edit')) {
             return redirect()->route('NoPermission');
         }
         $User = User::find($id);
@@ -494,6 +529,9 @@ class UsersController extends Controller
                 $User->password = bcrypt($request->password);
             }
             $User->role_id = $request->role_id;
+            if ((int)$request->permissions_id !== (int)$User->permissions_id && ($why = $this->roleChangeDenied($User, $request->permissions_id))) {
+                return redirect()->back()->withErrors(['permissions_id' => $why])->withInput();
+            }
             $User->permissions_id = $request->permissions_id;
             if ($request->has('team_id')) {
                 $selectedTeamIds = is_array($request->team_id) ? array_map('intval', array_filter($request->team_id)) : [];
@@ -597,7 +635,7 @@ class UsersController extends Controller
             }
 
             // Save the company-wide AI Transcript setting only when that section of the form was submitted
-            if ($request->has('ai_settings_present')) {
+            if ($request->has('ai_settings_present') && \App\Support\RoleAccess::allows(Auth::user(), 'configuration.company_settings.edit')) {   // Company Settings: Admin only
                 $aiSettings = \App\Models\CompanyAiSetting::company();
                 $aiSettings->ai_enabled = $request->has('ai_enabled');
                 $aiSettings->save();
@@ -614,8 +652,8 @@ class UsersController extends Controller
                 abort(403, 'Unauthorized: Only Administrators can modify Delete Permission.');
             }
 
-            // Save Company Settings: RMI Report (Admin or settings_status)
-            if (@Auth::user()->permissionsGroup->settings_status || $isAdmin) {
+            // Save Company Settings: RMI Report
+            if (\App\Support\RoleAccess::allows(Auth::user(), 'configuration.company_settings.edit')) {   // Company Settings: Admin only
                 $setting = Setting::first();
                 if (!empty($setting)) {
                     $setting->rmi_report_enabled = $request->has('rmi_report_enabled') ? 1 : 0;
@@ -977,7 +1015,7 @@ class UsersController extends Controller
     public function destroy($id)
     {
         // Check Delete Authorization
-        if (!Helper::canDelete()) {
+        if (!Helper::canDelete('people.staff')) {
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
             }
@@ -1009,7 +1047,7 @@ class UsersController extends Controller
     public function updateAll(Request $request)
     {
         // Check Permissions
-        if (!@Auth::user()->permissionsGroup->settings_status) {
+        if (!\App\Support\RoleAccess::allows(Auth::user(), 'people.staff.edit')) {
             return redirect()->route('NoPermission');
         }
         if ($request->ids != "") {
@@ -1022,7 +1060,7 @@ class UsersController extends Controller
                     ->update(['status' => 0]);
 
             } elseif ($request->action == "delete") {
-                if (!Helper::canDelete()) {
+                if (!Helper::canDelete('people.staff')) {
                     if ($request->ajax() || $request->wantsJson()) {
                         return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
                     }
@@ -1728,7 +1766,7 @@ class UsersController extends Controller
 
     public function destroyTeam($id)
     {
-        if (!Helper::canDelete()) {
+        if (!Helper::canDelete('people.teams')) {
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
             }
@@ -1783,8 +1821,14 @@ class UsersController extends Controller
         }
 
         $User = User::find($id);
+        if (!empty($User) && ($why = $this->roleChangeDenied($User, $request->permissions_id))) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => $why], 422);
+            }
+            return redirect()->back()->withErrors(['permissions_id' => $why]);
+        }
         if (!empty($User)) {
-            $User->permissions_id = $request->permissions_id;
+            $User->permissions_id = $request->permissions_id;   // the new role's permissions apply on the next request
             $User->save();
 
             if ($request->ajax() || $request->wantsJson()) {

@@ -551,8 +551,8 @@ class RecordingsController extends Controller
                     . " data-duration='" . e(\App\Helpers\Helper::formatDuration($durationSec)) . "'";
                 $off = $hasAudio ? '' : " disabled style='opacity:.45;cursor:not-allowed;' title='" . ($notAnswered ? 'The call was not answered: no recording' : 'Recording not available yet') . "'";
                 $actions = "<div class='lg-dl-actions'>"
-                    . "<button type='button' class='lg-dl-act lg-dl-act-download' {$attrs} onclick='lgDlDownload(this)'" . ($off ?: " title='Download recording'") . " aria-label='Download recording'><i class='fas fa-download'></i></button>"
-                    . "<button type='button' class='lg-dl-act lg-dl-act-play' {$attrs} onclick='lgDlPlay(this)'" . ($off ?: " title='Play recording'") . " aria-label='Play recording'><i class='fas fa-play'></i></button>";
+                    . "<button type='button' class='lg-dl-act lg-dl-act-download' data-lg-perm='recordings.call_recordings.download' {$attrs} onclick='lgDlDownload(this)'" . ($off ?: " title='Download recording'") . " aria-label='Download recording'><i class='fas fa-download'></i></button>"
+                    . "<button type='button' class='lg-dl-act lg-dl-act-play' data-lg-perm='recordings.call_recordings.play' {$attrs} onclick='lgDlPlay(this)'" . ($off ?: " title='Play recording'") . " aria-label='Play recording'><i class='fas fa-play'></i></button>";
 
                 // View Transcript: the transcript when completed, otherwise its live status (Pending / Transcribing / failed + Retry)
                 if ($st === 'completed' || $hasAudio || in_array($st, ['pending', 'queued', 'processing', 'failed', 'waiting_key'], true)) {
@@ -624,13 +624,13 @@ class RecordingsController extends Controller
     }
 
     /**
-     * Admins and managers may run a transcript manually (even when automatic AI Transcript is off).
+     * Who may run a transcript manually (even when automatic AI Transcript is off): role permission
+     * recordings.call_recordings.transcribe (Admin, Webmaster and Manager before role permissions).
      * Everyone else sees transcript status read-only.
      */
     public static function canRequestTranscript(): bool
     {
-        $role = Auth::user()->permissionsGroup->name ?? '';
-        return in_array($role, ['Super Admin', 'Admin', 'Webmaster', 'Manager'], true);
+        return \App\Support\RoleAccess::allows(Auth::user(), 'recordings.call_recordings.transcribe');
     }
 
     /**

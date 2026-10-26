@@ -96,6 +96,14 @@ if ($userGroup) {
     }
 }
 
+// Role permissions (config/permissions.php): every sidebar item needs its "view"
+$lgCan = fn (string $key) => \App\Support\RoleAccess::allows(Auth::user(), $key);
+$lgCanAny = fn (string $prefix) => \App\Support\RoleAccess::allowsAnyIn(Auth::user(), $prefix);
+$canViewProducts = $canViewProducts && $lgCan('master_data.products.view');
+$canViewSources  = $canViewSources && $lgCan('master_data.sources.view');
+$canViewSegments = $canViewSegments && $lgCan('master_data.segments.view');
+$canViewStatus   = $canViewStatus && $lgCan('master_data.statuses.view');
+
 $canViewLeadSetup  = ($canViewProducts || $canViewSources || $canViewSegments || $canViewStatus);
 $canViewMasterData = $canViewLeadSetup;
 
@@ -128,16 +136,21 @@ try {
             <ul class="lg-nav-list">
             
             <!-- 1. DASHBOARD -->
+            @if($lgCan('dashboard.home.view'))
             <li class="lg-nav-item">
+                @if($lgCan('dashboard.home.view'))
                 <a href="{{ route('adminHome') }}" class="lg-menu-row {{ $isDashboardActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </span>
                     <span class="lg-menu-label">Dashboard</span>
                 </a>
+                @endif
             </li>
+            @endif
 
             <!-- 2. LEADS -->
+            @if($lgCanAny('leads'))
             <li class="lg-nav-item has-sub {{ $isLeadsActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isLeadsActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -150,6 +163,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('leads.lead_list.create') || $lgCan('leads.import_leads.view'))
                     <a href="{{ route('leadsCreate') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'leads/create') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -158,6 +172,8 @@ try {
                             <span class="lg-sub-text">Upload Leads</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('leads.lead_list.view'))
                     <a href="{{ route('leads') }}" class="lg-sub-link {{ ((strpos($urlAfterRoot, 'leads') !== false || $urlAfterRoot == 'leads') && strpos($urlAfterRoot, 'leads/create') === false && !Request::get('status')) ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -167,7 +183,9 @@ try {
                         </div>
                         <span style="font-size: 11px; font-weight: 700; color: #94A3B8; margin-left: auto; white-space: nowrap; flex-shrink: 0;">{{ number_format($totalLeads ?? 0) }}</span>
                     </a>
+                    @endif
 
+                    @if($lgCan('leads.lead_list.view'))
                     <a href="{{ route('leads') }}?filter=followup" class="lg-sub-link {{ Request::get('filter') == 'followup' ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -177,10 +195,13 @@ try {
                         </div>
                         <span style="font-size: 11px; font-weight: 700; color: #38BDF8; margin-left: auto; white-space: nowrap; flex-shrink: 0;">{{ $pendingFollowupsCount ?? 0 }}</span>
                     </a>
+                    @endif
                 </div>
             </li>
+            @endif
 
             <!-- 3. CAMPAIGNS -->
+            @if($lgCanAny('campaigns'))
             <li class="lg-nav-item has-sub {{ $isCampaignsActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isCampaignsActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -192,6 +213,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('campaigns.campaign_list.view'))
                     <a href="{{ route('campaigns') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'campaign') !== false && strpos($urlAfterRoot, 'campaigns/create') === false && strpos($urlAfterRoot, 'campaigns/transfer-accounts') === false && strpos($urlAfterRoot, 'campaigns/auto-distribute') === false && strpos($urlAfterRoot, 'campaignStatus') === false) ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -201,6 +223,8 @@ try {
                         </div>
                         <span style="font-size: 10.5px; font-weight: 700; color: #F59E0B; margin-left: auto; white-space: nowrap; flex-shrink: 0;">{{ $activeCampaignsCount ?? 0 }} active</span>
                     </a>
+                    @endif
+                    @if($lgCan('campaigns.create_campaign.create'))
                     <a href="{{ route('campaignsCreate') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'campaigns/create') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -209,6 +233,8 @@ try {
                             <span class="lg-sub-text">Create Campaign</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('campaigns.transfer_leads.view'))
                     <a href="{{ route('campaignsTransferAccounts') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'campaigns/transfer-accounts') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -217,6 +243,8 @@ try {
                             <span class="lg-sub-text">Transfer Leads</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('campaigns.auto_distribute.view'))
                     <a href="{{ route('campaignsAutoDistribute') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'campaigns/auto-distribute') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -225,6 +253,8 @@ try {
                             <span class="lg-sub-text">Auto Distribute</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('campaigns.add_voucher.view'))
                     <a href="{{ route('obdDid') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'did') !== false) ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -233,10 +263,13 @@ try {
                             <span class="lg-sub-text">Add Voucher</span>
                         </div>
                     </a>
+                    @endif
                 </div>
             </li>
+            @endif
 
             <!-- 4. CALLING -->
+            @if($lgCanAny('calling'))
             <li class="lg-nav-item has-sub {{ $isCallingActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isCallingActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -248,6 +281,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('calling.dialing.view'))
                     <a href="{{ route('dialer') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'dialer') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -256,10 +290,13 @@ try {
                             <span class="lg-sub-text">Dialing</span>
                         </div>
                     </a>
+                    @endif
                 </div>
             </li>
+            @endif
 
             <!-- 5. CONFIGURATION -->
+            @if($lgCan('configuration.call_setup.view') || $lgCan('configuration.profile.view') || \App\Support\Tenancy::isSuperAdmin(Auth::user()))
             <li class="lg-nav-item has-sub {{ $isConfigurationActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isConfigurationActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -271,6 +308,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('configuration.call_setup.view'))
                     <a href="{{ route('callingSettings') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'calling-settings') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -279,6 +317,8 @@ try {
                             <span class="lg-sub-text">Call Setup</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('configuration.profile.view'))
                     <a href="{{ route('usersEdit', Auth::user()->id ?? 1) }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'users/' . (Auth::user()->id ?? 1) . '/edit') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -287,6 +327,7 @@ try {
                             <span class="lg-sub-text">Profile</span>
                         </div>
                     </a>
+                    @endif
                     @if (\App\Support\Tenancy::isSuperAdmin(Auth::user()))
                     <a href="{{ route('companies') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'companies') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
@@ -299,6 +340,7 @@ try {
                     @endif
                 </div>
             </li>
+            @endif
 
             <!-- 6. MASTER DATA (Lead Setup: Products, Sources, Segments, Status) -->
             @if ($canViewMasterData)
@@ -391,6 +433,7 @@ try {
             @endif
 
             <!-- 7. PEOPLE -->
+            @if($lgCanAny('people'))
             <li class="lg-nav-item has-sub {{ $isPeopleActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isPeopleActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -402,6 +445,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('people.staff.view'))
                     <a href="{{ route('users') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'users') !== false && strpos($urlAfterRoot, 'users/' . (Auth::user()->id ?? 1) . '/edit') === false && strpos($urlAfterRoot, 'team') === false) ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -410,6 +454,8 @@ try {
                             <span class="lg-sub-text">Staff</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('people.teams.view'))
                     <a href="{{ route('teams') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'team') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -418,6 +464,7 @@ try {
                             <span class="lg-sub-text">Teams</span>
                         </div>
                     </a>
+                    @endif
                     <!-- Call channels nested expandable menu -->
                     @php
                         $isCallChannelsRoute = (
@@ -427,6 +474,7 @@ try {
                             strpos($urlAfterRoot, 'click2Call') !== false
                         );
                     @endphp
+                    @if($lgCan('people.webrtc.view') || $lgCan('people.click2call.view'))
                     <div class="lg-nested-channel-group {{ $isCallChannelsRoute ? 'open' : '' }}" id="lgSidebarCallChannelsGroup">
                         <div class="lg-sub-link lg-nested-channel-header {{ strpos($urlAfterRoot, 'call-channels') !== false ? 'active' : '' }}" 
                              id="lgSidebarCallChannelsHeader"
@@ -445,6 +493,7 @@ try {
                         <!-- Nested Submenu Channels: Clean Direct Navigation Links -->
                         <div class="lg-nested-channel-list" id="lgSidebarChannelList">
                             <!-- 1. WebRTC Navigation Link -->
+                            @if($lgCan('people.webrtc.view'))
                             <a href="{{ route('webrtc') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'webrtc') !== false ? 'active' : '' }}">
                                 <div class="lg-sub-left">
                                     <span class="lg-sub-icon">
@@ -453,8 +502,10 @@ try {
                                     <span class="lg-sub-text">WebRTC</span>
                                 </div>
                             </a>
+                            @endif
 
                             <!-- 2. Click2Call Navigation Link -->
+                            @if($lgCan('people.click2call.view'))
                             <a href="{{ route('click2Call') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'click2Call') !== false || strpos($urlAfterRoot, 'click2call') !== false) ? 'active' : '' }}">
                                 <div class="lg-sub-left">
                                     <span class="lg-sub-icon">
@@ -463,12 +514,16 @@ try {
                                     <span class="lg-sub-text">Click2Call</span>
                                 </div>
                             </a>
+                            @endif
                         </div>
                     </div>
+                    @endif
                 </div>
             </li>
+            @endif
 
             <!-- 8. REPORTS -->
+            @if($lgCanAny('reports'))
             <li class="lg-nav-item has-sub {{ $isReportsActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isReportsActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -480,6 +535,7 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('reports.call_report.view'))
                     <a href="{{ route('callReport') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'call-report') !== false || strpos($urlAfterRoot, 'callReport') !== false) ? 'active' : '' }}" title="Call Report">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -488,6 +544,8 @@ try {
                             <span class="lg-sub-text">Call Report</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('reports.agent_performance.view'))
                     <a href="{{ route('agentPerformance') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'agentPerformance') !== false || strpos($urlAfterRoot, 'userLogs') !== false) ? 'active' : '' }}" title="Agent Performance">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -496,6 +554,8 @@ try {
                             <span class="lg-sub-text">Agent Performance</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('reports.campaigns.view'))
                     <a href="{{ route('campaignStatus') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'campaignStatus') !== false ? 'active' : '' }}" title="Campaigns">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -504,7 +564,8 @@ try {
                             <span class="lg-sub-text">Campaigns</span>
                         </div>
                     </a>
-                    @if((int)(Auth::user()->permissionsGroup->inbound_calls_status ?? 0))
+                    @endif
+                    @if($lgCan('reports.inbound_calls.view'))
                     <a href="{{ route('inboundCalls') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'inbound-calls') !== false ? 'active' : '' }}" title="Inbound Calls">
                         <div class="lg-sub-left">
                             <span class="lg-sub-icon">
@@ -514,7 +575,7 @@ try {
                         </div>
                     </a>
                     @endif
-                    {{-- Transcript Report: the roles that may request transcripts --}}
+                    {{-- Transcript Report: role permission reports.transcript_report.view --}}
                     @if(\App\Services\TranscriptReportQuery::canView(Auth::user()))
                     <a href="{{ route('transcriptReport') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'transcript-report') !== false ? 'active' : '' }}" title="Transcript Report">
                         <div class="lg-sub-left">
@@ -527,8 +588,10 @@ try {
                     @endif
                 </div>
             </li>
+            @endif
 
             <!-- 9. RECORDINGS -->
+            @if($lgCanAny('recordings'))
             <li class="lg-nav-item has-sub {{ $isRecordingsActive ? 'open' : '' }}">
                 <div class="lg-menu-row lg-menu-toggle {{ $isRecordingsActive ? 'active' : '' }}">
                     <span class="lg-menu-icon">
@@ -540,18 +603,23 @@ try {
                     </span>
                 </div>
                 <div class="lg-submenu">
+                    @if($lgCan('recordings.call_recordings.view'))
                     <a href="{{ route('recordings') }}" class="lg-sub-link {{ (strpos($urlAfterRoot, 'recording') !== false && strpos($urlAfterRoot, 'rmi-analysis') === false) ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-text">Call Recordings</span>
                         </div>
                     </a>
+                    @endif
+                    @if($lgCan('recordings.rmi_analysis.view'))
                     <a href="{{ route('rmiAnalysis') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'rmi-analysis') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-text">RMI Analysis</span>
                         </div>
                     </a>
+                    @endif
                 </div>
             </li>
+            @endif
 
             </ul>
         </div>

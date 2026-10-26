@@ -22,14 +22,7 @@ class InboundCallsController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware(function ($request, $next) {
-            if (!(int)(Auth::user()->permissionsGroup->inbound_calls_status ?? 0)) {
-                return $request->ajax() || $request->wantsJson()
-                    ? response()->json(['message' => 'You do not have permission to view inbound calls.'], 403)
-                    : redirect()->route('NoPermission');
-            }
-            return $next($request);
-        });
+        // who may open the report / export: role permissions reports.inbound_calls.* (config/permissions.php)
     }
 
     public function index()

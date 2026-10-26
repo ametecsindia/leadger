@@ -25,8 +25,7 @@ class SubstatusesController extends Controller
     {
         $this->middleware('auth');
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
-        $this->middleware('lg.permission:add')->only(['create', 'store']);
-        $this->middleware('lg.permission:edit')->only(['edit', 'update']);
+        // Create / Edit / Delete: role permissions master_data.* (config/permissions.php, CheckPermission middleware)
     }
 
     /**

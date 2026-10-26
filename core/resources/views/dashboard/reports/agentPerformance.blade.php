@@ -792,7 +792,7 @@ span.flatpickr-weekday {
 @section('content')
 @php
     // Same roles as the "Export Report" button (and the export route)
-    $canExportAgentPerformance = in_array(optional(Auth::user()->permissionsGroup)->name, ['Webmaster', 'Admin', 'Manager'], true);
+    $canExportAgentPerformance = \App\Support\RoleAccess::allows(Auth::user(), 'reports.agent_performance.export');
 @endphp
 <div class="lg-agent-dashboard">
 
@@ -860,7 +860,7 @@ span.flatpickr-weekday {
 
         <div class="lg-filters-right">
             <!-- Export Button -->
-            @if(in_array(Auth::user()->permissionsGroup->name, ['Webmaster','Admin','Manager']))
+            @if(\App\Support\RoleAccess::allows(Auth::user(), 'reports.agent_performance.export'))
             <button type="button" class="lg-btn-export" id="excel_btn" onclick="print_as('excel')">
                 <i class="fas fa-download"></i>
                 <span>Export Report</span>
@@ -1244,7 +1244,7 @@ $(document).ready(function () {
     renderAgentFilterChip();
 
     // Summary cards: open the existing page that lists the records behind each number, with the same filters
-    var lgCanViewStaff = {{ @Auth::user()->permissionsGroup->settings_status ? 'true' : 'false' }};
+    var lgCanViewStaff = {{ \App\Support\RoleAccess::allows(Auth::user(), 'people.staff.view') ? 'true' : 'false' }};
     function lgKpiNavigate(kpi) {
         var f = {
             from_date: $('#from_date').val(),

@@ -274,7 +274,7 @@ WHERE 1=1 ";
                             </small>
                         </a>
                         AAA;
-                if(in_array(@Auth::user()->permissionsGroup->name,['Admin','Manager','Team Leader']))
+                if (\App\Support\RoleAccess::allows(Auth::user(), 'campaigns.campaign_list.edit'))   // Edit and Transfer icons
                 {
                     $options .= <<<AAA
                             <a
@@ -289,7 +289,7 @@ WHERE 1=1 ";
                                         </a>
                             AAA;
                 }
-                $canDelete = Helper::canDelete();
+                $canDelete = Helper::canDelete('campaigns.campaign_list');
                 if ($canDelete)
                 {
                     $deleteurl = route("campaignsDelete",["id"=>$Campaign->id]);
@@ -897,7 +897,7 @@ WHERE 1=1 ";
      */
     public function destroyAjax($id)
     {
-        if (!Helper::canDelete()) {
+        if (!Helper::canDelete('campaigns.campaign_list')) {
             return response()->json(['success' => false, 'message' => 'You do not have permission to delete campaigns.'], 403);
         }
         [$campaign] = $this->accessibleCampaign($id);
@@ -930,7 +930,7 @@ WHERE 1=1 ";
 
     public function delete($id)
     {
-        if (!Helper::canDelete()) {
+        if (!Helper::canDelete('campaigns.campaign_list')) {
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
             }

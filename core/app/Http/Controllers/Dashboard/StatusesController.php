@@ -24,9 +24,7 @@ class StatusesController extends Controller
     {
         $this->middleware('auth');
         // Role permissions (add / edit / delete flags) enforced on the server, not only in the UI
-        $this->middleware('lg.permission:add')->only(['create', 'store', 'ajaxStoreSubstatus']);
-        $this->middleware('lg.permission:edit')->only(['edit', 'update', 'ajaxToggleFollowup', 'ajaxToggleConnected']);
-        $this->middleware('lg.permission:delete')->only(['ajaxDeleteSubstatus']);
+        // Create / Edit / Delete: role permissions master_data.* (config/permissions.php, CheckPermission middleware)
     }
 
     /**
@@ -198,7 +196,7 @@ class StatusesController extends Controller
         $notes = [];
         $removeIds = array_filter(array_map('intval', $removeIds));
         if ($removeIds) {
-            if (!\App\Helpers\Helper::canDelete()) {
+            if (!\App\Helpers\Helper::canDelete('master_data.statuses')) {
                 $notes[] = 'Substatuses were not removed: delete operations are restricted to Admin.';
             } else {
                 foreach (\App\Models\Substatus::where('status_id', $Status->id)->whereIn('id', $removeIds)->get() as $sub) {
@@ -281,7 +279,7 @@ class StatusesController extends Controller
 
     public function ajaxDeleteSubstatus(Request $request)
     {
-        if (!\App\Helpers\Helper::canDelete()) {
+        if (!\App\Helpers\Helper::canDelete('master_data.statuses')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
         }
         $sub = \App\Models\Substatus::find($request->id);

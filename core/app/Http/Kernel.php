@@ -99,6 +99,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'LanguageSwitcher' => \App\Http\Middleware\LanguageSwitcher::class,
         'lg.permission' => \App\Http\Middleware\RequireRolePermission::class,
+        'permission' => \App\Http\Middleware\CheckPermission::class,
         
 
 

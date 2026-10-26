@@ -723,7 +723,7 @@
                 </div>
             </div>
             <div class="lg-table-header-actions">
-                @if(@Auth::user()->permissionsGroup->name != 'Auditor')
+                @if(\App\Support\RoleAccess::allows(Auth::user(), 'leads.lead_list.create'))
                     <button type="button" class="lg-btn lg-btn-primary" onclick="window.location='{{ route('leadsCreate', ['id' => $id]) }}'" style="height:36px;padding:0 16px;font-size:13px;">
                         <i class="fa fa-plus"></i> Add Lead
                     </button>

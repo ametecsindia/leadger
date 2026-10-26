@@ -23,7 +23,7 @@
                 <div class="cr-header-sub" id="crPeriodLabel">Today &mdash; {{ date('d M Y') }}</div>
             </div>
         </div>
-        <div class="cr-export-wrap">
+        <div class="cr-export-wrap" data-lg-perm="reports.call_report.export">
             <button type="button" class="cr-export-btn" id="crExportBtn" aria-haspopup="true" aria-expanded="false" aria-controls="crExportMenu">
                 <i class="fa fa-download"></i> Export
             </button>
@@ -214,10 +214,10 @@
             <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#475569;cursor:pointer;" title="Add a column with the link of each call recording">
                 <input type="checkbox" id="crWithUrl"> Include recording URL
             </label>
-            <button type="button" class="cr-dl-btn cr-dl-excel" id="crExportXlsx" title="Download these calls as an Excel file">
+            <button type="button" class="cr-dl-btn cr-dl-excel" id="crExportXlsx" data-lg-perm="reports.call_report.export" title="Download these calls as an Excel file">
                 <i class="fa fa-file-excel"></i> Excel
             </button>
-            <button type="button" class="cr-dl-btn cr-dl-csv" id="crExportCsv" title="Download these calls as a CSV file">
+            <button type="button" class="cr-dl-btn cr-dl-csv" id="crExportCsv" data-lg-perm="reports.call_report.export" title="Download these calls as a CSV file">
                 <i class="fa fa-file-csv"></i> CSV
             </button>
         </div>

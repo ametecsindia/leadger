@@ -1158,7 +1158,7 @@
                 <button type="button" class="lg-btn-bulk-deselect" onclick="lgClearSelection()" title="Clear Selection">
                     Deselect All
                 </button>
-                <button type="button" class="lg-btn-bulk-download" id="btn_download_selected" onclick="downloadSelectedRecordings()" title="Download the selected recordings as one ZIP file" disabled>
+                <button type="button" class="lg-btn-bulk-download" id="btn_download_selected" data-lg-perm="recordings.call_recordings.download" onclick="downloadSelectedRecordings()" title="Download the selected recordings as one ZIP file" disabled>
                     <i class="fas fa-download"></i>
                     <span>Download Selected</span>
                 </button>
@@ -1561,7 +1561,7 @@
                                     <div id="modal-audio-progress" style="height: 100%; width: 0%; background: var(--lg-accent); border-radius: 3px; transition: width 0.1s linear;"></div>
                                 </div>
                                 <span id="modal-audio-time" style="font-size: 11.5px; font-weight: 600; color: #64748B; white-space: nowrap;">00:00 / 00:00</span>
-                                <a id="modal-audio-download" href="#" download class="lg-audio-dl-btn" title="Download Audio" style="color: #64748B; font-size: 13px; text-decoration: none; padding: 4px;">
+                                <a id="modal-audio-download" href="#" download class="lg-audio-dl-btn" data-lg-perm="recordings.call_recordings.download" title="Download Audio" style="color: #64748B; font-size: 13px; text-decoration: none; padding: 4px;">
                                     <i class="fas fa-download"></i>
                                 </a>
                             </div>

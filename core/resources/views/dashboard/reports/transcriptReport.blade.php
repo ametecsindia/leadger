@@ -266,7 +266,7 @@
             var off = r.has_text ? '' : ' disabled title="' + (r.status === 'Failed' ? 'The transcript failed' : 'No transcript yet (' + esc(r.status).toLowerCase() + ')') + '"';
             return '<div class="tr-actions">'
                 + '<button type="button" class="tr-act tr-view" data-batch="' + esc(v) + '"' + (off || ' title="View transcript"') + ' aria-label="View transcript"><i class="fa fa-eye"></i></button>'
-                + '<button type="button" class="tr-act tr-download" data-batch="' + esc(v) + '"' + (off || ' title="Download transcript"') + ' aria-label="Download transcript"><i class="fa fa-download"></i></button>'
+                + '<button type="button" class="tr-act tr-download" data-lg-perm="reports.transcript_report.export" data-batch="' + esc(v) + '"' + (off || ' title="Download transcript"') + ' aria-label="Download transcript"><i class="fa fa-download"></i></button>'
                 + '<button type="button" class="tr-act tr-copy" data-batch="' + esc(v) + '"' + (off || ' title="Copy transcript"') + ' aria-label="Copy transcript"><i class="fa fa-copy"></i></button>'
                 + '</div>';
         } }

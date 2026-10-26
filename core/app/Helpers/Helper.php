@@ -212,15 +212,20 @@ class Helper
      * (leads, campaigns, staff, logs, etc.).
      * The Company Settings Delete Permission applies ONLY to call recordings and does NOT block other pages.
      *
+     * With a menu item of config/permissions.php ("master_data.sources"), its "delete" permission of the role.
+     *
      * @return bool
      */
-    static function canDelete()
+    static function canDelete(?string $item = null)
     {
         if (!\Illuminate\Support\Facades\Auth::check()) {
             return false;
         }
 
         $user = \Illuminate\Support\Facades\Auth::user();
+        if ($item !== null) {
+            return \App\Support\RoleAccess::allows($user, $item . '.delete');
+        }
         $userRole = @$user->permissionsGroup->name;
 
         if (in_array($userRole, ['Admin', 'Webmaster'])) {

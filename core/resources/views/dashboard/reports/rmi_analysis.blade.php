@@ -615,7 +615,7 @@
                 </div>
 
                 <div class="lg-export-group">
-                    <a href="{{ route('rmiAnalysisExport', 'excel') }}" class="lg-btn-export" id="btnExportExcel" target="_blank">
+                    <a href="{{ route('rmiAnalysisExport', 'excel') }}" class="lg-btn-export" id="btnExportExcel" data-lg-perm="recordings.rmi_analysis.export" target="_blank">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -623,7 +623,7 @@
                         </svg>
                         <span>Excel</span>
                     </a>
-                    <a href="{{ route('rmiAnalysisExport', 'csv') }}" class="lg-btn-export" id="btnExportCsv" target="_blank">
+                    <a href="{{ route('rmiAnalysisExport', 'csv') }}" class="lg-btn-export" id="btnExportCsv" data-lg-perm="recordings.rmi_analysis.export" target="_blank">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>

@@ -690,7 +690,7 @@ body > .modal-backdrop.in,
 
         <!-- 3. TOP ACTION & CONTROLS -->
         <div class="lg-top-actions-bar">
-            @if(in_array(@Auth::user()->permissionsGroup->name, ['Webmaster', 'Admin', 'Manager']))
+            @if(\App\Support\RoleAccess::allows(Auth::user(), 'people.teams.create'))
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <button type="button" class="lg-btn-add" data-toggle="modal" data-target="#addTeamModal">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -731,7 +731,7 @@ body > .modal-backdrop.in,
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
                 </div>
                 <p style="font-size: 14px; font-weight: 600; color: #475569; margin: 0;">{{ __('backend.noData') }}</p>
-                @if(in_array(@Auth::user()->permissionsGroup->name, ['Webmaster', 'Admin', 'Manager']))
+                @if(\App\Support\RoleAccess::allows(Auth::user(), 'people.teams.create'))
                     <button type="button" class="lg-btn-add" data-toggle="modal" data-target="#addTeamModal" style="margin-top: 16px;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span>Add New Team</span>
@@ -746,7 +746,7 @@ body > .modal-backdrop.in,
                             <th style="width: 70px;">ID</th>
                             <th>NAME</th>
                             <th>CREATED AT</th>
-                            @if(in_array(@Auth::user()->permissionsGroup->name, ['Webmaster', 'Admin', 'Manager']))
+                            @if(\App\Support\RoleAccess::allows(Auth::user(), 'people.teams.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'people.teams.delete'))
                                 <th class="text-center" style="width: 140px;">ACTION</th>
                             @endif
                         </tr>
@@ -772,7 +772,7 @@ body > .modal-backdrop.in,
                                         {{ $Team->created_at ? \Carbon\Carbon::parse($Team->created_at)->format('d M, Y') : '—' }}
                                     </span>
                                 </td>
-                                @if(in_array(@Auth::user()->permissionsGroup->name, ['Webmaster', 'Admin', 'Manager']))
+                                @if(\App\Support\RoleAccess::allows(Auth::user(), 'people.teams.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'people.teams.delete'))
                                     <td class="text-center">
                                         <div class="lg-action-btn-group">
                                             <button type="button" class="lg-action-btn edit" data-toggle="modal" data-target="#editTeamModal_{{ $Team->id }}" title="Edit Team">
@@ -781,7 +781,7 @@ body > .modal-backdrop.in,
                                             <button type="button" class="lg-action-btn members" data-toggle="modal" data-target="#viewMembers" onclick="getTeamMembers('{{ $Team->id }}')" title="View Team Members">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                             </button>
-                                            @if(Helper::canDelete())
+                                            @if(Helper::canDelete('people.teams'))
                                                 <button type="button" class="lg-action-btn delete" data-toggle="modal" data-target="#m-{{ $Team->id }}" title="Delete Team">
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                                 </button>
@@ -1051,7 +1051,7 @@ body > .modal-backdrop.in,
                                             <button type="button" class="lg-action-btn edit" data-toggle="modal" data-target="#editTeamModal_{{ $TeamItem->id }}" onclick="$('#viewTeamsModal').modal('hide');" title="Edit Team" style="width: 34px; height: 34px;">
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             </button>
-                                            @if(Helper::canDelete())
+                                            @if(Helper::canDelete('people.teams'))
                                                 <button type="button" class="lg-action-btn delete" data-toggle="modal" data-target="#m-{{ $TeamItem->id }}" onclick="$('#viewTeamsModal').modal('hide');" title="Delete Team" style="width: 34px; height: 34px;">
                                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                                 </button>

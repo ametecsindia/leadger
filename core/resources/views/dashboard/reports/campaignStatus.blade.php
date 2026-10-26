@@ -31,7 +31,7 @@
                 <div class="cr-header-sub" id="csPeriodLabel">All campaigns &middot; as of {{ date('d M Y') }}</div>
             </div>
         </div>
-        <div class="cr-export-wrap">
+        <div class="cr-export-wrap" data-lg-perm="reports.campaigns.export">
             <button type="button" class="cr-export-btn" id="csExportBtn" aria-haspopup="true" aria-expanded="false" aria-controls="csExportMenu">
                 <i class="fa fa-download"></i> Export
             </button>

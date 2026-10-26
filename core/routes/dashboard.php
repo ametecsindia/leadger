@@ -49,7 +49,7 @@ use App\Http\Controllers\Dashboard\FileManagerController;
 use Illuminate\Support\Facades\Route;
 
 // Admin Home
-Route::middleware(['auth','web'])->group(function () {
+Route::middleware(['auth','web','permission'])->group(function () {   // permission: config/permissions.php
 Route::get('/', [DashboardController::class, 'index'])->name('adminHome');
 Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('adminDashboard');
 //Search
@@ -259,6 +259,12 @@ Route::post('/users/roles/quick-store', [UsersController::class, 'quickStoreRole
 Route::post('/users/roles/{id}/ajax-update', [UsersController::class, 'ajaxUpdateRoleName'])->name('rolesAjaxUpdate');
 Route::delete('/users/roles/{id}/ajax-delete', [UsersController::class, 'ajaxDeleteRole'])->name('rolesAjaxDelete');
 Route::get('/users/roles/ajax-list', [UsersController::class, 'ajaxGetRolesList'])->name('rolesAjaxList');
+// Roles & Permissions popup (Admin only; config/permissions.php)
+Route::get('/roles', [\App\Http\Controllers\Dashboard\RolesController::class, 'index'])->name('rolesIndex');
+Route::get('/roles/{id}', [\App\Http\Controllers\Dashboard\RolesController::class, 'show'])->whereNumber('id')->name('rolesShow');
+Route::post('/roles', [\App\Http\Controllers\Dashboard\RolesController::class, 'store'])->middleware('throttle:60,1')->name('rolesStore');
+Route::put('/roles/{id}', [\App\Http\Controllers\Dashboard\RolesController::class, 'update'])->whereNumber('id')->middleware('throttle:60,1')->name('rolesUpdate');
+Route::delete('/roles/{id}', [\App\Http\Controllers\Dashboard\RolesController::class, 'destroy'])->whereNumber('id')->middleware('throttle:60,1')->name('rolesDestroy');
 Route::post('/users/license/sync-did', [UsersController::class, 'syncDid'])->name('usersSyncDid');
 Route::post('/users/license/delete', [UsersController::class, 'deleteLicense'])->name('usersDeleteLicense');
 Route::get('/users/license/info', [UsersController::class, 'getLicenseInfo'])->name('usersGetLicenseInfo');

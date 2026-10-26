@@ -615,7 +615,7 @@
             <p class="lg-ps-subtitle">Manage and organize your products.</p>
         </div>
 
-        @if(@Auth::user()->permissionsGroup->add_status)
+        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.products.create'))
             <a class="lg-ps-btn-add" href="{{ route('productServicesCreate') }}" onclick="openAddProductModal(); return false;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"/>
@@ -650,7 +650,7 @@
                     <tr>
                         <th style="width: 60px;">#</th>
                         <th>PRODUCT NAME</th>
-                        @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.products.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.products.delete'))
                             <th class="text-right" style="width: 140px; text-align: right !important; padding-right: 24px !important;">ACTIONS</th>
                         @endif
                     </tr>
@@ -762,7 +762,7 @@
             }
         }
 
-        var LG_CAN_DELETE = @json(Helper::canDelete());
+        var LG_CAN_DELETE = @json(Helper::canDelete('master_data.products'));
 
         /* Options -> Delete: confirm, delete on the server (refused while leads use it), redraw this page of the table */
         function lgDeleteProduct(item) {
@@ -937,7 +937,7 @@
                                    '</div>';
                         }
                     },
-                    @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                    @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.products.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.products.delete'))
                     {
                         "data": "options", "orderable": false,
                         "render": function(data, type, row) {

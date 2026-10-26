@@ -325,7 +325,7 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
         </div>
         <div class="d-flex align-items-center flex-wrap" style="gap: 12px;">
             <span style="font-size: 13px; color: #64748B;">Last auto-sync: <span id="sync" style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #0F172A;">{{ date('H:i:s') }}</span></span>
-            <button id="btnExportShiftLog" class="btn-outline-custom" onclick="exportShiftLog()"><i class="fas fa-file-export" style="margin-right: 5px;"></i>Export Shift Log</button>
+            <button id="btnExportShiftLog" data-lg-perm="dashboard.home.export" class="btn-outline-custom" onclick="exportShiftLog()"><i class="fas fa-file-export" style="margin-right: 5px;"></i>Export Shift Log</button>
             <button class="btn-primary-custom" onclick="window.location='{{ route('lead_allocation') }}'">+ Quick Allocate Leads</button>
         </div>
     </section>

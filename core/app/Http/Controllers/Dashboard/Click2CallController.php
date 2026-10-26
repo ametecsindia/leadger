@@ -65,9 +65,7 @@ class Click2CallController extends Controller
 
     public function callingSettings()
     {
-        if (Auth::check() && !@Auth::user()->permissionsGroup->settings_status && @Auth::user()->permissions_id != 1) {
-            return redirect()->route('adminHome')->with('errorMessage', __('backend.noPermission'));
-        }
+        // role permissions configuration.call_setup.* (config/permissions.php, CheckPermission middleware)
 
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         $settings = DB::table('settings')->where('id', 1)->first();
@@ -100,9 +98,7 @@ class Click2CallController extends Controller
 
     public function updateCallingSettings(Request $request)
     {
-        if (Auth::check() && !@Auth::user()->permissionsGroup->settings_status && @Auth::user()->permissions_id != 1) {
-            return redirect()->route('adminHome')->with('errorMessage', __('backend.noPermission'));
-        }
+        // role permissions configuration.call_setup.* (config/permissions.php, CheckPermission middleware)
 
         $validator = Validator::make($request->all(), [
             'calling_hours_from' => ['required', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'],
@@ -357,7 +353,7 @@ where c2c_channel = 1 ";
      */
     public function delete($id)
     {
-        if (!\App\Helpers\Helper::canDelete()) {
+        if (!\App\Helpers\Helper::canDelete('people.click2call')) {
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
             }

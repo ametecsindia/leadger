@@ -547,7 +547,7 @@
 
 </div>
 
-@if(\App\Helpers\Helper::canDelete())
+@if(\App\Helpers\Helper::canDelete('campaigns.campaign_list'))
 <!-- Delete Campaign Confirmation -->
 <div id="lg-camp-delete-modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
@@ -802,7 +802,7 @@ $(document).ready(function () {
                 "render": function(data, type, row) {
                     var name = $('<div>').text(row.raw_name || 'Campaign').html();
                     var html = '<div class="lg-actions-cell">' +
-                        '<button type="button" class="lg-row-act" title="Download leads (CSV / Excel)" data-toggle="tooltip" ' +
+                        '<button type="button" class="lg-row-act" data-lg-perm="campaigns.campaign_list.export" title="Download leads (CSV / Excel)" data-toggle="tooltip" ' +
                         'onclick="lgDownloadCampaign(this)" data-url="' + row.export_url + '" data-name="' + name + '">' +
                         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
                         '</button>';

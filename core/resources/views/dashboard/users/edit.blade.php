@@ -1124,6 +1124,8 @@ body > #editShiftModal.modal.in,
     $selectedLoc = $WorkLocations->firstWhere('id', $Users->work_location_id);
     $addressVal = $selectedLoc ? ($selectedLoc->name == 'No Work Location' ? '' : $selectedLoc->name) : '';
     $defaultTab = session('active_tab', 'profile');
+    $lgAdminTabs = \App\Support\RoleAccess::isFullAccess(Auth::user());
+    if (!$lgAdminTabs) { $defaultTab = 'profile'; }
 @endphp
 
 <div class="lg-edit-user-wrapper">
@@ -1178,6 +1180,7 @@ body > #editShiftModal.modal.in,
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <span>Profile</span>
             </button>
+            @if($lgAdminTabs)
             <button type="button" class="lg-nav-tab-item" data-tab="tab-company-settings" role="tab" aria-selected="false">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <span>Company Settings</span>
@@ -1194,6 +1197,7 @@ body > #editShiftModal.modal.in,
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <span>License Info</span>
             </button>
+            @endif
         </div>
     </div>
 
@@ -1311,6 +1315,8 @@ body > #editShiftModal.modal.in,
 
     {{ Form::close() }}
 
+    {{-- Company Settings, Work Configuration, Roles & Permissions, License Info: Admin only (config/permissions.php) --}}
+    @if($lgAdminTabs)
     <!-- ============================================== -->
     <!-- TAB PANE 2: COMPANY SETTINGS CONTAINER         -->
     <!-- ============================================== -->
@@ -1581,100 +1587,45 @@ body > #editShiftModal.modal.in,
     <!-- ============================================== -->
     <div class="lg-tab-pane" id="tab-roles-permissions" role="tabpanel">
         <div class="lg-card-section" id="addRoleCard">
-            <div class="lg-section-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="lg-section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div class="lg-section-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                             <circle cx="9" cy="7" r="4"/>
                             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
                     </div>
-                    <span>Add Role</span>
+                    <span>Roles &amp; Permissions</span>
                 </div>
                 <button type="button" id="btnToggleNewRoleForm" class="lg-btn-outline-primary" style="height: 34px; padding: 0 14px; font-size: 12.5px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>Add New Role</span>
                 </button>
             </div>
 
-            <!-- Collapsible Add New Role Form -->
-            <div id="newRoleFormBox" style="display: none; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1464F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                    <span>Create New Role</span>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;" class="lg-grid-2col">
-                    <!-- Display Name -->
-                    <div class="lg-field-group" style="margin-bottom: 0;">
-                        <label for="new_role_display_name" class="lg-field-label">Display Name <span style="color: #EF4444;">*</span></label>
-                        <input type="text" id="new_role_display_name" class="lg-input" placeholder="e.g. Sales Manager" autocomplete="off">
-                    </div>
-
-                    <!-- Role Name -->
-                    <div class="lg-field-group" style="margin-bottom: 0;">
-                        <label for="new_role_name" class="lg-field-label">Role Name <span style="color: #EF4444;">*</span></label>
-                        <input type="text" id="new_role_name" class="lg-input" placeholder="e.g. sales_manager" autocomplete="off">
-                    </div>
-                </div>
-                
-                <div id="new_role_form_error" style="color: #EF4444; font-size: 12.5px; font-weight: 500; margin-top: 10px; display: none;"></div>
-
-                <!-- Action Buttons: Save & Close -->
-                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 16px;">
-                    <button type="button" id="btnCloseNewRoleForm" class="lg-btn-cancel" style="height: 38px; padding: 0 18px; font-size: 13px;">
-                        <span>Close</span>
-                    </button>
-                    <button type="button" id="btnSaveNewRole" class="lg-btn-work-save" style="height: 38px; padding: 0 20px; font-size: 13px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span>Save</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Role Master Directory Table -->
+            <!-- Role Master Directory Table (filled from the roles list, see lgRolesLoad) -->
             <div style="margin-bottom: 20px;">
-                <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div class="lg-rp-dir-head">
                     <span>Role Master Directory</span>
-                    <span style="font-weight: 500; color: #64748B; font-size: 12px;">Total Roles: <strong id="totalRolesCount">{{ count($Permissions) }}</strong></span>
+                    <span class="lg-rp-dir-total">Total Roles: <strong id="totalRolesCount">{{ count($Permissions) }}</strong></span>
                 </div>
-                <div style="overflow-x: auto; border: 1px solid #E2E8F0; border-radius: 10px;">
-                    <table style="width: 100%; font-size: 13px; border-collapse: collapse; text-align: left;" id="rolesMasterTable">
+                <div class="lg-rp-dir-wrap">
+                    <table class="lg-rp-dir" id="rolesMasterTable">
                         <thead>
-                            <tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
-                                <th style="padding: 10px 14px; width: 60px;">ID</th>
-                                <th style="padding: 10px 14px;">Name</th>
-                                <th style="padding: 10px 14px;">Description / Role Name</th>
-                                <th style="padding: 10px 14px;">Created At</th>
-                                <th style="padding: 10px 14px; text-align: right; width: 110px;">Action</th>
+                            <tr>
+                                <th scope="col" style="width: 60px;">ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Description</th>
+                                <th scope="col" style="width: 80px;">Users</th>
+                                <th scope="col" style="width: 140px;">Permissions</th>
+                                <th scope="col" style="width: 140px;">Created At</th>
+                                <th scope="col" style="width: 130px; text-align: right;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="rolesTableBody">
-                            @if(isset($Permissions) && count($Permissions) > 0)
-                                @foreach ($Permissions as $Permission)
-                                    <tr data-role-id="{{ $Permission->id }}" style="border-bottom: 1px solid #F1F5F9; color: #1E293B;">
-                                        <td style="padding: 10px 14px; font-weight: 600;">#{{ $Permission->id }}</td>
-                                        <td style="padding: 10px 14px; font-weight: 600;" class="role-display-name">{{ $Permission->name }}</td>
-                                        <td style="padding: 10px 14px; color: #64748B;">
-                                            <code style="background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--lg-accent);" class="role-slug-name">{{ \Illuminate\Support\Str::slug($Permission->name, '_') }}</code>
-                                        </td>
-                                        <td style="padding: 10px 14px; color: #64748B;">{{ $Permission->created_at ? $Permission->created_at->format('Y-m-d H:i') : 'System' }}</td>
-                                        <td style="padding: 10px 14px; text-align: right;">
-                                            <div style="display: flex; justify-content: flex-end; gap: 6px;">
-                                                <button type="button" class="btn-edit-role" data-id="{{ $Permission->id }}" data-name="{{ $Permission->name }}" title="Edit Role" style="border: 1px solid #CBD5E1; background: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #334155;">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                </button>
-                                                @if(!in_array($Permission->id, [1, 4]))
-                                                    <button type="button" class="btn-delete-role" data-id="{{ $Permission->id }}" data-name="{{ $Permission->name }}" title="Delete Role" style="border: 1px solid #FECACA; background: #FEF2F2; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #EF4444;">
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endif
+                            <tr><td colspan="7" class="lg-rp-dir-empty">Loading roles...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1809,6 +1760,7 @@ body > #editShiftModal.modal.in,
         {{-- Transcription · Sarvam AI: this company's own API key and transcription settings --}}
         @include('dashboard.users.partials.sarvam-key-card')
     </div>
+    @endif
 
 </div>
 
@@ -1988,66 +1940,186 @@ body > #editShiftModal.modal.in,
     </div>
 </div>
 
+@if($lgAdminTabs)
 <!-- ============================================== -->
-<!-- EDIT ROLE MODAL                                -->
+<!-- CREATE / EDIT ROLE MODAL (Permission Menu)     -->
 <!-- ============================================== -->
-<div class="lg-role-modal-overlay" id="editRoleModalOverlay">
-    <div class="lg-role-modal-wrapper" id="editRoleModalWrapper" role="dialog" aria-modal="true" aria-labelledby="editRoleModalTitle">
-        <!-- Header -->
+<style>
+/* Create Role popup and Role Master Directory: theme variables (original, slate, green, dark) */
+#lgRoleModal .lg-role-modal-wrapper, #deleteRoleModalOverlay .lg-role-modal-wrapper { background: var(--t-bg-card, #FFFFFF); border-color: var(--t-border, #E2E8F0); }
+#lgRoleModal .lg-role-modal-header, #lgRoleModal .lg-role-modal-footer,
+#deleteRoleModalOverlay .lg-role-modal-header, #deleteRoleModalOverlay .lg-role-modal-body, #deleteRoleModalOverlay .lg-role-modal-footer { background: var(--t-bg-card, #FFFFFF); border-color: var(--t-border, #E2E8F0); }
+#lgRoleModal .lg-role-modal-title, #deleteRoleModalOverlay .lg-role-modal-title { color: var(--t-text, #0F172A); }
+#lgRoleModal .lg-role-modal-subtitle { color: var(--t-text-muted, #64748B); }
+#lgRoleModal .lg-role-modal-close-btn { background: var(--t-bg-alt, #F1F5F9); border-color: var(--t-border, #E2E8F0); color: var(--t-text-muted, #64748B); }
+#lgRoleModal .lg-role-modal-label { color: var(--t-text-body, #334155); }
+html[data-theme="dark"] #lgRoleModal .lg-role-modal-label, html[data-theme="dark"] #lgRoleModal .lg-rp-act,
+html[data-theme="dark"] #lgRoleModal .lg-rp-row-label, html[data-theme="dark"] #lgRoleModal .lg-rp-all { color: var(--t-text) !important; }
+#lgRoleModal .lg-role-modal-input, #lgRoleModal .lg-rp-search { background-color: var(--t-bg-input, #FFFFFF) !important; border-color: var(--t-border-strong, #CBD5E1) !important; color: var(--t-text, #0F172A) !important; }
+#lgRoleModal .lg-btn-role-cancel { background: var(--t-bg-card, #FFFFFF); color: var(--t-text-body, #475569); border-color: var(--t-border-strong, #CBD5E1); }
+.lg-role-modal-close-btn:focus-visible, .lg-btn-role-cancel:focus-visible, .lg-btn-role-save:focus-visible, .lg-rp-link:focus-visible,
+.lg-rp-dir-btn:focus-visible { outline: 2px solid var(--t-accent, #1464F4); outline-offset: 2px; }
+
+#lgRoleModal.lg-role-modal-overlay { transition: opacity .16s ease; }
+#lgRoleModal .lg-role-modal-wrapper.lg-rp-wrapper { max-width: 820px; max-height: calc(100vh - 32px); }
+.lg-rp-body { padding: 18px 24px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; background: var(--t-bg-card, #FFFFFF); }
+.lg-rp-note { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; font-weight: 600;
+    background: var(--t-accent-soft, #EFF6FF); color: var(--t-accent, #1464F4); border: 1px solid var(--t-accent-border, #BFDBFE); }
+.lg-rp-fields { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; margin-bottom: 18px; }
+.lg-rp-textarea { height: 64px; padding: 10px 14px; resize: vertical; min-height: 44px; line-height: 1.4; }
+.lg-rp-hintrow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--t-text-muted, #64748B); }
+.lg-rp-hintrow code { background: var(--t-bg-alt, #F1F5F9); color: var(--t-accent, #1464F4); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+.lg-rp-perm-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding-top: 14px;
+    border-top: 1px solid var(--t-border, #E2E8F0); margin-bottom: 12px; }
+.lg-rp-h { font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--t-text, #0F172A); }
+.lg-rp-count { font-size: 12.5px; color: var(--t-text-muted, #64748B); margin-top: 2px; }
+.lg-rp-count strong { color: var(--t-accent, #1464F4); }
+.lg-rp-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lg-rp-search { height: 34px; width: 200px; padding: 0 10px 0 30px; border-radius: 8px; font-size: 13px; outline: none;
+    border: 1px solid var(--t-border-strong, #CBD5E1); background: var(--t-bg-input, #FFFFFF) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 10px center;
+    color: var(--t-text, #0F172A); }
+.lg-rp-search:focus { border-color: var(--t-accent, #1464F4); box-shadow: var(--lg-shadow-focus, 0 0 0 3px rgba(20,100,244,.15)); }
+.lg-rp-link { background: none; border: 0; padding: 2px 0; font-size: 12.5px; font-weight: 600; color: var(--t-accent, #1464F4); cursor: pointer; }
+.lg-rp-link:hover { text-decoration: underline; }
+.lg-rp-link:disabled { color: var(--t-text-muted, #94A3B8); cursor: not-allowed; text-decoration: none; }
+.lg-rp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.lg-rp-card { border: 1px solid var(--t-border, #E2E8F0); border-radius: 12px; background: var(--t-bg-card, #FFFFFF); overflow: hidden; }
+.lg-rp-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: var(--t-bg-alt, #F8FAFC);
+    border-bottom: 1px solid var(--t-border, #E2E8F0); }
+.lg-rp-card-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--t-text, #0F172A); margin: 0; }
+.lg-rp-card-title svg { flex: 0 0 auto; color: var(--t-accent, #1464F4); }
+.lg-rp-all { display: inline-flex !important; align-items: center; gap: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--t-text-muted, #64748B);
+    margin: 0; cursor: pointer; text-transform: uppercase; }
+.lg-rp-row { padding: 9px 12px; border-top: 1px solid var(--t-border, #F1F5F9); }
+.lg-rp-row:first-of-type { border-top: 0; }
+.lg-rp-row-label { font-size: 12.5px; font-weight: 600; color: var(--t-text-body, #334155); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.lg-rp-row-hint { font-size: 11.5px; font-weight: 500; color: var(--t-text-muted, #64748B); margin: -3px 0 6px; }
+.lg-rp-lock { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; color: var(--t-warning, #B45309);
+    background: color-mix(in srgb, var(--t-warning, #D97706) 12%, transparent); padding: 1px 6px; border-radius: 999px; }
+.lg-rp-acts { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.lg-rp-act { display: inline-flex !important; align-items: center; gap: 0; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    color: var(--t-text-body, #475569); cursor: pointer; user-select: none; }
+.lg-rp-act input, .lg-rp-all input { width: 15px; height: 15px; margin: 0 6px 0 0 !important; flex: 0 0 auto; position: static; accent-color: var(--t-accent-fill, #1464F4); cursor: pointer; }
+.lg-rp-act.is-locked, .lg-rp-act.is-locked input { cursor: not-allowed; opacity: .55; }
+.lg-rp-act input:focus-visible, .lg-rp-all input:focus-visible { outline: 2px solid var(--t-accent, #1464F4); outline-offset: 2px; }
+.lg-rp-empty { padding: 26px 10px; text-align: center; color: var(--t-text-muted, #64748B); font-size: 13px; }
+.lg-rp-discard { display: flex; align-items: center; gap: 10px; margin-right: auto; font-size: 13px; font-weight: 600; color: var(--t-danger, #DC2626); }
+.lg-rp-discard[hidden], .lg-rp-note[hidden], .lg-rp-empty[hidden] { display: none; }
+#lgRoleModal .lg-role-modal-footer { flex-wrap: wrap; }
+
+/* Role Master Directory */
+.lg-rp-dir-head { font-size: 13px; font-weight: 700; color: var(--t-text-body, #334155); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.lg-rp-dir-total { font-weight: 500; color: var(--t-text-muted, #64748B); font-size: 12px; }
+.lg-rp-dir-wrap { overflow-x: auto; border: 1px solid var(--t-border, #E2E8F0); border-radius: 10px; }
+.lg-rp-dir { width: 100%; font-size: 13px; border-collapse: collapse; text-align: left; }
+.lg-rp-dir th { padding: 10px 14px; background: var(--t-bg-alt, #F8FAFC); border-bottom: 1px solid var(--t-border, #E2E8F0); color: var(--t-text-body, #475569);
+    font-weight: 600; white-space: nowrap; }
+.lg-rp-dir td { padding: 10px 14px; border-bottom: 1px solid var(--t-border, #F1F5F9); color: var(--t-text, #1E293B); vertical-align: middle; }
+.lg-rp-dir tr:last-child td { border-bottom: 0; }
+.lg-rp-dir .muted { color: var(--t-text-muted, #64748B); }
+.lg-rp-dir code { background: var(--t-bg-alt, #F1F5F9); color: var(--t-accent, #1464F4); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+.lg-rp-dir-empty { text-align: center; color: var(--t-text-muted, #64748B); padding: 18px !important; }
+.lg-rp-badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+    background: var(--t-accent-soft, #EFF6FF); color: var(--t-accent, #1464F4); border: 1px solid var(--t-accent-border, #BFDBFE); vertical-align: 1px; }
+.lg-rp-dir-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.lg-rp-dir-btn { border: 1px solid var(--t-border-strong, #CBD5E1); background: var(--t-bg-card, #FFFFFF); border-radius: 6px; padding: 4px 8px; cursor: pointer;
+    color: var(--t-text-body, #334155); line-height: 1; }
+.lg-rp-dir-btn:hover { border-color: var(--t-accent, #1464F4); color: var(--t-accent, #1464F4); }
+.lg-rp-dir-btn.danger { color: var(--t-danger, #EF4444); border-color: color-mix(in srgb, var(--t-danger, #EF4444) 35%, transparent); }
+
+@media (max-width: 760px) {
+    .lg-rp-grid, .lg-rp-fields { grid-template-columns: 1fr; }
+    #lgRoleModal .lg-role-modal-wrapper.lg-rp-wrapper { max-width: 100%; max-height: calc(100vh - 16px); }
+    #lgRoleModal.lg-role-modal-overlay { padding: 8px; }
+    .lg-rp-body { padding: 14px 16px 18px; }
+    .lg-rp-search { width: 100%; }
+    .lg-rp-tools { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #lgRoleModal .lg-role-modal-wrapper { animation: none; }
+}
+</style>
+
+<div class="lg-role-modal-overlay" id="lgRoleModal" aria-hidden="true">
+    <div class="lg-role-modal-wrapper lg-rp-wrapper" role="dialog" aria-modal="true" aria-labelledby="lgRoleModalTitle" aria-describedby="lgRoleModalSub">
+        <!-- Header (stays on top) -->
         <div class="lg-role-modal-header">
             <div class="lg-role-modal-header-left">
                 <div class="lg-role-modal-icon-badge">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1464F4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1464F4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
                     </svg>
                 </div>
                 <div>
-                    <h3 class="lg-role-modal-title" id="editRoleModalTitle">Edit Role</h3>
-                    <p class="lg-role-modal-subtitle">Update the role name</p>
+                    <h3 class="lg-role-modal-title" id="lgRoleModalTitle">Create Role</h3>
+                    <p class="lg-role-modal-subtitle" id="lgRoleModalSub">Choose the menus and actions this role can use</p>
                 </div>
             </div>
-            <button type="button" class="lg-role-modal-close-btn" id="btnEditRoleClose" aria-label="Close modal">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+            <button type="button" class="lg-role-modal-close-btn" id="lgRoleModalClose" aria-label="Close">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
         </div>
 
-        <!-- Body -->
-        <div class="lg-role-modal-body">
-            <input type="hidden" id="edit_role_id" value="">
-            <div class="lg-role-form-group">
-                <label for="edit_role_name" class="lg-role-modal-label">
-                    Role name <span style="color: #EF4444;">*</span>
-                </label>
-                <input type="text" id="edit_role_name" class="lg-role-modal-input" placeholder="e.g. Sales Executive" autocomplete="off" maxlength="100">
-                
-                <!-- Read-only Role ID & Slug Info -->
-                <div class="lg-role-meta-hint">
-                    <span>Role ID: <strong id="edit_role_id_display" style="color: #0F172A;">#1</strong></span>
-                    <span class="lg-role-meta-dot">&bull;</span>
-                    <span>Identifier: <code id="edit_role_slug_display" class="lg-role-code-pill">webmaster</code></span>
-                </div>
-
-                <!-- Inline error message under input -->
-                <div id="edit_role_inline_error" class="lg-role-inline-error" style="display: none;"></div>
+        <!-- Body (scrolls) -->
+        <div class="lg-rp-body">
+            <div class="lg-rp-note" id="lgRpAdminNote" hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span id="lgRpAdminNoteText">Admin has full access. This role cannot be changed.</span>
             </div>
+
+            <div class="lg-rp-fields">
+                <div class="lg-role-form-group">
+                    <label for="lg_rp_role_title" class="lg-role-modal-label">Role name <span style="color: #EF4444;" aria-hidden="true">*</span></label>
+                    {{-- not "name"/"email": keeps the browser from filling a saved login into it --}}
+                    <input type="text" id="lg_rp_role_title" name="lg_rp_role_title" class="lg-role-modal-input" placeholder="e.g. Sales Manager"
+                           maxlength="50" autocomplete="off" autocapitalize="words" spellcheck="false" data-lpignore="true" data-1p-ignore="true"
+                           data-form-type="other" aria-required="true" aria-describedby="lgRpSlugHint lgRpNameErr">
+                    <div class="lg-rp-hintrow" id="lgRpSlugHint"><span>Role key: <code id="lgRpSlug">-</code></span><span id="lgRpNameCount">0 / 50</span></div>
+                    <div id="lgRpNameErr" class="lg-role-inline-error" role="alert" hidden></div>
+                </div>
+                <div class="lg-role-form-group">
+                    <label for="lg_rp_role_about" class="lg-role-modal-label">Description <span class="lg-rp-count" style="font-weight: 500;">(optional)</span></label>
+                    <textarea id="lg_rp_role_about" name="lg_rp_role_about" class="lg-role-modal-input lg-rp-textarea" maxlength="200" rows="2"
+                              placeholder="What this role is for" autocomplete="off" data-lpignore="true" data-1p-ignore="true" aria-describedby="lgRpAboutCount lgRpAboutErr"></textarea>
+                    <div class="lg-rp-hintrow"><span></span><span id="lgRpAboutCount">0 / 200</span></div>
+                    <div id="lgRpAboutErr" class="lg-role-inline-error" role="alert" hidden></div>
+                </div>
+            </div>
+
+            <div class="lg-rp-perm-head">
+                <div>
+                    <div class="lg-rp-h" id="lgRpPermTitle">PERMISSION MENU</div>
+                    <div class="lg-rp-count" id="lgRpCount" aria-live="polite"><strong>0</strong> permissions selected</div>
+                </div>
+                <div class="lg-rp-tools">
+                    <input type="search" id="lgRpSearch" class="lg-rp-search" placeholder="Search menu..." aria-label="Search menu" autocomplete="off" data-lpignore="true">
+                    <button type="button" class="lg-rp-link" id="lgRpSelectAll">Select all</button>
+                    <button type="button" class="lg-rp-link" id="lgRpClearAll">Clear all</button>
+                </div>
+            </div>
+            <div id="lgRpPermErr" class="lg-role-inline-error" role="alert" hidden style="margin-bottom: 10px;"></div>
+            <div class="lg-rp-grid" id="lgRpGrid" role="group" aria-labelledby="lgRpPermTitle"></div>
+            <div class="lg-rp-empty" id="lgRpEmpty" hidden>No menu matches your search.</div>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer (stays at the bottom) -->
         <div class="lg-role-modal-footer">
-            <button type="button" class="lg-btn-role-cancel" id="btnEditRoleCancel">Cancel</button>
-            <button type="button" class="lg-btn-role-save" id="btnEditRoleSubmit">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Save</span>
+            <div class="lg-rp-discard" id="lgRpDiscard" hidden role="alert">
+                <span>Discard changes?</span>
+                <button type="button" class="lg-btn-role-cancel" id="lgRpKeep" style="height: 32px; padding: 0 12px;">Keep editing</button>
+                <button type="button" class="lg-btn-role-delete" id="lgRpDiscardYes" style="height: 32px; padding: 0 12px;">Discard</button>
+            </div>
+            <button type="button" class="lg-btn-role-cancel" id="lgRpCancel">Cancel</button>
+            <button type="button" class="lg-btn-role-save" id="lgRpSave" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Save role</span>
             </button>
         </div>
     </div>
 </div>
+@endif
 
 <!-- ============================================== -->
 <!-- DELETE ROLE CONFIRMATION MODAL                 -->
@@ -2116,7 +2188,7 @@ body > #editShiftModal.modal.in,
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
         // Move modals directly to body so they are never trapped by nested stacking contexts/backdrop
-        $('#createShiftModal, #manageShiftsModal, #editShiftModal, #editRoleModalOverlay, #deleteRoleModalOverlay').appendTo('body');
+        $('#createShiftModal, #manageShiftsModal, #editShiftModal, #lgRoleModal, #deleteRoleModalOverlay').appendTo('body');
 
         // Tab switching function: shows ONLY the selected tab container and hides all others
         function switchTab(tabId) {
@@ -2200,383 +2272,323 @@ body > #editShiftModal.modal.in,
             $('.lg-custom-dropdown-wrap').removeClass('open').find('.lg-custom-dropdown-trigger').attr('aria-expanded', 'false');
         });
 
-        // Toggle & Reset Add New Role Form
-        $('#btnToggleNewRoleForm').on('click', function (e) {
-            e.preventDefault();
-            const $formBox = $('#newRoleFormBox');
-            if ($formBox.is(':visible')) {
-                $formBox.slideUp(200);
-            } else {
-                $('#new_role_display_name').val('');
-                $('#new_role_name').val('');
-                $('#new_role_form_error').hide();
-                $formBox.slideDown(200, function() {
-                    $('#new_role_display_name').focus();
+        // =========================================================================
+        // ROLES & PERMISSIONS: directory, Create / Edit / Duplicate Role popup, delete (Admin only)
+        // The permission list comes from config/permissions.php; the server checks everything again.
+        // =========================================================================
+        @if($lgAdminTabs)
+        (function () {
+            var MENU = @json(\App\Support\RoleAccess::forPopup());
+            var URL_ROLES = "{{ route('rolesIndex') }}";
+            var CSRF = "{{ csrf_token() }}";
+            var roles = [];
+            var state = { mode: 'create', id: null, duplicateOf: null, readOnly: false, snapshot: '', opener: null, busy: false };
+            var $modal = $('#lgRoleModal'), $grid = $('#lgRpGrid'), $name = $('#lg_rp_role_title'), $about = $('#lg_rp_role_about');
+
+            function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+            function slugify(s) {
+                return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+                    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || '';
+            }
+            function uniqueSlug(name) {
+                var base = slugify(name), slug = base, n = 2;
+                if (!base) return '-';
+                var taken = roles.filter(function (r) { return r.id !== state.id; }).map(function (r) { return r.slug; });
+                while (taken.indexOf(slug) !== -1) { slug = base + '_' + n++; }
+                return slug;
+            }
+            function ajax(method, url, data) {
+                return $.ajax({ url: url, type: method, headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                    contentType: 'application/json', data: data ? JSON.stringify(data) : undefined, dataType: 'json' });
+            }
+            function errMsg(xhr, fallback) {
+                return (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : fallback;
+            }
+
+            // ---------- Role Master Directory ----------
+            var ICON_EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+            var ICON_VIEW = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            var ICON_COPY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+            var SVG = function (paths, size) { return '<svg width="' + (size || 15) + '" height="' + (size || 15) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>'; };
+            var ICON_LOCK = SVG('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 11);
+            // the group icons of the sidebar (config/permissions.php "icon")
+            var GROUP_ICONS = {
+                home: SVG('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+                leads: SVG('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>'),
+                megaphone: SVG('<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'),
+                headset: SVG('<path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z"/>'),
+                settings: SVG('<circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>'),
+                database: SVG('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>'),
+                people: SVG('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+                chart: SVG('<path d="M18 20V10M12 20V4M6 20v-6"/>'),
+                mic: SVG('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/>'),
+                folder: SVG('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>')
+            };
+            var ICON_DEL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+            function renderRoles() {
+                $('#totalRolesCount').text(roles.length);
+                if (!roles.length) {
+                    $('#rolesTableBody').html('<tr><td colspan="7" class="lg-rp-dir-empty">No roles yet.</td></tr>');
+                    return;
+                }
+                $('#rolesTableBody').html(roles.map(function (r) {
+                    var perms = r.is_system ? 'All permissions' : (r.permissions_count + (r.permissions_count === 1 ? ' permission' : ' permissions'));
+                    return '<tr data-role-id="' + r.id + '">'
+                        + '<td style="font-weight:600;">#' + r.id + '</td>'
+                        + '<td><span style="font-weight:600;">' + esc(r.name) + '</span>' + (r.is_system ? '<span class="lg-rp-badge">System</span>' : '')
+                        + '<div><code>' + esc(r.slug) + '</code></div></td>'
+                        + '<td class="muted">' + (r.description ? esc(r.description) : '-') + '</td>'
+                        + '<td>' + r.users_count + '</td>'
+                        + '<td>' + perms + '</td>'
+                        + '<td class="muted">' + esc(r.created_at) + '</td>'
+                        + '<td><div class="lg-rp-dir-actions">'
+                        + '<button type="button" class="lg-rp-dir-btn" data-act="edit" data-id="' + r.id + '" title="' + (r.is_system ? 'View role' : 'Edit role') + '" aria-label="' + (r.is_system ? 'View' : 'Edit') + ' role ' + esc(r.name) + '">' + (r.is_system ? ICON_VIEW : ICON_EDIT) + '</button>'
+                        + '<button type="button" class="lg-rp-dir-btn" data-act="duplicate" data-id="' + r.id + '" title="Duplicate role" aria-label="Duplicate role ' + esc(r.name) + '">' + ICON_COPY + '</button>'
+                        + (r.deletable ? '<button type="button" class="lg-rp-dir-btn danger" data-act="delete" data-id="' + r.id + '" title="Delete role" aria-label="Delete role ' + esc(r.name) + '">' + ICON_DEL + '</button>' : '')
+                        + '</div></td></tr>';
+                }).join(''));
+            }
+            function loadRoles() {
+                return ajax('GET', URL_ROLES).done(function (res) { roles = res.roles || []; renderRoles(); })
+                    .fail(function (xhr) {
+                        $('#rolesTableBody').html('<tr><td colspan="7" class="lg-rp-dir-empty">' + esc(errMsg(xhr, 'The roles could not be loaded.')) + '</td></tr>');
+                    });
+            }
+            function findRole(id) { return roles.filter(function (r) { return r.id === id; })[0]; }
+
+            // ---------- Permission Menu ----------
+            function buildGrid() {
+                $grid.html(MENU.map(function (g) {
+                    var single = g.items.length === 1 && g.items[0].label === g.label;
+                    var rows = g.items.map(function (it) {
+                        var acts = it.actions.map(function (a) {
+                            var id = 'lgrp_' + a.key.replace(/\./g, '_');
+                            return '<label class="lg-rp-act' + (a.admin_only ? ' is-locked' : '') + '" for="' + id + '"' + (a.admin_only ? ' title="Admin only"' : '') + '>'
+                                + '<input type="checkbox" id="' + id + '" class="lg-rp-cb" value="' + a.key + '" data-item="' + it.key + '" data-action="' + a.action + '"'
+                                + (a.admin_only ? ' data-locked="1" disabled' : '')
+                                + ' aria-label="' + esc(it.label + ': ' + a.label + (a.admin_only ? ' (Admin only)' : '')) + '">'
+                                + '<span>' + esc(a.label.toUpperCase()) + '</span></label>';
+                        }).join('');
+                        var lock = it.admin_only ? ' <span class="lg-rp-lock" title="Admin only">' + ICON_LOCK + ' Admin only</span>' : '';
+                        var oneLock = !it.admin_only && it.actions.some(function (a) { return a.admin_only; })
+                            ? ' <span class="lg-rp-lock" title="Admin only">' + ICON_LOCK + ' Delete: Admin only</span>' : '';
+                        return '<div class="lg-rp-row" data-item="' + it.key + '" data-search="' + esc((g.label + ' ' + it.label).toLowerCase()) + '">'
+                            + (single && !lock ? '' : '<div class="lg-rp-row-label">' + esc(it.label) + lock + oneLock + '</div>')
+                            + (single && oneLock ? '<div class="lg-rp-row-label">' + oneLock + '</div>' : '')
+                            + (it.hint ? '<div class="lg-rp-row-hint">' + esc(it.hint) + '</div>' : '')
+                            + '<div class="lg-rp-acts">' + acts + '</div></div>';
+                    }).join('');
+                    var gid = 'lgrp_g_' + g.key;
+                    return '<section class="lg-rp-card" data-group="' + g.key + '" data-search="' + esc(g.label.toLowerCase()) + '" aria-labelledby="' + gid + '_t">'
+                        + '<div class="lg-rp-card-head"><h4 class="lg-rp-card-title" id="' + gid + '_t">' + (GROUP_ICONS[g.icon] || GROUP_ICONS.folder) + '' + esc(g.label) + '</h4>'
+                        + '<label class="lg-rp-all" for="' + gid + '"><input type="checkbox" id="' + gid + '" class="lg-rp-group-cb" data-group="' + g.key + '" aria-label="Select all in ' + esc(g.label) + '"> All</label></div>'
+                        + rows + '</section>';
+                }).join(''));
+            }
+            function boxes() { return $grid.find('.lg-rp-cb'); }
+            function editable() { return boxes().not('[data-locked]'); }
+            function selectedKeys() { return editable().filter(':checked').map(function () { return this.value; }).get(); }
+            function itemBox($item, action) { return $grid.find('.lg-rp-cb[data-item="' + $item + '"][data-action="' + action + '"]'); }
+
+            function refreshCounts() {
+                var n = state.readOnly ? boxes().length : selectedKeys().length;
+                $('#lgRpCount').html('<strong>' + n + '</strong> ' + (n === 1 ? 'permission' : 'permissions') + ' selected');
+                $grid.find('.lg-rp-card').each(function () {
+                    var $c = $(this), $b = $c.find('.lg-rp-cb').not('[data-locked]'), on = $b.filter(':checked').length;
+                    var g = $c.find('.lg-rp-group-cb')[0];
+                    g.checked = $b.length > 0 && on === $b.length;
+                    g.indeterminate = on > 0 && on < $b.length;
+                    g.disabled = state.readOnly || $b.length === 0;
                 });
+                var nameOk = $.trim($name.val()).length > 0;
+                $('#lgRpSave').prop('disabled', !nameOk || state.busy);
             }
-        });
-
-        $('#btnCloseNewRoleForm').on('click', function (e) {
-            e.preventDefault();
-            $('#newRoleFormBox').slideUp(200);
-            $('#new_role_display_name').val('');
-            $('#new_role_name').val('');
-            $('#new_role_form_error').hide();
-        });
-
-        let roleNameManuallyEdited = false;
-        $('#new_role_name').on('input', function() {
-            roleNameManuallyEdited = $(this).val().length > 0;
-        });
-        $('#new_role_display_name').on('input', function() {
-            if (!roleNameManuallyEdited) {
-                const val = $(this).val();
-                const slug = val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-                $('#new_role_name').val(slug);
-            }
-        });
-
-        // Save New Role AJAX
-        $('#btnSaveNewRole').on('click', function (e) {
-            e.preventDefault();
-            const displayName = $.trim($('#new_role_display_name').val());
-            const roleName = $.trim($('#new_role_name').val());
-
-            if (!displayName && !roleName) {
-                $('#new_role_form_error').text('Please fill in Display Name and Role Name.').show();
-                $('#new_role_display_name').focus();
-                return;
-            }
-
-            $('#new_role_form_error').hide();
-            const $btn = $(this);
-            const originalHtml = $btn.html();
-            $btn.prop('disabled', true).html('<span>Saving...</span>');
-
-            $.ajax({
-                url: "{{ route('rolesQuickStore') }}",
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    display_name: displayName,
-                    role_name: roleName
-                },
-                success: function (response) {
-                    $btn.prop('disabled', false).html(originalHtml);
-                    if (response.status === 'success') {
-                        $('#newRoleFormBox').slideUp(200);
-                        $('#new_role_display_name').val('');
-                        $('#new_role_name').val('');
-                        roleNameManuallyEdited = false;
-
-                        const newId = response.role.id;
-                        const newName = response.role.name;
-                        const newRoleName = response.role.role_name || newName.toLowerCase().replace(/\s+/g, '_');
-                        const createdAt = response.role.created_at || 'Just now';
-
-                        const newRowHtml = `
-                            <tr data-role-id="${newId}" style="border-bottom: 1px solid #F1F5F9; color: #1E293B;">
-                                <td style="padding: 10px 14px; font-weight: 600;">#${newId}</td>
-                                <td style="padding: 10px 14px; font-weight: 600;" class="role-display-name">${newName}</td>
-                                <td style="padding: 10px 14px; color: #64748B;">
-                                    <code style="background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--lg-accent);" class="role-slug-name">${newRoleName}</code>
-                                </td>
-                                <td style="padding: 10px 14px; color: #64748B;">${createdAt}</td>
-                                <td style="padding: 10px 14px; text-align: right;">
-                                    <div style="display: flex; justify-content: flex-end; gap: 6px;">
-                                        <button type="button" class="btn-edit-role" data-id="${newId}" data-name="${newName}" title="Edit Role" style="border: 1px solid #CBD5E1; background: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #334155;">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                        </button>
-                                        <button type="button" class="btn-delete-role" data-id="${newId}" data-name="${newName}" title="Delete Role" style="border: 1px solid #FECACA; background: #FEF2F2; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #EF4444;">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                        $('#rolesTableBody').append(newRowHtml);
-                        const currentTotal = parseInt($('#totalRolesCount').text()) || 0;
-                        $('#totalRolesCount').text(currentTotal + 1);
-
-                        showLgToast('Role "' + newName + '" added successfully!');
-                    } else {
-                        $('#new_role_form_error').text(response.message || 'Error saving role').show();
-                    }
-                },
-                error: function (xhr) {
-                    $btn.prop('disabled', false).html(originalHtml);
-                    let msg = 'Error saving new role.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
-                    $('#new_role_form_error').text(msg).show();
+            // CREATE / EDIT / DELETE / EXPORT ... tick VIEW of the same item; unticking VIEW clears the item
+            $grid.on('change', '.lg-rp-cb', function () {
+                var item = $(this).data('item'), action = $(this).data('action');
+                if (action === 'view' && !this.checked) {
+                    $grid.find('.lg-rp-cb[data-item="' + item + '"]').not('[data-locked]').prop('checked', false);
+                } else if (action !== 'view' && this.checked) {
+                    itemBox(item, 'view').not('[data-locked]').prop('checked', true);
                 }
+                refreshCounts();
             });
-        });
+            $grid.on('change', '.lg-rp-group-cb', function () {
+                $grid.find('.lg-rp-card[data-group="' + $(this).data('group') + '"] .lg-rp-cb').not('[data-locked]').prop('checked', this.checked);
+                refreshCounts();
+            });
+            $('#lgRpSelectAll').on('click', function () { editable().prop('checked', true); refreshCounts(); });
+            $('#lgRpClearAll').on('click', function () { editable().prop('checked', false); refreshCounts(); });
+            $('#lgRpSearch').on('input', function () {
+                var q = $.trim(this.value).toLowerCase(), any = false;
+                $grid.find('.lg-rp-card').each(function () {
+                    var $c = $(this), groupHit = !q || String($c.data('search')).indexOf(q) !== -1, shown = 0;
+                    $c.find('.lg-rp-row').each(function () {
+                        var hit = groupHit || String($(this).data('search')).indexOf(q) !== -1;
+                        $(this).toggle(hit);
+                        if (hit) shown++;
+                    });
+                    $c.toggle(shown > 0);
+                    if (shown) any = true;
+                });
+                $('#lgRpEmpty').prop('hidden', any);
+            });
 
-        // =========================================================================
-        // ROLE MODALS LOGIC (EDIT ROLE & DELETE ROLE)
-        // =========================================================================
-
-        function closeEditRoleModal() {
-            $('#editRoleModalOverlay').removeClass('active');
-            $('#edit_role_inline_error').hide().text('');
-        }
-
-        function closeDeleteRoleModal() {
-            $('#deleteRoleModalOverlay').removeClass('active');
-            $('#delete_role_inline_error').hide().text('');
-        }
-
-        // Open Edit Role Modal
-        $(document).on('click', '.btn-edit-role', function(e) {
-            e.preventDefault();
-            const roleId = $(this).data('id');
-            const $row = $('tr[data-role-id="' + roleId + '"]');
-            const currentName = $(this).data('name') || $row.find('.role-display-name').text().trim();
-            const currentSlug = $row.find('.role-slug-name').text().trim() || ('role_' + roleId);
-
-            $('#edit_role_id').val(roleId);
-            $('#edit_role_name').val(currentName);
-            $('#edit_role_id_display').text('#' + roleId);
-            $('#edit_role_slug_display').text(currentSlug);
-            $('#edit_role_inline_error').hide().text('');
-
-            // Reset save button state
-            $('#btnEditRoleSubmit').prop('disabled', false).html(`
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Save</span>
-            `);
-
-            $('#editRoleModalOverlay').addClass('active');
-            setTimeout(function() {
-                $('#edit_role_name').focus().select();
-            }, 50);
-        });
-
-        // Submit Edit Role
-        function submitEditRole() {
-            const roleId = $('#edit_role_id').val();
-            const rawName = $('#edit_role_name').val();
-            const trimmedName = $.trim(rawName);
-
-            if (!trimmedName) {
-                $('#edit_role_inline_error').html(`
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                        <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    <span>Role name cannot be empty.</span>
-                `).show();
-                $('#edit_role_name').focus();
-                return;
+            // ---------- Fields ----------
+            function refreshName() {
+                var v = $name.val();
+                $('#lgRpSlug').text(uniqueSlug(v));
+                $('#lgRpNameCount').text(v.length + ' / 50');
+                $('#lgRpNameErr').prop('hidden', true).text('');
+                refreshCounts();
             }
+            $name.on('input', refreshName);
+            $about.on('input', function () { $('#lgRpAboutCount').text(this.value.length + ' / 200'); $('#lgRpAboutErr').prop('hidden', true); });
 
-            const $btn = $('#btnEditRoleSubmit');
-            $btn.prop('disabled', true).html(`
-                <svg class="lg-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: lgSpin 0.75s linear infinite;">
-                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                    <path d="M12 2a10 10 0 0 1 10 10"></path>
-                </svg>
-                <span>Saving...</span>
-            `);
+            function showErr(sel, msg) { $(sel).text(msg).prop('hidden', !msg); }
+            function clearErrs() { ['#lgRpNameErr', '#lgRpAboutErr', '#lgRpPermErr'].forEach(function (s) { showErr(s, ''); }); }
+            function current() { return JSON.stringify([$.trim($name.val()), $.trim($about.val()), selectedKeys()]); }
 
-            $.ajax({
-                url: '/admin/users/roles/' + roleId + '/ajax-update',
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    name: trimmedName
-                },
-                success: function(res) {
-                    $btn.prop('disabled', false).html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        <span>Save</span>
-                    `);
+            // ---------- Open / close ----------
+            function open(mode, role, keys) {
+                state.mode = mode; state.id = mode === 'edit' ? role.id : null;
+                state.duplicateOf = mode === 'duplicate' ? role.id : null;
+                state.readOnly = mode === 'edit' && role.is_system;
+                state.opener = document.activeElement;
+                clearErrs();
+                $('#lgRpDiscard').prop('hidden', true);
+                $('#lgRpSearch').val('').trigger('input');
+                $('#lgRoleModalTitle').text(mode === 'edit' ? 'Edit Role' : 'Create Role');
+                $('#lgRoleModalSub').text(state.readOnly ? 'System role' : (mode === 'duplicate' ? 'A copy of "' + role.name + '": change what you need' : 'Choose the menus and actions this role can use'));
+                var name = mode === 'edit' ? role.name : (mode === 'duplicate' ? ('Copy of ' + role.name).slice(0, 50) : '');
+                $name.val(name).prop('readonly', state.readOnly);
+                $about.val(role && mode !== 'create' ? (role.description || '') : '').prop('readonly', state.readOnly);
+                $('#lgRpAboutCount').text($about.val().length + ' / 200');
+                boxes().each(function () {
+                    var locked = !!$(this).attr('data-locked');
+                    this.checked = state.readOnly ? true : (!locked && keys.indexOf(this.value) !== -1);
+                    this.disabled = state.readOnly || locked;
+                });
+                $('#lgRpAdminNote').prop('hidden', !state.readOnly);
+                $('#lgRpSave').toggle(!state.readOnly);
+                $('#lgRpSelectAll, #lgRpClearAll').prop('disabled', state.readOnly);
+                $('#lgRpCancel').text(state.readOnly ? 'Close' : 'Cancel');
+                refreshName();
+                state.snapshot = current();
+                if ($modal.parent().is(':not(body)')) $modal.appendTo('body');
+                $modal.addClass('active').attr('aria-hidden', 'false');
+                $('body').css('overflow', 'hidden');
+                setTimeout(function () { (state.readOnly ? $('#lgRoleModalClose') : $name).trigger('focus'); }, 30);
+            }
+            function close(force) {
+                if (!force && !state.readOnly && current() !== state.snapshot) {
+                    $('#lgRpDiscard').prop('hidden', false);
+                    $('#lgRpKeep').trigger('focus');
+                    return;
+                }
+                $modal.removeClass('active').attr('aria-hidden', 'true');
+                $('body').css('overflow', '');
+                if (state.opener && document.body.contains(state.opener)) state.opener.focus();
+            }
+            $('#lgRoleModalClose, #lgRpCancel').on('click', function () { close(false); });
+            $('#lgRpKeep').on('click', function () { $('#lgRpDiscard').prop('hidden', true); $name.trigger('focus'); });
+            $('#lgRpDiscardYes').on('click', function () { close(true); });
+            $modal.on('mousedown', function (e) { if (e.target === this) close(false); });
+            $modal.on('keydown', function (e) {
+                if (e.key === 'Escape') { e.preventDefault(); close(false); return; }
+                if (e.key !== 'Tab') return;
+                // keep the focus inside the popup
+                var $f = $modal.find('button, input, textarea, [tabindex]:not([tabindex="-1"])').filter(':visible:not(:disabled)');
+                if (!$f.length) return;
+                var first = $f[0], last = $f[$f.length - 1];
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            });
+            $name.on('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('#lgRpSave').trigger('click'); } });
 
-                    if (res.status === 'success') {
-                        const updatedRole = res.role;
-                        const $row = $('tr[data-role-id="' + roleId + '"]');
-                        $row.find('.role-display-name').text(updatedRole.name);
-                        if (updatedRole.role_name) {
-                            $row.find('.role-slug-name').text(updatedRole.role_name);
-                        }
-                        $row.find('.btn-edit-role').data('name', updatedRole.name).attr('data-name', updatedRole.name);
-                        $row.find('.btn-delete-role').data('name', updatedRole.name).attr('data-name', updatedRole.name);
+            // ---------- Save ----------
+            $('#lgRpSave').on('click', function () {
+                if (state.readOnly || state.busy) return;
+                clearErrs();
+                var name = $.trim($name.val());
+                if (name.length < 2 || name.length > 50) {
+                    showErr('#lgRpNameErr', name.length < 2 ? 'The role name needs at least 2 characters.' : 'The role name can have at most 50 characters.');
+                    $name.trigger('focus');
+                    return;
+                }
+                var body = { name: name, description: $.trim($about.val()), permissions: selectedKeys() };
+                if (state.duplicateOf) body.duplicate_of = state.duplicateOf;
+                var $btn = $(this), html = $btn.html();
+                state.busy = true;
+                $btn.prop('disabled', true).html('<span>Saving...</span>');
+                ajax(state.mode === 'edit' ? 'PUT' : 'POST', state.mode === 'edit' ? URL_ROLES + '/' + state.id : URL_ROLES, body)
+                    .done(function (res) {
+                        showLgToast(state.mode === 'edit' ? 'Role saved' : 'Role created');
+                        close(true);
+                        loadRoles();
+                    })
+                    .fail(function (xhr) {
+                        var e = (xhr.responseJSON && xhr.responseJSON.errors) || {};
+                        if (e.name) showErr('#lgRpNameErr', e.name[0]);
+                        if (e.description) showErr('#lgRpAboutErr', e.description[0]);
+                        if (e.permissions) showErr('#lgRpPermErr', e.permissions.join(' '));
+                        showLgToast(errMsg(xhr, 'The role could not be saved.'), true);
+                    })
+                    .always(function () { state.busy = false; $btn.html(html); refreshCounts(); });
+            });
 
-                        closeEditRoleModal();
-                        showLgToast('Role updated to "' + updatedRole.name + '"!');
-                    } else {
-                        const msg = res.message || 'Failed to update role.';
-                        $('#edit_role_inline_error').html(`
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                                <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <span>` + msg + `</span>
-                        `).show();
-                        showLgToast(msg, true);
-                    }
-                },
-                error: function(xhr) {
-                    $btn.prop('disabled', false).html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        <span>Save</span>
-                    `);
-                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to update role.';
-                    $('#edit_role_inline_error').html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                        <span>` + msg + `</span>
-                    `).show();
+            // ---------- Directory actions ----------
+            $('#btnToggleNewRoleForm').on('click', function (e) { e.preventDefault(); open('create', null, []); });
+            $('#rolesTableBody').on('click', '.lg-rp-dir-btn', function () {
+                var id = parseInt($(this).data('id'), 10), act = $(this).data('act'), role = findRole(id), $b = $(this);
+                if (!role) return;
+                if (act === 'delete') { openDelete(role); return; }
+                $b.prop('disabled', true);
+                ajax('GET', URL_ROLES + '/' + id).done(function (res) {
+                    open(act === 'duplicate' ? 'duplicate' : 'edit', res.role, res.role.is_system ? [] : (res.role.permissions || []));
+                }).fail(function (xhr) { showLgToast(errMsg(xhr, 'The role could not be opened.'), true); })
+                  .always(function () { $b.prop('disabled', false); });
+            });
+
+            // ---------- Delete (confirmation popup) ----------
+            var $del = $('#deleteRoleModalOverlay'), delRole = null, delOpener = null;
+            function openDelete(role) {
+                delRole = role; delOpener = document.activeElement;
+                $('#delete_role_name_display').text(role.name);
+                $('#delete_role_inline_error').hide().text('');
+                var blocked = role.users_count > 0;
+                $del.find('.lg-role-delete-warning-box span').text(blocked
+                    ? 'Reassign these ' + role.users_count + ' user(s) first. A role with users cannot be deleted.'
+                    : 'This role and its permissions are removed. This action cannot be undone.');
+                $('#btnDeleteRoleSubmit').prop('disabled', blocked);
+                if ($del.parent().is(':not(body)')) $del.appendTo('body');
+                $del.addClass('active');
+                setTimeout(function () { $(blocked ? '#btnDeleteRoleCancel' : '#btnDeleteRoleSubmit').trigger('focus'); }, 30);
+            }
+            function closeDelete() { $del.removeClass('active'); if (delOpener && document.body.contains(delOpener)) delOpener.focus(); }
+            $('#btnDeleteRoleClose, #btnDeleteRoleCancel').on('click', closeDelete);
+            $del.on('mousedown', function (e) { if (e.target === this) closeDelete(); });
+            $del.on('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeDelete(); } });
+            $('#btnDeleteRoleSubmit').on('click', function () {
+                if (!delRole) return;
+                var $btn = $(this), html = $btn.html();
+                $btn.prop('disabled', true).html('<span>Deleting...</span>');
+                ajax('DELETE', URL_ROLES + '/' + delRole.id).done(function () {
+                    showLgToast('Role deleted');
+                    closeDelete();
+                    loadRoles();
+                }).fail(function (xhr) {
+                    var msg = errMsg(xhr, 'The role could not be deleted.');
+                    $('#delete_role_inline_error').text(msg).show();
                     showLgToast(msg, true);
-                }
+                }).always(function () { $btn.prop('disabled', false).html(html); });
             });
-        }
 
-        $('#btnEditRoleSubmit').on('click', function(e) {
-            e.preventDefault();
-            submitEditRole();
-        });
-
-        $('#edit_role_name').on('keydown', function(e) {
-            if (e.key === 'Enter' || e.keyCode === 13) {
-                e.preventDefault();
-                submitEditRole();
-            }
-        });
-
-        $('#edit_role_name').on('input', function() {
-            if ($.trim($(this).val())) {
-                $('#edit_role_inline_error').hide().text('');
-            }
-        });
-
-        // Close Edit Role Modal triggers
-        $('#btnEditRoleClose, #btnEditRoleCancel').on('click', function(e) {
-            e.preventDefault();
-            closeEditRoleModal();
-        });
-
-        // Open Delete Role Modal
-        $(document).on('click', '.btn-delete-role', function(e) {
-            e.preventDefault();
-            const roleId = $(this).data('id');
-            const $row = $('tr[data-role-id="' + roleId + '"]');
-            const roleName = $(this).data('name') || $row.find('.role-display-name').text().trim();
-
-            $('#delete_role_id').val(roleId);
-            $('#delete_role_name_val').val(roleName);
-            $('#delete_role_name_display').text('"' + roleName + '"');
-            $('#delete_role_inline_error').hide().text('');
-
-            $('#btnDeleteRoleSubmit').prop('disabled', false).html(`
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                <span>Delete</span>
-            `);
-
-            $('#deleteRoleModalOverlay').addClass('active');
-        });
-
-        // Submit Delete Role
-        $('#btnDeleteRoleSubmit').on('click', function(e) {
-            e.preventDefault();
-            const roleId = $('#delete_role_id').val();
-            const roleName = $('#delete_role_name_val').val();
-            const $btn = $(this);
-
-            $btn.prop('disabled', true).html(`
-                <svg class="lg-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="animation: lgSpin 0.75s linear infinite;">
-                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-                    <path d="M12 2a10 10 0 0 1 10 10"></path>
-                </svg>
-                <span>Deleting...</span>
-            `);
-
-            $.ajax({
-                url: '/admin/users/roles/' + roleId + '/ajax-delete',
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(res) {
-                    $btn.prop('disabled', false).html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        <span>Delete</span>
-                    `);
-
-                    if (res.status === 'success') {
-                        closeDeleteRoleModal();
-                        $('tr[data-role-id="' + roleId + '"]').fadeOut(300, function() { $(this).remove(); });
-                        const currentTotal = Math.max(0, (parseInt($('#totalRolesCount').text()) || 1) - 1);
-                        $('#totalRolesCount').text(currentTotal);
-                        showLgToast('Role "' + roleName + '" deleted successfully!');
-                    } else {
-                        const msg = res.message || 'Cannot delete role.';
-                        $('#delete_role_inline_error').html(`
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                                <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <span>` + msg + `</span>
-                        `).show();
-                        showLgToast(msg, true);
-                    }
-                },
-                error: function(xhr) {
-                    $btn.prop('disabled', false).html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        <span>Delete</span>
-                    `);
-                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Cannot delete role.';
-                    $('#delete_role_inline_error').html(`
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                        <span>` + msg + `</span>
-                    `).show();
-                    showLgToast(msg, true);
-                }
-            });
-        });
-
-        // Close Delete Role Modal triggers
-        $('#btnDeleteRoleClose, #btnDeleteRoleCancel').on('click', function(e) {
-            e.preventDefault();
-            closeDeleteRoleModal();
-        });
-
-        // Close on backdrop click
-        $('#editRoleModalOverlay, #deleteRoleModalOverlay').on('click', function(e) {
-            if (e.target === this) {
-                $(this).removeClass('active');
-            }
-        });
-
-        // Global Esc key listener for role modals
-        $(document).on('keydown', function(e) {
-            if (e.key === 'Escape' || e.keyCode === 27) {
-                if ($('#editRoleModalOverlay').hasClass('active')) {
-                    closeEditRoleModal();
-                }
-                if ($('#deleteRoleModalOverlay').hasClass('active')) {
-                    closeDeleteRoleModal();
-                }
-            }
-        });
+            buildGrid();
+            loadRoles();
+        })();
+        @endif
 
 
         // Save Work Configuration AJAX

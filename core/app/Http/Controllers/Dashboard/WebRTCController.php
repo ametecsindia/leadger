@@ -1137,7 +1137,7 @@ class WebRTCController extends Controller
      */
     public function delete($id)
     {
-        if (!\App\Helpers\Helper::canDelete()) {
+        if (!\App\Helpers\Helper::canDelete('people.webrtc')) {
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized: Delete operations are disabled or restricted to Admin.'], 403);
             }

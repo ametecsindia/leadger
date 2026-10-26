@@ -732,7 +732,7 @@
             </div>
         </div>
 
-        @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+        @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.create'))
             <a href="javascript:void(0)" onclick="lgOpenAddSubstatusModal()" class="lg-btn-add-subs">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -768,7 +768,7 @@
                 </div>
                 <p class="lg-subs-empty-title">No sub statuses yet</p>
                 <p class="lg-subs-empty-msg">Create your first sub status to help categorise lead outcomes more granularly.</p>
-                @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.create'))
                     <a href="javascript:void(0)" onclick="lgOpenAddSubstatusModal()" class="lg-btn-add-subs">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span>Add a new Substatus</span>
@@ -805,7 +805,7 @@
                         <tr>
                             <th style="width: 55%;">Substatus</th>
                             <th style="width: 30%;">Status</th>
-                            @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                            @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.delete'))
                                 <th style="width: 15%; text-align: right; padding-right: 24px;">Options</th>
                             @endif
                         </tr>
@@ -827,7 +827,7 @@
                                 </td>
 
                                 {{-- Options --}}
-                                @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                                @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.delete'))
                                     <td style="text-align: right; padding-right: 24px;">
                                         <button type="button"
                                                 class="lg-btn-edit-subs"
@@ -1386,7 +1386,7 @@ function lgSubmitSubstatus(event) {
                 tr.style.transition = 'background-color 1.5s ease';
 
                 let optionsHtml = '';
-                @if(in_array(@Auth::user()->permissionsGroup->name, ['Admin','Manager']))
+                @if(\App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.edit') || \App\Support\RoleAccess::allows(Auth::user(), 'master_data.statuses.delete'))
                 optionsHtml = `
                     <td style="text-align: right; padding-right: 24px;">
                         <button type="button"

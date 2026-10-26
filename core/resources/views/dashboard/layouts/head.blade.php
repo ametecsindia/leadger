@@ -67,4 +67,14 @@
 @stack('after-styles')
 {{-- Executive Slate / Professional Green / Midnight Dark (inactive for the original theme). Loaded last so it wins. --}}
 <link rel="stylesheet" href="{{ asset('assets/dashboard/css/lg-themes.css') }}?v=4" type="text/css"/>
-<script src="{{ asset('assets/dashboard/js/lg-themes.js') }}?v=3" defer></script>
+<script src="{{ asset('assets/dashboard/js/lg-themes.js') }}?v=3" defer></script>{{-- Role permissions for page scripts: lgCan('reports.call_report.export'); controls marked data-lg-perm="<key>"
+     are hidden when the role lacks the key. The server checks every request again. --}}
+@php($lgPerms = \App\Support\RoleAccess::forScript(Auth::user()))
+@if(Auth::check() && !$lgPerms['full'])
+{{-- the keys come from config/permissions.php only, so they are printed unescaped --}}
+<style>{!! implode(',', array_map(fn ($k) => '[data-lg-perm="' . $k . '"]', array_diff(array_keys(\App\Support\RoleAccess::keys()), $lgPerms['keys']))) ?: '[data-lg-perm-none]' !!}{display:none !important}</style>
+@endif
+<script>
+    window.LG_PERMS = @json($lgPerms);
+    window.lgCan = function (key) { return !!(window.LG_PERMS && (window.LG_PERMS.full || window.LG_PERMS.keys.indexOf(key) !== -1)); };
+</script>

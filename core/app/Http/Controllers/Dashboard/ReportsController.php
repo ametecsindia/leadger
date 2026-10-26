@@ -1497,9 +1497,6 @@ public function agentPerformanceData(Request $request)
     ]);
 }
 
-/** Roles that may export the Agent Performance report (the same roles that see "Export Report" on the page). */
-private const AGENT_PERFORMANCE_EXPORT_ROLES = ['Webmaster', 'Admin', 'Manager'];
-
 /**
  * Agent Performance Details export (Excel .xlsx / CSV): every row the table shows for the current filters, search and
  * sorting (same query, counting and visibility rules, via agentPerformanceData), not only the visible page.
@@ -1512,7 +1509,7 @@ public function agentPerformanceExport(Request $request, string $format)
     if (!in_array($format, ['xlsx', 'csv'], true)) {
         abort(404);
     }
-    if (!in_array(optional(Auth::user()->permissionsGroup)->name, self::AGENT_PERFORMANCE_EXPORT_ROLES, true)) {
+    if (!\App\Support\RoleAccess::allows(Auth::user(), 'reports.agent_performance.export')) {
         return response()->json(['message' => 'You do not have permission to export this report.'], 403);
     }
 

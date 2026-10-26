@@ -75,10 +75,19 @@ class SiteProvisioner
             foreach ($plan['tables'] as $t) {
                 $this->conn->statement('CREATE TABLE IF NOT EXISTS ' . $q($db) . '.' . $q($t) . ' LIKE ' . $q($this->central) . '.' . $q($t));
             }
+            $copied = [];
             foreach ($plan['starting'] as $t) {
                 if ($this->isEmpty($db, $t)) {   // checked again: never adds to a table that has rows
                     $this->conn->statement('INSERT INTO ' . $q($db) . '.' . $q($t) . ' SELECT * FROM ' . $q($this->central) . '.' . $q($t));
+                    $copied[] = $t;
                 }
+            }
+            // The roles' permission keys belong to the role ids: copied only together with the roles themselves
+            $roles = $this->prefix . 'permissions';
+            $keys = $this->prefix . 'role_permissions';
+            if (in_array($roles, $copied, true) && in_array($keys, $this->tables($db), true) && in_array($keys, $this->tables($this->central), true)
+                && $this->isEmpty($db, $keys)) {
+                $this->conn->statement('INSERT INTO ' . $q($db) . '.' . $q($keys) . ' SELECT * FROM ' . $q($this->central) . '.' . $q($keys));
             }
             if ($plan['admins'] && $this->isEmpty($db, $this->prefix . 'users')) {
                 foreach ($this->centralAdmins() as $u) {

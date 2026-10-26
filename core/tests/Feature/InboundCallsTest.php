@@ -259,11 +259,18 @@ class InboundCallsTest extends TestCase
 
     public function test_page_is_refused_without_the_inbound_calls_permission()
     {
+        // the role permission reports.inbound_calls.* (Roles & Permissions), which replaced the inbound_calls_status flag
         $role = DB::table('permissions')->where('name', 'Telecaller')->value('id');
-        DB::table('permissions')->where('id', $role)->update(['inbound_calls_status' => 0]);
-        $this->actingAs(User::find($this->agentId));
-        $this->postJson(route('inboundCallsData'), ['from_date' => $this->today, 'to_date' => $this->today])->assertStatus(403);
-        $this->get(route('inboundCalls'))->assertRedirect(route('NoPermission'));
+        DB::table('permissions')->where('id', $role)->update(['permissions_managed' => 1]);
+        DB::table('role_permissions')->where('role_id', $role)->where('permission_key', 'like', 'reports.inbound_calls.%')->delete();
+        \App\Support\RoleAccess::forgetRole((int)$role);
+        try {
+            $this->actingAs(User::find($this->agentId));
+            $this->postJson(route('inboundCallsData'), ['from_date' => $this->today, 'to_date' => $this->today])->assertStatus(403);
+            $this->get(route('inboundCalls'))->assertForbidden();
+        } finally {
+            \App\Support\RoleAccess::forgetRole((int)$role);   // the rolled-back keys apply again
+        }
     }
 
     /* ---- filters, search, sort, pagination ---- */
