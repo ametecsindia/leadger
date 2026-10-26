@@ -75,17 +75,14 @@ class LoginController extends Controller
             
             $currentTime = \Carbon\Carbon::now()->format('H:i:s');
             
-            if ($objcaller->role_name == 'Telecaller') {
-
-                if ($currentTime < $loginTime || $currentTime > $logoutTime) {
-                    $arrData['error'] = "You can only log in between $loginTime and $logoutTime.";
-
-                    echo json_encode($arrData);
-                    exit();
-                }
+            // Telecallers: only within the calling hours; then the password and account checks apply to every role
+            if ($objcaller->role_name == 'Telecaller' && ($currentTime < $loginTime || $currentTime > $logoutTime)) {
+                $arrData['error'] = "You can only log in between $loginTime and $logoutTime.";
+                echo json_encode($arrData);
+                exit();
             }
-            
-            else if (!Hash::check($request->password, $objUser->password)) {
+
+            if (!Hash::check($request->password, $objUser->password)) {
                 $arrData['error'] = trans('Wrong Password');
                 echo json_encode($arrData);
                 exit();
@@ -160,7 +157,7 @@ class LoginController extends Controller
 
         $arrData = [];
 
-        $arrInputs = $_POST;
+        $arrInputs = $request->post();
         $otp = isset($arrInputs['otp']) ? trim($arrInputs['otp']) : '';
 
         if (empty($otp) || !preg_match('/^\d{4}$/', $otp)) {
@@ -205,7 +202,11 @@ class LoginController extends Controller
                     return json_encode($arrData);
             }
 
-        } 
+            // the OTP was right: the password or the account is the problem, so say that
+            $this->incrementLoginAttempts($request);
+            $arrData['error'] = (string)$objUser->status === '0' ? trans('Account Disabled') : trans('Wrong Password');
+            return json_encode($arrData);
+        }
         $this->incrementLoginAttempts($request);
         $arrData['error'] = 'Please enter a valid 4-digit OTP.';
         return json_encode($arrData);
