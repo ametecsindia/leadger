@@ -1798,6 +1798,9 @@
 .cw-mc-phone { flex-shrink: 0; }
 .cw-mc-phone { --lg-control-h: 50px; --lg-fs-body: 22px; }   /* design-system sizes inputs from these variables */
 .cw-mc-phone .cw-phone-input-large { padding-left: 14px; }
+/* Mobile Number box: compact width (the clear x stays inside it); full width on phones */
+.cw-mc-phone .cw-phone-input-wrap { max-width: 320px; }
+@media (max-width: 480px) { .cw-mc-phone .cw-phone-input-wrap { max-width: none; } }
 .cw-mc-scroll { display: flex; flex-direction: column; gap: 14px; }
 .cw-mc-scroll > * { flex-shrink: 0; }
 /* Click2Call / WebRTC VMN as two equal option tiles; the tile of the channel(s) the entered number will use is highlighted */
@@ -2353,14 +2356,14 @@
                 </div>
 
                 <div class="cw-card-body cw-mc-body">
-                    <!-- 1. Phone Number Input -->
+                    <!-- 1. Mobile Number Input -->
                     <div class="cw-field-group cw-mc-phone" style="margin-bottom: 0;">
-                        <label class="cw-label" for="mobile" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Phone Number *</label>
+                        <label class="cw-label" for="mobile" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Mobile Number *</label>
                         <div class="cw-phone-input-wrap">
                             <input type="text"
                                    id="mobile"
                                    class="cw-phone-input-large"
-                                   placeholder="Enter number..."
+                                   placeholder="Enter mobile number..."
                                    value="{{ $Lead->phonenumber ?? '' }}"
                                    maxlength="20"
                                    autocomplete="off"
