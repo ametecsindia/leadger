@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1640" viewBox="0 0 1200 1640" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#DC2626"/></marker>
+    <style>
+      .t{font-size:17px;font-weight:600;fill:#0F172A}
+      .s{font-size:13px;fill:#475569}
+      .lane{font-size:15px;font-weight:700;fill:#1E3A8A}
+      .ln{stroke:#475569;stroke-width:2;fill:none;marker-end:url(#a)}
+      .er{stroke:#DC2626;stroke-width:2;fill:none;stroke-dasharray:6 4;marker-end:url(#r)}
+      .et{font-size:12.5px;fill:#B91C1C;font-weight:600}
+    </style>
+  </defs>
+  <rect width="1200" height="1640" fill="#FFFFFF"/>
+  <text x="600" y="44" text-anchor="middle" font-size="26" font-weight="700" fill="#0F3D91">Sarvam AI Call Transcription &amp; AI Analysis – End-to-End Flow</text>
+  <text x="600" y="72" text-anchor="middle" class="s">Solid = normal path · red dashed = error / cancel path · [LeadGER] = existing · [Proposed] = recommended for a new project</text>
+
+  <!-- lanes -->
+  <rect x="20" y="96" width="1160" height="250" rx="14" fill="#F1F5FF" stroke="#C7D2FE"/>
+  <text x="40" y="122" class="lane">1 · COMPANY SETTINGS (admin)</text>
+  <rect x="20" y="360" width="1160" height="400" rx="14" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="40" y="386" class="lane">2 · CALL RECORDINGS PAGE (user, browser)</text>
+  <rect x="20" y="774" width="1160" height="640" rx="14" fill="#F0FDF4" stroke="#BBF7D0"/>
+  <text x="240" y="800" class="lane">3 · BACKGROUND QUEUE WORKER (server)</text>
+  <rect x="20" y="1428" width="1160" height="190" rx="14" fill="#FFF7ED" stroke="#FED7AA"/>
+  <text x="40" y="1454" class="lane">4 · RESULT (browser)</text>
+
+  <!-- settings -->
+  <g>
+    <rect x="60" y="140" width="300" height="80" rx="10" fill="#fff" stroke="#6366F1"/>
+    <text x="210" y="172" text-anchor="middle" class="t">Admin enters Sarvam API key</text>
+    <text x="210" y="196" text-anchor="middle" class="s">License Info card · Admin role only</text>
+    <rect x="450" y="140" width="300" height="80" rx="10" fill="#fff" stroke="#6366F1"/>
+    <text x="600" y="172" text-anchor="middle" class="t">Test key with Sarvam</text>
+    <text x="600" y="196" text-anchor="middle" class="s">GET job status probe · 401/403 = invalid</text>
+    <rect x="840" y="140" width="300" height="80" rx="10" fill="#fff" stroke="#6366F1"/>
+    <text x="990" y="172" text-anchor="middle" class="t">Save encrypted + mask</text>
+    <text x="990" y="196" text-anchor="middle" class="s">encrypted cast · last 4 digits · status</text>
+    <rect x="450" y="250" width="300" height="76" rx="10" fill="#fff" stroke="#6366F1"/>
+    <text x="600" y="280" text-anchor="middle" class="t">Enable AI Transcript</text>
+    <text x="600" y="304" text-anchor="middle" class="s">language · auto-transcribe scope</text>
+    <path class="ln" d="M360,180 H448"/><path class="ln" d="M750,180 H838"/>
+    <path class="ln" d="M990,220 V288 H752"/>
+    <path class="er" d="M600,220 V236 H300 V236"/><text x="310" y="232" class="et">invalid key → 422, nothing saved</text>
+  </g>
+
+  <!-- recordings -->
+  <g>
+    <rect x="60" y="404" width="300" height="80" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="210" y="436" text-anchor="middle" class="t">User opens Call Recordings</text>
+    <text x="210" y="460" text-anchor="middle" class="s">AI Analysis column per row</text>
+    <rect x="450" y="404" width="300" height="80" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="600" y="436" text-anchor="middle" class="t">Select recording(s)</text>
+    <text x="600" y="460" text-anchor="middle" class="s">permission · file exists · duration &gt; 0</text>
+    <rect x="840" y="404" width="300" height="80" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="990" y="436" text-anchor="middle" class="t">Transcript already saved?</text>
+    <text x="990" y="460" text-anchor="middle" class="s">yes → open from database, no charge</text>
+    <rect x="840" y="520" width="300" height="86" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="990" y="552" text-anchor="middle" class="t">Calculate estimated cost</text>
+    <text x="990" y="576" text-anchor="middle" class="s">duration × rate [LeadGER]</text>
+    <text x="990" y="594" text-anchor="middle" class="s">per-service verified prices [Proposed]</text>
+    <rect x="450" y="520" width="300" height="86" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="600" y="552" text-anchor="middle" class="t">Cost confirmation popup</text>
+    <text x="600" y="576" text-anchor="middle" class="s">duration · rate · estimated total</text>
+    <text x="600" y="594" text-anchor="middle" class="s">Cancel | Confirm &amp; Start</text>
+    <rect x="60" y="520" width="300" height="86" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="210" y="552" text-anchor="middle" class="t">User approves</text>
+    <text x="210" y="576" text-anchor="middle" class="s">POST transcription/jobs</text>
+    <text x="210" y="594" text-anchor="middle" class="s">duplicate guard · QUEUED job row</text>
+    <rect x="60" y="640" width="300" height="76" rx="10" fill="#fff" stroke="#64748B"/>
+    <text x="210" y="670" text-anchor="middle" class="t">"Transcription Processing"</text>
+    <text x="210" y="694" text-anchor="middle" class="s">popup polls status · can be closed</text>
+    <path class="ln" d="M360,444 H448"/><path class="ln" d="M750,444 H838"/>
+    <path class="ln" d="M990,484 V518"/><path class="ln" d="M840,563 H752"/><path class="ln" d="M450,563 H362"/>
+    <path class="ln" d="M210,606 V638"/>
+    <path class="er" d="M600,606 V700 H760"/><text x="610" y="640" class="et">Cancel → nothing sent, nothing charged</text>
+    <text x="610" y="660" class="et">no key / no file / no permission → error</text>
+    <text x="770" y="704" class="et">stop</text>
+  </g>
+
+  <!-- worker -->
+  <g>
+    <rect x="60" y="818" width="300" height="80" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="210" y="850" text-anchor="middle" class="t">TranscribeRecordingJob</text>
+    <text x="210" y="874" text-anchor="middle" class="s">max 2 parallel per company · PROCESSING</text>
+    <rect x="450" y="818" width="300" height="80" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="600" y="850" text-anchor="middle" class="t">Find audio · measure duration</text>
+    <text x="600" y="874" text-anchor="middle" class="s">ffmpeg probe (or WAV header)</text>
+    <rect x="840" y="818" width="300" height="80" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="990" y="850" text-anchor="middle" class="t">Start English batch job</text>
+    <text x="990" y="874" text-anchor="middle" class="s">saaras:v3 · translate · diarization</text>
+    <rect x="840" y="930" width="300" height="96" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="990" y="962" text-anchor="middle" class="t">Original-language transcript</text>
+    <text x="990" y="986" text-anchor="middle" class="s">REST /speech-to-text · translit</text>
+    <text x="990" y="1006" text-anchor="middle" class="s">&gt; 29 s: split by ffmpeg, or batch API</text>
+    <rect x="450" y="930" width="300" height="96" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="600" y="962" text-anchor="middle" class="t">Collect English conversation</text>
+    <text x="600" y="986" text-anchor="middle" class="s">poll job status · download JSON</text>
+    <text x="600" y="1006" text-anchor="middle" class="s">speakers S1, S2 with timestamps</text>
+    <rect x="60" y="930" width="300" height="96" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="210" y="962" text-anchor="middle" class="t">AI analysis</text>
+    <text x="210" y="986" text-anchor="middle" class="s">/v1/chat/completions · sarvam-105b</text>
+    <text x="210" y="1006" text-anchor="middle" class="s">fallback: keyword rules</text>
+    <rect x="60" y="1060" width="300" height="96" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="210" y="1092" text-anchor="middle" class="t">Save transcript + analysis</text>
+    <text x="210" y="1116" text-anchor="middle" class="s">call_ai_analyses · completed</text>
+    <text x="210" y="1136" text-anchor="middle" class="s">job COMPLETED · actual cost</text>
+    <rect x="450" y="1060" width="300" height="96" rx="10" fill="#fff" stroke="#16A34A"/>
+    <text x="600" y="1092" text-anchor="middle" class="t">Usage &amp; cost tracking</text>
+    <text x="600" y="1116" text-anchor="middle" class="s">transcription_jobs.actual_cost</text>
+    <text x="600" y="1136" text-anchor="middle" class="s">ai_usage_logs</text>
+    <path class="ln" d="M360,858 H448"/><path class="ln" d="M750,858 H838"/><path class="ln" d="M990,898 V928"/>
+    <path class="ln" d="M840,978 H752"/><path class="ln" d="M450,978 H362"/><path class="ln" d="M210,1026 V1058"/><path class="ln" d="M360,1108 H448"/>
+    <path class="ln" d="M210,716 V816"/>
+
+    <!-- error box -->
+    <rect x="840" y="1060" width="300" height="330" rx="10" fill="#FEF2F2" stroke="#FCA5A5"/>
+    <text x="990" y="1088" text-anchor="middle" class="t" fill="#991B1B">Error paths</text>
+    <text x="860" y="1118" class="et">401/403 → key marked invalid,</text>
+    <text x="860" y="1136" class="et">  jobs WAITING_KEY until a new key</text>
+    <text x="860" y="1162" class="et">0 / 429 / 5xx → retried (3 tries,</text>
+    <text x="860" y="1180" class="et">  back-off 60 s, 300 s)</text>
+    <text x="860" y="1206" class="et">other error → FAILED, cost 0,</text>
+    <text x="860" y="1224" class="et">  Retry button in the popup</text>
+    <text x="860" y="1250" class="et">worker died → no heartbeat 5 min</text>
+    <text x="860" y="1268" class="et">  → shown as failed, runs again</text>
+    <text x="860" y="1294" class="et">no free slot → waits (release 20 s)</text>
+    <text x="860" y="1320" class="et">analysis model fails → keyword</text>
+    <text x="860" y="1338" class="et">  rules (transcript still saved)</text>
+    <text x="860" y="1364" class="et">no speech → placeholder transcript</text>
+    <path class="er" d="M750,1000 H800 V1100 H838"/>
+  </g>
+
+  <!-- result -->
+  <g>
+    <rect x="60" y="1476" width="320" height="110" rx="10" fill="#fff" stroke="#EA580C"/>
+    <text x="220" y="1508" text-anchor="middle" class="t">Popup shows the result</text>
+    <text x="220" y="1532" text-anchor="middle" class="s">English conversation (S1/S2 → Agent/Customer)</text>
+    <text x="220" y="1552" text-anchor="middle" class="s">original transcript · audio player</text>
+    <text x="220" y="1572" text-anchor="middle" class="s">copy · download .txt</text>
+    <rect x="440" y="1476" width="320" height="110" rx="10" fill="#fff" stroke="#EA580C"/>
+    <text x="600" y="1508" text-anchor="middle" class="t">AI analysis</text>
+    <text x="600" y="1532" text-anchor="middle" class="s">summary · sentiment · interest level</text>
+    <text x="600" y="1552" text-anchor="middle" class="s">key points + evidence · intent</text>
+    <text x="600" y="1572" text-anchor="middle" class="s">next action · suggested disposition</text>
+    <rect x="820" y="1476" width="320" height="110" rx="10" fill="#fff" stroke="#EA580C"/>
+    <text x="980" y="1508" text-anchor="middle" class="t">Opened again later</text>
+    <text x="980" y="1532" text-anchor="middle" class="s">read from the database</text>
+    <text x="980" y="1552" text-anchor="middle" class="s">no new Sarvam request, no charge</text>
+    <text x="980" y="1572" text-anchor="middle" class="s">(re-run only when the user asks)</text>
+    <path class="ln" d="M210,1156 V1474"/><path class="ln" d="M380,1531 H438"/><path class="ln" d="M760,1531 H818"/>
+  </g>
+</svg>

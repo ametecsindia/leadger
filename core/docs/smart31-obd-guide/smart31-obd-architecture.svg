@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#CBD5E1;stroke-width:1.5}
+      .app{fill:#EFF6FF;stroke:#3B82F6;stroke-width:2}
+      .ext{fill:#F8FAFC;stroke:#94A3B8;stroke-width:1.5}
+      .t{font-size:17px;font-weight:700;fill:#0F172A}
+      .s{font-size:13px;fill:#475569}
+      .l{font-size:12.5px;fill:#334155}
+      .n{font-size:12px;font-weight:700;fill:#fff}
+      .line{stroke:#475569;stroke-width:1.6;fill:none;marker-end:url(#a)}
+      .dash{stroke:#475569;stroke-width:1.6;fill:none;stroke-dasharray:6 4;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect width="1200" height="800" fill="#fff"/>
+  <text x="600" y="32" text-anchor="middle" font-size="22" font-weight="700" fill="#0F172A">Smart31 &amp; OBD gateway – how a call flows</text>
+  <g transform="translate(0,44)">
+
+  <!-- people -->
+  <rect class="box" x="40" y="90" width="200" height="90" rx="12"/>
+  <text class="t" x="140" y="125" text-anchor="middle">Agent</text>
+  <text class="s" x="140" y="148" text-anchor="middle">dialer in the browser</text>
+  <text class="s" x="140" y="166" text-anchor="middle">+ phone (A party)</text>
+
+  <rect class="box" x="40" y="560" width="200" height="90" rx="12"/>
+  <text class="t" x="140" y="595" text-anchor="middle">Customer</text>
+  <text class="s" x="140" y="618" text-anchor="middle">B party – sees the VMN</text>
+
+  <!-- app -->
+  <rect class="app" x="380" y="190" width="440" height="330" rx="14"/>
+  <text class="t" x="600" y="222" text-anchor="middle">Your app (LeadGER)</text>
+  <text class="l" x="405" y="256">• VMN check: Add Voucher / Smart31 / 1600, team, channel, expiry</text>
+  <text class="l" x="405" y="280">• call row + unique ref_id</text>
+  <text class="l" x="405" y="304">• /dialer/call-status (polled every 2 s)</text>
+  <text class="l" x="405" y="328">• webhooks: /api/telephony/webhook, /inbound-call</text>
+  <text class="l" x="405" y="352">• outcome from the customer leg, talk time</text>
+  <text class="l" x="405" y="376">• recordings: download queue, fetch-pending sweep</text>
+  <text class="l" x="405" y="400">• inbound-calls:pull every minute</text>
+  <text class="l" x="405" y="424">• OBD campaigns + credits</text>
+  <rect x="405" y="446" width="390" height="54" rx="8" fill="#DBEAFE"/>
+  <text class="l" x="600" y="469" text-anchor="middle">tables: obd_did, smart31_vmn_numbers, call_logs /</text>
+  <text class="l" x="600" y="488" text-anchor="middle">dialer_logs, recordings, inbound_calls, obd_campaigns</text>
+
+  <!-- external -->
+  <rect class="ext" x="940" y="70" width="230" height="110" rx="12"/>
+  <text class="t" x="1055" y="102" text-anchor="middle">Call gateway</text>
+  <text class="s" x="1055" y="124" text-anchor="middle">sip.telozar.com</text>
+  <text class="s" x="1055" y="146" text-anchor="middle">c2c_call · webrtc_call</text>
+  <text class="s" x="1055" y="164" text-anchor="middle">rings A, then B</text>
+
+  <rect class="ext" x="940" y="240" width="230" height="130" rx="12"/>
+  <text class="t" x="1055" y="272" text-anchor="middle">OBD / CDR gateway</text>
+  <text class="s" x="1055" y="294" text-anchor="middle">obd.ametecsindia.com</text>
+  <text class="s" x="1055" y="316" text-anchor="middle">click2call_data · incoming_data</text>
+  <text class="s" x="1055" y="334" text-anchor="middle">obd_data · webhooks</text>
+  <text class="s" x="1055" y="352" text-anchor="middle">header Secret-Key</text>
+
+  <rect class="ext" x="940" y="430" width="230" height="110" rx="12"/>
+  <text class="t" x="1055" y="462" text-anchor="middle">License server</text>
+  <text class="s" x="1055" y="484" text-anchor="middle">lc.ametecsindia.com</text>
+  <text class="s" x="1055" y="506" text-anchor="middle">DID vouchers · Smart31 list</text>
+  <text class="s" x="1055" y="524" text-anchor="middle">OBD credit vouchers</text>
+
+  <rect class="ext" x="940" y="600" width="230" height="100" rx="12"/>
+  <text class="t" x="1055" y="632" text-anchor="middle">Vi dynamic OBD</text>
+  <text class="s" x="1055" y="654" text-anchor="middle">cts.myvi.in:8443</text>
+  <text class="s" x="1055" y="676" text-anchor="middle">campaign · voice · numbers</text>
+
+  <!-- arrows -->
+  <path class="line" d="M240,135 C310,135 330,230 380,240"/>
+  <circle cx="300" cy="150" r="13" fill="#2563EB"/><text class="n" x="300" y="154" text-anchor="middle">1</text>
+  <text class="l" x="60" y="205">pick VMN, Call</text>
+
+  <path class="line" d="M820,240 C880,200 890,140 940,128"/>
+  <circle cx="880" cy="180" r="13" fill="#2563EB"/><text class="n" x="880" y="184" text-anchor="middle">2</text>
+  <text class="l" x="812" y="180" text-anchor="end">start call + ref_id</text>
+
+  <path class="line" d="M940,110 C640,60 360,70 242,118"/>
+  <path class="line" d="M960,72 C700,22 140,30 22,112 L22,590 Q22,605 38,605"/>
+  <circle cx="620" cy="72" r="13" fill="#2563EB"/><text class="n" x="620" y="76" text-anchor="middle">3</text>
+  <text class="l" x="300" y="68">rings the agent (A), then the customer (B)</text>
+
+  <path class="line" d="M820,320 L940,305"/>
+  <path class="line" d="M940,335 L820,350"/>
+  <circle cx="880" cy="285" r="13" fill="#2563EB"/><text class="n" x="880" y="289" text-anchor="middle">4</text>
+  <text class="l" x="828" y="372">record / webhook</text>
+
+  <path class="dash" d="M820,470 L940,480"/>
+  <text class="l" x="830" y="460">vouchers, Smart31</text>
+  <path class="dash" d="M820,505 C880,560 900,620 940,640"/>
+  <text class="l" x="868" y="600" text-anchor="end">OBD campaigns</text>
+
+  <circle cx="470" cy="552" r="13" fill="#2563EB"/><text class="n" x="470" y="556" text-anchor="middle">5</text>
+  <text class="l" x="492" y="557">result on screen, recording downloaded</text>
+
+  <text class="s" x="40" y="735">1 agent starts the call · 2 app checks the VMN and asks the gateway · 3 gateway rings A then B · 4 app reads the call record and receives the webhook · 5 outcome, talk time and recording saved</text>
+  </g>
+</svg>

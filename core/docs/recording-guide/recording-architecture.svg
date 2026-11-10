@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1180" viewBox="0 0 1200 1180" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E9F6E"/></marker>
+    <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D97706"/></marker>
+    <style>
+      .t{font-size:16px;font-weight:600;fill:#0F172A}
+      .s{font-size:12.5px;fill:#475569}
+      .h{font-size:13px;font-weight:700;fill:#64748B;letter-spacing:1.2px}
+      .n{font-size:12px;font-weight:700;fill:#fff}
+      .box{fill:#fff;stroke:#CBD5E1;stroke-width:1.4;rx:10}
+      .app{fill:#EFF6FF;stroke:#93C5FD}
+      .prov{fill:#FFF7ED;stroke:#FDBA74}
+      .job{fill:#ECFDF5;stroke:#6EE7B7}
+      .ui{fill:#F5F3FF;stroke:#C4B5FD}
+      .ln{stroke:#475569;stroke-width:1.6;fill:none;marker-end:url(#a)}
+      .lg{stroke:#0E9F6E;stroke-width:1.6;fill:none;marker-end:url(#g);stroke-dasharray:6 4}
+      .lo{stroke:#D97706;stroke-width:1.6;fill:none;marker-end:url(#o)}
+    </style>
+  </defs>
+  <rect width="1200" height="1180" fill="#FFFFFF"/>
+  <text x="40" y="44" font-size="24" font-weight="700" fill="#0F3D91">Call recording – end-to-end flow</text>
+  <text x="40" y="70" class="s">Blue = your app · Orange = telephony provider · Green = background (queue / scheduler) · Purple = pages users open</text>
+
+  <!-- 1. place the call -->
+  <text x="40" y="112" class="h">1 · PLACE A RECORDED CALL</text>
+  <rect x="40" y="124" width="300" height="86" class="box app"/>
+  <text x="58" y="152" class="t">Agent clicks Call</text>
+  <text x="58" y="174" class="s">Click2Call / WebRTC / manual dial</text>
+  <text x="58" y="193" class="s">call row saved first: reference_id</text>
+  <rect x="450" y="124" width="300" height="86" class="box app"/>
+  <text x="468" y="152" class="t">Call request to provider</text>
+  <text x="468" y="174" class="s">ref_id = reference_id</text>
+  <text x="468" y="193" class="s">record=1 · recording=1 · record_call=1</text>
+  <rect x="860" y="124" width="300" height="86" class="box prov"/>
+  <text x="878" y="152" class="t">Provider connects &amp; records</text>
+  <text x="878" y="174" class="s">returns its call_id → provider_call_id</text>
+  <text x="878" y="193" class="s">audio stays on the provider's server</text>
+  <path d="M340 167 H446" class="ln"/>
+  <path d="M750 167 H856" class="ln"/>
+
+  <!-- 2. call ends -->
+  <text x="40" y="262" class="h">2 · CALL ENDS – THE RECORDING ARRIVES (TWO WAYS, SAME CODE)</text>
+  <rect x="860" y="276" width="300" height="96" class="box prov"/>
+  <text x="878" y="304" class="t">A. Webhook (push)</text>
+  <text x="878" y="326" class="s">POST /api/recording/callback</text>
+  <text x="878" y="345" class="s">ref_id, call_id, status, duration,</text>
+  <text x="878" y="362" class="s">recording_url · header Secret-Key</text>
+  <rect x="860" y="392" width="300" height="96" class="box job"/>
+  <text x="878" y="420" class="t">B. Pull (scheduler, every min)</text>
+  <text x="878" y="442" class="s">calls with no recording yet:</text>
+  <text x="878" y="461" class="s">GET provider /call_data/{ref_id}</text>
+  <text x="878" y="478" class="s">answer → same payload as A</text>
+  <path d="M1010 210 V272" class="lo"/>
+
+  <rect x="450" y="300" width="300" height="164" class="box app"/>
+  <text x="468" y="328" class="t">processWebhook(payload)</text>
+  <text x="468" y="352" class="s">1. secret must match (else 401)</text>
+  <text x="468" y="372" class="s">2. not connected / 0 s talk → update</text>
+  <text x="482" y="389" class="s">call outcome, no recording</text>
+  <text x="468" y="409" class="s">3. match call: ref_id → call_id</text>
+  <text x="482" y="426" class="s">(→ phone, last 24 h: optional)</text>
+  <text x="468" y="446" class="s">4. upsert ONE recording per call</text>
+  <path d="M856 324 H754" class="ln"/>
+  <path d="M856 440 H754" class="lg"/>
+
+  <rect x="40" y="300" width="300" height="164" class="box app"/>
+  <text x="58" y="328" class="t">recordings row</text>
+  <text x="58" y="352" class="s">provider_call_id (unique)</text>
+  <text x="58" y="372" class="s">call_log_id / dialer_log_id (unique)</text>
+  <text x="58" y="392" class="s">recording_url, duration, raw_payload</text>
+  <text x="58" y="412" class="s">URL known → pending + dispatch job</text>
+  <text x="58" y="432" class="s">no URL yet → awaiting</text>
+  <text x="58" y="452" class="s">call row ← recording_id (back-link)</text>
+  <path d="M450 382 H344" class="ln"/>
+
+  <!-- 3. download -->
+  <text x="40" y="520" class="h">3 · DOWNLOAD IN THE BACKGROUND</text>
+  <rect x="40" y="534" width="300" height="118" class="box job"/>
+  <text x="58" y="562" class="t">DownloadRecordingJob</text>
+  <text x="58" y="584" class="s">queue · 5 tries · backoff 5-120 s</text>
+  <text x="58" y="604" class="s">status downloading, attempts + 1</text>
+  <text x="58" y="624" class="s">stream URL → file (timeout 60 s)</text>
+  <text x="58" y="642" class="s">empty / HTTP ≥ 400 → retry</text>
+  <path d="M326 464 V530" class="lg"/>
+  <rect x="450" y="534" width="300" height="118" class="box app"/>
+  <text x="468" y="562" class="t">storage/app/recordings/</text>
+  <text x="468" y="584" class="s">{Ymd_His}_{id}_{phone}.{ext}</text>
+  <text x="468" y="604" class="s">file_path, file_size, completed</text>
+  <text x="468" y="624" class="s">duration from ffmpeg if 0</text>
+  <text x="468" y="642" class="s">→ optional: auto-transcribe</text>
+  <path d="M340 593 H446" class="ln"/>
+  <rect x="860" y="534" width="300" height="118" class="box job"/>
+  <text x="878" y="562" class="t">Sweeps (scheduler)</text>
+  <text x="878" y="584" class="s">stuck pending/downloading 3 min → re-queue</text>
+  <text x="878" y="604" class="s">failed, &lt; 20 tries, 24 h → retry (5 min)</text>
+  <text x="878" y="624" class="s">awaiting &gt; 60 min → unavailable</text>
+  <text x="878" y="642" class="s">calls of last 60 min with no recording → B</text>
+  <path d="M1010 652 V674 H160 V656" class="lg"/>
+
+  <!-- 4. use -->
+  <text x="40" y="704" class="h">4 · USERS LISTEN, DOWNLOAD, DELETE</text>
+  <rect x="40" y="718" width="300" height="118" class="box ui"/>
+  <text x="58" y="746" class="t">Recordings page</text>
+  <text x="58" y="768" class="s">server-side table, filters, search</text>
+  <text x="58" y="788" class="s">role scope: own / team / all</text>
+  <text x="58" y="808" class="s">badge: Waiting · Ready · Not available</text>
+  <text x="58" y="826" class="s">bulk ZIP (≤ 500) · delete (admin)</text>
+  <rect x="450" y="718" width="300" height="118" class="box app"/>
+  <text x="468" y="746" class="t">GET …/recordings/{id}/play</text>
+  <text x="468" y="768" class="s">auth + same scope as the list</text>
+  <text x="468" y="788" class="s">local file → inline, Range (seek)</text>
+  <text x="468" y="808" class="s">?download → attachment</text>
+  <text x="468" y="826" class="s">no file yet → stream from provider</text>
+  <path d="M340 777 H446" class="ln"/>
+  <path d="M600 652 V714" class="ln"/>
+  <rect x="860" y="718" width="300" height="118" class="box ui"/>
+  <text x="878" y="746" class="t">Player popup</text>
+  <text x="878" y="768" class="s">new Audio(url) preload=metadata</text>
+  <text x="878" y="788" class="s">plays while it loads</text>
+  <text x="878" y="808" class="s">on error: HEAD → explain</text>
+  <text x="878" y="826" class="s">401 · 403 · 404 · format</text>
+  <path d="M754 777 H856" class="ln"/>
+
+  <!-- states -->
+  <text x="40" y="878" class="h">recordings.download_status</text>
+  <g font-size="12.5" font-weight="700">
+    <rect x="40" y="904" width="120" height="34" rx="17" fill="#64748B"/><text x="100" y="926" text-anchor="middle" class="n">awaiting</text>
+    <rect x="200" y="904" width="120" height="34" rx="17" fill="#2563EB"/><text x="260" y="926" text-anchor="middle" class="n">pending</text>
+    <rect x="360" y="904" width="140" height="34" rx="17" fill="#7C3AED"/><text x="430" y="926" text-anchor="middle" class="n">downloading</text>
+    <rect x="540" y="904" width="130" height="34" rx="17" fill="#059669"/><text x="605" y="926" text-anchor="middle" class="n">completed</text>
+    <rect x="540" y="962" width="130" height="34" rx="17" fill="#DC2626"/><text x="605" y="984" text-anchor="middle" class="n">failed</text>
+    <rect x="40" y="962" width="120" height="34" rx="17" fill="#94A3B8"/><text x="100" y="984" text-anchor="middle" class="n">unavailable</text>
+    <rect x="740" y="904" width="120" height="34" rx="17" fill="#0F172A"/><text x="800" y="926" text-anchor="middle" class="n">deleted</text>
+  </g>
+  <path d="M160 921 H196" class="ln"/><text x="164" y="904" class="s">URL</text>
+  <path d="M320 921 H356" class="ln"/>
+  <path d="M500 921 H536" class="ln"/>
+  <path d="M430 938 Q430 979 536 979" class="ln"/>
+  <path d="M605 962 Q560 948 300 940" class="lg"/><text x="330" y="960" class="s">retry sweep</text>
+  <path d="M100 938 V958" class="ln"/><text x="110" y="953" class="s">60 min</text>
+  <path d="M670 921 H736" class="ln"/><text x="680" y="900" class="s">admin</text>
+  <text x="900" y="918" class="s">deleted is final: callbacks,</text>
+  <text x="900" y="936" class="s">sweeps and playback ignore it</text>
+
+  <text x="40" y="1050" class="s" font-weight="600">Rules that make it reliable</text>
+  <text x="40" y="1074" class="s">• Save the call row (with reference_id) BEFORE asking the provider to dial – the callback can arrive in under a second.</text>
+  <text x="40" y="1096" class="s">• Webhook and pull share one function and are idempotent: unique provider_call_id and one recording per call.</text>
+  <text x="40" y="1118" class="s">• Answer the webhook fast; download in a queue job. Restart queue workers after every deploy.</text>
+  <text x="40" y="1140" class="s">• Call the provider over https: an http → https 301 turns a POST into a GET and drops the Secret-Key header (401).</text>
+</svg>

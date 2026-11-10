@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LeadGER Click2Call – Complete API &amp; Integration Guide</title>
+<style>
+  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1F2937; line-height: 1.35; }
+  h1 { font-size: 22pt; color: #0F3D91; margin: 18pt 0 6pt; border-bottom: 1.5pt solid #0F3D91; padding-bottom: 3pt; page-break-before: always; }
+  h1.first { page-break-before: auto; }
+  h2 { font-size: 15pt; color: #1464F4; margin: 14pt 0 4pt; }
+  h3 { font-size: 12.5pt; color: #0F172A; margin: 10pt 0 3pt; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 6pt 18pt; }
+  li { margin-bottom: 2pt; }
+  code { font-family: Consolas, 'Courier New', monospace; font-size: 9.5pt; color: #9A1B4B; }
+  pre { font-family: Consolas, 'Courier New', monospace; font-size: 8.5pt; background: #F3F5F9; border: 0.75pt solid #D5DBE5; padding: 6pt; margin: 4pt 0 8pt; white-space: pre-wrap; color: #111827; }
+  table.grid { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; }
+  table.grid th { background: #E8EEF9; color: #0F172A; font-weight: bold; text-align: left; border: 0.75pt solid #B9C4D6; padding: 3pt 5pt; font-size: 9.5pt; }
+  table.grid td { border: 0.75pt solid #CBD3E1; padding: 3pt 5pt; vertical-align: top; font-size: 9.5pt; }
+  table.note { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; }
+  table.note td { padding: 5pt 8pt; font-size: 10pt; border-left: 3pt solid #1464F4; background: #EEF4FF; }
+  table.warn td { border-left: 3pt solid #D97706; background: #FFF7E6; }
+  table.risk td { border-left: 3pt solid #DC2626; background: #FDECEC; }
+  table.ok td { border-left: 3pt solid #16A34A; background: #ECFDF3; }
+  .tag { font-weight: bold; }
+  .cover-title { font-size: 28pt; color: #0F3D91; font-weight: bold; margin-top: 120pt; }
+  .cover-sub { font-size: 14pt; color: #475569; margin-top: 6pt; }
+  .small { font-size: 9pt; color: #64748B; }
+</style>
+</head>
+<body>
+
+<p class="cover-title">LeadGER Click2Call</p>
+<p class="cover-sub">Complete API &amp; Integration Guide</p>
+<p class="cover-sub">For developers adding the same Click2Call calling to another application</p>
+<p>&nbsp;</p>
+<table class="grid">
+  <tr><th style="width:30%">Based on</th><td>The working LeadGER code (Laravel 13, PHP 8.3), branch <code>main</code>, October 2026</td></tr>
+  <tr><th>Audience</th><td>Backend and frontend developers integrating Click2Call into their own project. No prior LeadGER knowledge assumed.</td></tr>
+  <tr><th>Secrets</th><td>All keys, secrets and phone numbers are replaced with placeholders such as <code>&lt;PROVIDER_SECRET_KEY&gt;</code> and <code>9XXXXXXXXX</code>. Get real values from your provider account – never from this document.</td></tr>
+  <tr><th>Labels used</th><td><span class="tag">Confirmed</span> = read in LeadGER's code (file and line given). <span class="tag">Provider-side</span> = depends on the calling provider and is not visible in the code. <span class="tag">Recommended</span> = suggested for your project; not how LeadGER does it today.</td></tr>
+</table>
+
+<p>[[TOC]]</p>
+
+<!-- ======================================================================= -->
+<h1>1. Introduction</h1>
+
+<p><b>Click2Call</b> lets a user of a web application call a customer with one click, using the agent's own phone (mobile or desk phone) – not a softphone in the browser. When the agent clicks <i>Click2Call</i>:</p>
+<ol>
+  <li>The application asks the calling provider to start a call.</li>
+  <li>The provider rings the <b>agent's phone</b> first (the <i>A party</i>).</li>
+  <li>When the agent answers, the provider dials the <b>customer</b> (the <i>B party</i>) and bridges the two calls.</li>
+  <li>The customer sees the company's virtual number (<b>VMN</b>, the <i>DID</i>) as the caller ID, not the agent's private number.</li>
+  <li>After the call, the provider reports the result (answered, busy, no answer...) and a <b>recording</b> URL; the application stores both.</li>
+</ol>
+
+<p>This guide documents exactly how LeadGER implements this, then shows how to build the same thing in another Laravel (or any web) project.</p>
+
+<table class="note"><tr><td><b>Scope.</b> This guide covers Click2Call only. LeadGER also has WebRTC (browser) calling; it is mentioned only where it shares code with Click2Call (the call-matching lookup and the recordings table).</td></tr></table>
+
+<h2>1.1 Terms</h2>
+<table class="grid">
+  <tr><th style="width:24%">Term</th><th>Meaning</th></tr>
+  <tr><td>A party / A leg</td><td>The agent's phone. Rung first. In LeadGER: <code>users.click_agent_number</code>, else <code>users.mobile</code>.</td></tr>
+  <tr><td>B party / B leg</td><td>The customer's phone. Dialled after the agent answers.</td></tr>
+  <tr><td>VMN / DID</td><td>Virtual mobile number rented from the provider; shown to the customer as caller ID. Sent as <code>did</code>.</td></tr>
+  <tr><td>ref_id</td><td>Unique call id generated by LeadGER and sent to the provider; every later event and status lookup uses it.</td></tr>
+  <tr><td>CDR</td><td>Call detail record: the provider's final data for a call (dial statuses, times, recording URL).</td></tr>
+  <tr><td>Webhook / callback</td><td>An HTTP request the provider sends to LeadGER with call results.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>2. Architecture Overview</h1>
+
+<pre>
+ +-----------------------------+        +----------------------------------+
+ |  Browser (agent)            |        |  Laravel app (LeadGER)           |
+ |  calling-workspace page     |        |                                  |
+ |  #mobile  #vmn_select       | POST   |  DialerController::click2call    |
+ |  [Click2Call] -------------------->  |   - validate, permissions        |
+ |                             |        |   - calling hours / daily limit  |
+ |  polls every 2 s  <---------------+  |   - VMN check, per-agent lock    |
+ |  GET /dialer/call-status    |    |  |   - insert call row (initiated)  |
+ +-----------------------------+    |  |   - Helper::click2call ---------------+
+                                    |  |                                  |    |
+                                    |  |  DialerController::callStatus    |    |
+                                    +--|   - reads stored CDR, or         |    |
+                                       |   - live GET click2call_data ---------+---+
+                                       |                                  |    |   |
+  Provider webhook ------------------> |  TelephonyWebhookController      |    |   |
+  POST /api/telephony/webhook          |   -> CallRecordingService        |    |   |
+                                       |      ::processWebhook            |    |   |
+                                       |  Queue: DownloadRecordingJob     |    |   |
+                                       |  Scheduler: recordings:fetch-    |    |   |
+                                       |             pending (every min) ------+---+
+                                       +----------------------------------+    |   |
+                                                                               v   v
+                          +-----------------------------------+   +-----------------------------+
+                          | Telozar  (call initiation)        |   | Ametecs OBD gateway         |
+                          | POST https://sip.telozar.com/api/ |   | GET /admin/click2call_data/ |
+                          |      webrtc/c2c_call              |   |     {ref_id}/{vmn}          |
+                          | rings A, then B, bridges, records |   | (CDR + recording URL)       |
+                          +-----------------------------------+   +-----------------------------+
+</pre>
+
+<h2>2.1 Components (Confirmed)</h2>
+<table class="grid">
+  <tr><th style="width:32%">Component</th><th>Role</th></tr>
+  <tr><td><code>resources/views/dashboard/calling-workspace.blade.php</code></td><td>Calling page (Manual Dial and Campaign Queue tabs): number input, VMN selector, Click2Call button, live status, outcome form.</td></tr>
+  <tr><td><code>app/Http/Controllers/Dashboard/DialerController.php</code></td><td><code>click2call</code> (start a call), <code>callStatus</code> (polling), <code>updateCallState</code>, <code>savelog</code> (outcome), <code>getChannelConfig</code>, Smart31/1600 VMN lists.</td></tr>
+  <tr><td><code>app/Helpers/Helper.php</code></td><td><code>click2call()</code> / <code>click2callProviderRequest()</code>: the provider request; <code>callStateFromDialStatus()</code>, <code>callOutcome()</code>: status mapping.</td></tr>
+  <tr><td><code>app/Services/VmnService.php</code></td><td>Which VMNs a user may use; server-side VMN check before dialling.</td></tr>
+  <tr><td><code>app/Services/CallingRestrictionService.php</code></td><td>Calling hours, per-number daily attempt limit, per-agent lock.</td></tr>
+  <tr><td><code>app/Http/Controllers/APIs/TelephonyWebhookController.php</code> + <code>app/Services/CallRecordingService.php</code></td><td>Provider webhook; call result mapping (<code>providerCallFacts</code>); recording rows.</td></tr>
+  <tr><td><code>app/Jobs/DownloadRecordingJob.php</code>, <code>app/Console/Commands/FetchPendingRecordingsCommand.php</code></td><td>Download recordings; find recordings that never arrived.</td></tr>
+  <tr><td>Tables</td><td><code>dialer_logs</code> (manual calls), <code>call_logs</code> (campaign calls), <code>recordings</code>, <code>obd_did</code> (VMNs), <code>smart31_vmn_numbers</code>, <code>click2call_logs</code>, <code>daily_phone_call_attempts</code>, <code>blocked_call_logs</code>, <code>users</code>, <code>settings</code>.</td></tr>
+</table>
+
+<h2>2.2 Two external services</h2>
+<p>LeadGER uses <b>two different external services</b> for one call. This is easy to miss:</p>
+<table class="grid">
+  <tr><th style="width:22%">Service</th><th style="width:38%">Used for</th><th>Auth</th></tr>
+  <tr><td>Telozar</td><td>Starting the call (<code>c2c_call</code>)</td><td><b>None in the request.</b> Provider-side (most likely by server IP / account). Confirmed: <code>Helper.php:1488-1494</code> sends only <code>Content-Type</code>.</td></tr>
+  <tr><td>Ametecs OBD gateway</td><td>Reading the call record and recording URL (<code>click2call_data</code>)</td><td>HTTP header <code>Secret-Key: &lt;PROVIDER_SECRET_KEY&gt;</code></td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>3. Required Technologies</h1>
+<table class="grid">
+  <tr><th style="width:30%">Item</th><th>LeadGER (Confirmed)</th><th>Needed in your project</th></tr>
+  <tr><td>Backend</td><td>Laravel 13, PHP 8.3, cURL extension</td><td>Any backend that can make HTTPS requests and receive webhooks. Examples below are Laravel.</td></tr>
+  <tr><td>Database</td><td>MySQL 8 (table prefix <code>leadger_</code>)</td><td>Any SQL database.</td></tr>
+  <tr><td>Queue</td><td><code>QUEUE_CONNECTION=database</code> + a running <code>queue:work</code> worker</td><td>Required if you download recordings in the background (recommended).</td></tr>
+  <tr><td>Scheduler</td><td><code>php artisan schedule:run</code> every minute (cron)</td><td>Required for the "find missing recordings" sweep.</td></tr>
+  <tr><td>Cache</td><td><code>CACHE_DRIVER=file</code> (used for the per-agent lock)</td><td>Any cache that supports atomic locks (file, database, Redis).</td></tr>
+  <tr><td>Frontend</td><td>Blade + jQuery (<code>$.ajax</code>), toastr for toasts</td><td>Any frontend; plain <code>fetch</code> works.</td></tr>
+  <tr><td>Optional</td><td>ffmpeg (<code>FFMPEG_PATH</code>) to measure recording length</td><td>Optional.</td></tr>
+  <tr><td>Provider account</td><td>Telozar (initiation) + Ametecs gateway (status/recordings), at least one VMN</td><td>Your own account, VMN(s), the webhook URL registered with the provider, and the secret.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>4. Click2Call Workflow</h1>
+
+<h2>4.1 Step by step</h2>
+<table class="grid">
+  <tr><th style="width:4%">#</th><th style="width:40%">Step</th><th style="width:14%">Where</th><th>What happens (file:line)</th></tr>
+  <tr><td>1</td><td>User logs in</td><td>Confirmed</td><td>All dashboard routes need <code>auth</code> + <code>web</code> (session, CSRF). Telecallers are logged out outside <code>settings.caller_login</code>–<code>caller_logout</code> (<code>TelecallerMiddleware</code>).</td></tr>
+  <tr><td>2</td><td>Opens the calling page</td><td>Confirmed</td><td><code>GET /admin/dialer?tab=manual</code> (<code>DialerController::dialer</code>) or the campaign lead page <code>GET /admin/campaigns/{c}/lead/{l}/calling</code>. The page loads the user's VMNs (<code>VmnService::listFor</code>) and channel config.</td></tr>
+  <tr><td>3</td><td>Enters / selects the customer number</td><td>Confirmed</td><td><code>#mobile</code>; buttons enable only with &ge; 10 digits, calling hours open and a usable VMN (<code>lgCallBtnsState</code>, blade <code>:4769</code>).</td></tr>
+  <tr><td>4</td><td>Selects a Click2Call VMN</td><td>Confirmed</td><td><code>#vmn_select</code>, remembered in <code>localStorage['leadger_c2c_vmn']</code>; optional Smart31 / "Enabled 1600" pools.</td></tr>
+  <tr><td>5</td><td>Clicks Click2Call</td><td>Confirmed</td><td><code>startClick2Call()</code> (blade <code>:5124</code>) posts to <code>POST /admin/dialer/click2call</code>.</td></tr>
+  <tr><td>6</td><td>Backend checks and records the call</td><td>Confirmed</td><td><code>DialerController::click2call</code> (<code>:236-456</code>): validation, permission, calling hours, per-agent lock, VMN check; inserts a <code>dialer_logs</code> or <code>call_logs</code> row with <code>call_state='initiated'</code> and a unique <code>reference_id</code>.</td></tr>
+  <tr><td>7</td><td>Backend asks the provider to start the call</td><td>Confirmed</td><td><code>Helper::click2call</code> &rarr; <code>POST https://sip.telozar.com/api/webrtc/c2c_call</code>.</td></tr>
+  <tr><td>8</td><td>Provider rings the agent, then the customer</td><td>Provider-side</td><td>Not visible in code.</td></tr>
+  <tr><td>9</td><td>Browser shows "Calling..." and polls</td><td>Confirmed</td><td>Every 2 s <code>GET /admin/dialer/call-status</code>; the server reads the stored CDR or fetches <code>click2call_data</code> live.</td></tr>
+  <tr><td>10</td><td>Call connects or fails</td><td>Confirmed (mapping) / Provider (events)</td><td>Decided from <code>B_DIAL_STATUS</code> / <code>A_DIAL_STATUS</code> / <code>B_PARTY_CONNECTED_TIME</code> (<code>providerCallFacts</code>). <b>An HTTP 200 from the start request is never treated as connected.</b></td></tr>
+  <tr><td>11</td><td>Call ends</td><td>Provider-side + Confirmed</td><td>Provider posts the final record to the webhook, or the poll / scheduler fetches it.</td></tr>
+  <tr><td>12</td><td>Call details and recording saved</td><td>Confirmed</td><td><code>processWebhook</code> updates the call row (<code>call_state</code>, talk time, <code>click_response</code>, <code>click_recording_url</code>) and creates a <code>recordings</code> row; <code>DownloadRecordingJob</code> stores the file.</td></tr>
+  <tr><td>13</td><td>Agent saves the call outcome</td><td>Confirmed</td><td><code>POST /admin/dialer/savelog</code> (manual) or <code>/admin/campaigns/{c}/lead/{l}/save-disposition</code> (campaign).</td></tr>
+</table>
+
+<h2>4.2 Sequence diagram</h2>
+<pre>
+ Agent browser        LeadGER (Laravel)              Telozar           Ametecs gateway      Agent phone   Customer
+      |                      |                          |                     |                  |            |
+      |-- POST click2call -->|                          |                     |                  |            |
+      |                      |-- checks, insert row --  |                     |                  |            |
+      |                      |   (call_state=initiated) |                     |                  |            |
+      |                      |-- POST c2c_call -------->|                     |                  |            |
+      |                      |<-- 200 {...} ------------|                     |                  |            |
+      |<-- {success, id,     |                          |--- ring A ---------------------------->|            |
+      |     uuid}            |                          |<-- A answers ---------------------------|            |
+      | "Calling..."         |                          |--- dial B ------------------------------------------>|
+      |-- GET call-status -->|-- GET click2call_data ---------------------->|                  |            |
+      |<-- calling/ringing --|<-- CDR (in progress) ------------------------|                  |            |
+      |  ... every 2 s ...   |                          |<========== bridged call, recorded ===============>|
+      |<-- connected --------|                          |                     |                  |            |
+      |                      |<== POST /api/telephony/webhook (final CDR + recording URL) ======|            |
+      |                      |-- update row, create recordings row, queue download             |            |
+      |-- GET call-status -->|                          |                     |                  |            |
+      |<-- ended (talk time) |                          |                     |                  |            |
+      |-- POST savelog ----->|  (status, sub-status, follow-up, feedback)                      |            |
+</pre>
+
+<h2>4.3 Manual Dial vs Campaign calls</h2>
+<p>Both tabs use the <b>same</b> route <code>POST /admin/dialer/click2call</code>. The request field <code>source</code> decides where the call is stored (<code>DialerController.php:328-353</code>):</p>
+<ul>
+  <li><code>source=manual</code> &rarr; row in <code>dialer_logs</code> (<code>call_source='manual'</code>). If the number exactly matches a lead's <code>phonenumber</code>/<code>phonenumber_2</code>, the lead is linked.</li>
+  <li><code>source=campaign</code> (with <code>lead_id</code>, <code>campaign_id</code>) &rarr; row in <code>call_logs</code> (<code>call_source='campaign'</code>).</li>
+</ul>
+
+<!-- ======================================================================= -->
+<h1>5. API Documentation</h1>
+
+<table class="note"><tr><td>LeadGER calls <b>two provider APIs</b> and exposes <b>one webhook</b> plus its own internal browser APIs. Sample payloads below use only field names the code actually reads or sends. Values are placeholders. Where the provider's full response format is not visible in code, this is stated.</td></tr></table>
+
+<h2>5.1 Provider API: start a call (Telozar <code>c2c_call</code>)</h2>
+<table class="grid">
+  <tr><th style="width:22%">API name</th><td>Click2Call initiate</td></tr>
+  <tr><th>Purpose</th><td>Ask the provider to ring the agent (A) and then the customer (B), from the VMN, with recording on.</td></tr>
+  <tr><th>HTTP method</th><td><code>POST</code></td></tr>
+  <tr><th>Endpoint</th><td><code>https://sip.telozar.com/api/webrtc/c2c_call</code> (hard-coded, <code>app/Helpers/Helper.php:1488</code>)</td></tr>
+  <tr><th>Authentication</th><td>None sent by LeadGER. <b>Provider-side</b> – confirm with your provider (IP allow-list or account binding is typical).</td></tr>
+  <tr><th>Headers</th><td><code>Content-Type: application/json</code></td></tr>
+  <tr><th>Timeouts / TLS</th><td>No cURL timeout is set; TLS verification is <b>disabled</b> (<code>CURLOPT_SSL_VERIFYPEER=0</code>). See Security for the recommended values.</td></tr>
+</table>
+<p><b>Request parameters</b> (built in <code>DialerController.php:417-425</code>):</p>
+<table class="grid">
+  <tr><th style="width:18%">Field</th><th style="width:12%">Type</th><th>Value LeadGER sends</th></tr>
+  <tr><td><code>did</code></td><td>string</td><td>The VMN: digits only, a 12-digit number starting with <code>91</code> is cut to 10 digits.</td></tr>
+  <tr><td><code>a_party_no</code></td><td>string</td><td>Agent's number: <code>users.click_agent_number</code>, else <code>users.mobile</code>; digits only, <code>91</code> prefix removed.</td></tr>
+  <tr><td><code>b_party_no</code></td><td>string</td><td>Customer's number, same normalisation.</td></tr>
+  <tr><td><code>ref_id</code></td><td>string</td><td>LeadGER's unique call id: <code>{uuid}_d_{crm_id}_{user_id}_1</code> (see 9.4).</td></tr>
+  <tr><td><code>record</code>, <code>recording</code>, <code>record_call</code></td><td>int</td><td>Always <code>1</code> (all three are sent to be safe with the gateway).</td></tr>
+</table>
+<p><b>Sample request</b></p>
+<pre>POST https://sip.telozar.com/api/webrtc/c2c_call
+Content-Type: application/json
+
+{
+  "did": "80XXXXXXXX",
+  "a_party_no": "9XXXXXXXXX",
+  "b_party_no": "9XXXXXXXXX",
+  "ref_id": "3f6c1e2a-0b7d-4c1e-9a77-2f1d5e0c9b11_d_&lt;CRM_ID&gt;_21_1",
+  "record": 1,
+  "recording": 1,
+  "record_call": 1
+}</pre>
+<p><b>Sample responses</b> – the full format is <b>provider-side</b>. What LeadGER reads (<code>Helper.php:1501-1574</code>):</p>
+<ul>
+  <li>The body must be valid JSON. If it contains a key <code>error</code> or <code>errors</code>, the call failed.</li>
+  <li>Otherwise it is accepted, and the provider's call id is taken from <code>call_id</code>, <code>callId</code>, <code>uuid</code> or <code>response.call_id</code> (falls back to the <code>ref_id</code>).</li>
+  <li>The HTTP status code is read but <b>not</b> used to decide success (Recommended: also require 2xx).</li>
+</ul>
+<pre>// accepted (illustrative – only the keys LeadGER reads are shown)
+{ "call_id": "&lt;PROVIDER_CALL_ID&gt;" }
+
+// rejected
+{ "error": "&lt;provider message&gt;" }</pre>
+<p><b>Error handling</b> (what the user sees):</p>
+<table class="grid">
+  <tr><th style="width:38%">Situation</th><th>Message returned to the browser (HTTP 400)</th></tr>
+  <tr><td>Network / cURL error</td><td><code>Click2Call gateway connection failed: &lt;cURL error&gt;</code></td></tr>
+  <tr><td>Body is not JSON</td><td><code>Invalid JSON response from initiate-call</code></td></tr>
+  <tr><td>Body has <code>error</code>/<code>errors</code></td><td><code>Error indicated in response</code></td></tr>
+</table>
+<table class="ok"><tr><td><b>Important:</b> an accepted start request only means the provider <i>queued</i> the call. LeadGER keeps the row at <code>call_state='initiated'</code> and the browser shows "Calling...". Whether anybody answered is known only from the call record (5.2 / 5.3).</td></tr></table>
+
+<h2>5.2 Provider API: call record and recording (Ametecs <code>click2call_data</code>)</h2>
+<table class="grid">
+  <tr><th style="width:22%">API name</th><td>Click2Call call data (CDR)</td></tr>
+  <tr><th>Purpose</th><td>Read the status of a call (during and after) and its recording URL.</td></tr>
+  <tr><th>HTTP method</th><td><code>GET</code></td></tr>
+  <tr><th>Endpoint</th><td><code>https://obd.ametecsindia.com/admin/click2call_data/{ref_id}/{vmn}</code></td></tr>
+  <tr><th>Authentication</th><td>Shared secret in a header.</td></tr>
+  <tr><th>Headers</th><td><code>Secret-Key: &lt;PROVIDER_SECRET_KEY&gt;</code></td></tr>
+  <tr><th>Callers (Confirmed)</th><td><code>DialerController::fetchGatewayCallRecord</code> (<code>:1164</code>, 3 s timeout, every poll while the call is live); <code>FetchPendingRecordingsCommand</code> (<code>:163-210</code>, 5 s timeout, scheduler)</td></tr>
+</table>
+<p><b>Sample request</b></p>
+<pre>GET https://obd.ametecsindia.com/admin/click2call_data/&lt;REF_ID&gt;/80XXXXXXXX
+Secret-Key: &lt;PROVIDER_SECRET_KEY&gt;</pre>
+<p><b>Response fields LeadGER reads</b> (full format is provider-side):</p>
+<pre>{
+  "status": 200,                       // must be 200 (checked by the scheduler command)
+  "data": {
+    "recording_url": "https://...",    // recording, when ready
+    "duration": 75,                    // used by the scheduler command
+    "response": {                      // the CDR - an object or a JSON string
+      "REF_ID": "&lt;REF_ID&gt;",
+      "A_DIAL_STATUS": "ANSWERED",       // agent leg
+      "B_DIAL_STATUS": "ANSWERED",       // customer leg (BUSY / NOANSWER / FAILED ...)
+      "B_PARTY_CONNECTED_TIME": "21102026103015",   // format dmYHis
+      "B_PARTY_END_TIME": "21102026103130",
+      "A_PARTY_END_TIME": "21102026103131",
+      "EVENT_TYPE": "...end...",
+      "DISCONNECTED_BY": "...",
+      "talk_duration": 75, "billsec": 75, "duration": 82,
+      "RecordVoice": "https://...",
+      "DURATION": 82, "BILLSEC": 75
+    }
+  }
+}</pre>
+<p>How these fields become a call result is explained in section 9.</p>
+
+<h2>5.3 Webhook: provider &rarr; LeadGER</h2>
+<table class="grid">
+  <tr><th style="width:22%">API name</th><td>Telephony webhook / recording callback</td></tr>
+  <tr><th>Purpose</th><td>The provider sends the call result and recording URL when the call ends.</td></tr>
+  <tr><th>HTTP method</th><td><code>POST</code> (also accepts <code>GET</code>)</td></tr>
+  <tr><th>Endpoints</th><td>All four go to the same code (<code>routes/api.php:41-44</code>): <code>/api/telephony/webhook</code>, <code>/api/recording/callback</code>, <code>/api/dialer/callback</code>, <code>/api/vi_pingback_api</code> (POST only). Which one is registered with the provider is <b>provider-side</b>; LeadGER does not send a callback URL in the start request.</td></tr>
+  <tr><th>Authentication</th><td>Optional shared secret in <code>Secret-Key</code>, <code>X-Webhook-Secret</code> or <code>X-Api-Key</code> header, or <code>?secret=</code>. Compared with <code>env('TELEPHONY_WEBHOOK_SECRET')</code>. <b>LeadGER only rejects a wrong secret; a request without a secret is accepted</b> (<code>CallRecordingService.php:35-47</code>). Recommended: require it (see Security).</td></tr>
+  <tr><th>Other</th><td>Excluded from CSRF (<code>VerifyCsrfToken.php</code>); rate limit <code>throttle:api</code> (60/min per IP). Body: form fields or JSON.</td></tr>
+</table>
+<p><b>Fields read</b> (several spellings are accepted, <code>CallRecordingService.php:50-58</code>):</p>
+<table class="grid">
+  <tr><th style="width:30%">Meaning</th><th>Accepted keys</th></tr>
+  <tr><td>LeadGER's call id</td><td><code>ref_id</code>, <code>REF_ID</code>, <code>reference_id</code>, <code>refId</code></td></tr>
+  <tr><td>Provider call id</td><td><code>call_id</code>, <code>CALL_ID</code>, <code>CallId</code>, <code>uniqueid</code>, <code>unique_id</code>, <code>uuid</code></td></tr>
+  <tr><td>Customer number</td><td><code>b_party_no</code>, <code>B_PARTY_NO</code>, <code>customer_number</code>, <code>phone_number</code>, <code>mobile</code></td></tr>
+  <tr><td>Recording URL</td><td><code>recording_url</code>, <code>RecordVoice</code>, <code>record_voice</code>, <code>record_url</code>, <code>audio_url</code>, <code>file_url</code></td></tr>
+  <tr><td>Leg statuses</td><td><code>A_DIAL_STATUS</code>, <code>B_DIAL_STATUS</code> (or lower case); overall: <code>status</code>, <code>call_status</code>, <code>dial_status</code>, <code>disposition</code></td></tr>
+  <tr><td>Times / talk time</td><td>as in 5.2 (<code>B_PARTY_CONNECTED_TIME</code>, <code>B_PARTY_END_TIME</code>, <code>talk_duration</code>, <code>billsec</code>, <code>duration</code>)</td></tr>
+</table>
+<p><b>Sample request</b> (illustrative)</p>
+<pre>POST https://your-app.example.com/api/telephony/webhook
+Content-Type: application/json
+Secret-Key: &lt;WEBHOOK_SECRET&gt;
+
+{
+  "ref_id": "&lt;REF_ID&gt;",
+  "call_id": "&lt;PROVIDER_CALL_ID&gt;",
+  "b_party_no": "9XXXXXXXXX",
+  "A_DIAL_STATUS": "ANSWERED",
+  "B_DIAL_STATUS": "ANSWERED",
+  "B_PARTY_CONNECTED_TIME": "21102026103015",
+  "B_PARTY_END_TIME": "21102026103130",
+  "recording_url": "https://provider.example/rec/&lt;file&gt;.wav"
+}</pre>
+<p><b>Responses</b> (JSON, HTTP status = <code>code</code>):</p>
+<table class="grid">
+  <tr><th style="width:12%">HTTP</th><th>Body</th></tr>
+  <tr><td>200</td><td><code>{"status":"success", ...}</code> – call updated, recording row created / download queued</td></tr>
+  <tr><td>200</td><td><code>{"status":"ignored","message":"Call was busy, not answered, or failed. Recording not created."}</code> – state saved, no recording</td></tr>
+  <tr><td>200</td><td><code>{"status":"ignored","message":"Zero talk time. Recording not created."}</code></td></tr>
+  <tr><td>401</td><td><code>{"status":"error","message":"Unauthorized: Invalid webhook secret"}</code></td></tr>
+  <tr><td>500</td><td>Unexpected error (logged with prefix <code>[TelephonyWebhook]</code>)</td></tr>
+</table>
+
+<h2>5.4 LeadGER's own browser APIs</h2>
+<p>All under the <code>/admin</code> prefix (<code>BACKEND_PATH</code>), session-authenticated, CSRF-protected (send <code>_token</code>).</p>
+<table class="grid">
+  <tr><th style="width:9%">Method</th><th style="width:28%">URI (route name)</th><th>Purpose, request and response</th></tr>
+  <tr><td>POST</td><td><code>/admin/dialer/click2call</code> (<code>dialerClick2call</code>)</td><td><b>Start a call.</b> Body: <code>mobile</code> (required, digits, 10-20), <code>vmn</code> (required), <code>source</code> (<code>manual</code>|<code>campaign</code>), <code>lead_id</code>, <code>campaign_id</code>, <code>smart31_enabled</code>, <code>vmn1600_enabled</code>. Success: <code>{"success":true,"message":"Call initiated successfully","id":..,"uuid":"..","call_log_id":..,"dialer_log_id":..,"is_campaign":false,"provider_call_id":"..","reference_id":".."}</code>. Errors: see 13.2.</td></tr>
+  <tr><td>GET</td><td><code>/admin/dialer/call-status</code> (<code>dialerCallStatus</code>)</td><td><b>Live status.</b> Query: <code>id</code>, <code>uuid</code>, <code>is_campaign</code>. Response <code>status</code>: <code>calling</code>, <code>ringing</code>, <code>connected</code> (+ <code>connected_for</code>), <code>ended</code>, <code>busy</code>, <code>no_answer</code>, <code>failed</code>; final answers carry <code>final</code>, <code>duration</code>, <code>duration_formatted</code>, <code>disconnected_by</code>.</td></tr>
+  <tr><td>POST</td><td><code>/admin/dialer/update-call-state</code></td><td>Browser-reported state (<code>id</code>, <code>uuid</code>, <code>state</code>, <code>duration</code>, ...). Used to mark <code>initiated</code>.</td></tr>
+  <tr><td>POST</td><td><code>/admin/dialer/savelog</code> (<code>dialerSaveLog</code>)</td><td>Save the outcome of a manual call: <code>mobile</code>, <code>status_id</code>, <code>substatus_id</code>, <code>lead_id</code>, <code>follow_up_on</code>, <code>comments</code>, <code>feedback</code>, <code>call_type</code>, <code>id</code>, <code>is_campaign</code>.</td></tr>
+  <tr><td>GET</td><td><code>/admin/dialer/channel-config</code></td><td>The user's channels (Click2Call / WebRTC enabled) for the UI.</td></tr>
+  <tr><td>GET</td><td><code>/admin/dialer/get-smart31-vmns</code>, <code>/get-1600-vmns</code></td><td>Optional VMN pools.</td></tr>
+  <tr><td>GET</td><td><code>/admin/reports/download-recordings/{id}/{incoming}</code></td><td>Play (<code>?play=1</code>, HTTP Range) or download a recording; role-checked.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>6. Backend Integration</h1>
+
+<h2>6.1 What LeadGER does in <code>click2call</code> (Confirmed, in order)</h2>
+<ol>
+  <li><b>Validate</b> <code>mobile</code> (required, digits only, 10–20) and <code>vmn</code> (required). Errors &rarr; 422.</li>
+  <li><b>Authenticated user</b>, else 401.</li>
+  <li><b>Permission</b>: <code>$user-&gt;canClick2Call()</code> = <code>users.c2c_channel == 1</code> and an agent number exists. Else 403 "Click2Call is not enabled for your account…".</li>
+  <li><b>Calling rules</b>: <code>CallingRestrictionService::canPlaceOutboundCall()</code> – calling hours (<code>settings.calling_hours_from/to</code>, default 09:30–19:30, company timezone) and per-number daily limit (<code>settings.daily_call_limit</code>, default 100). Blocked attempts are written to <code>blocked_call_logs</code>.</li>
+  <li><b>Per-agent lock</b>: <code>Cache::lock("click2call_agent_lock_{userId}", 6)</code>; a second click within the lock &rarr; 429 "Another call is currently being processed…".</li>
+  <li><b>License</b>: <code>crm_id</code> from the encrypted <code>settings.full_response</code> (LeadGER-specific).</li>
+  <li><b>VMN check</b>: <code>VmnService::check($user, $vmn, 'click2call', $pool)</code> – the number must be configured for Click2Call, belong to one of the user's teams (Admin: any), and not be expired.</li>
+  <li><b>Normalise numbers</b>: digits only; 12 digits starting with <code>91</code> &rarr; last 10.</li>
+  <li><b>Create the call row</b> (<code>dialer_logs</code> or <code>call_logs</code>) with <code>call_state='initiated'</code>, <code>vmn_used</code>, <code>reference_id</code>, <code>start_time</code>; plus an audit row in <code>click2call_logs</code>.</li>
+  <li><b>Call the provider</b> (<code>Helper::click2call</code>). This re-checks the calling rules with <code>reserve=true</code>, which atomically counts the attempt in <code>daily_phone_call_attempts</code>; if the provider fails, the attempt is given back.</li>
+  <li><b>Respond</b>: provider failure &rarr; 400 with the message; success &rarr; JSON with <code>id</code>, <code>uuid</code>, <code>reference_id</code>, <code>provider_call_id</code>.</li>
+</ol>
+
+<h2>6.2 Environment and configuration</h2>
+<p>LeadGER hard-codes the provider URLs and the gateway secret (see Security). In your project, put them in configuration:</p>
+<pre># .env  (Recommended names for your project)
+C2C_START_URL=https://sip.telozar.com/api/webrtc/c2c_call
+C2C_CDR_URL=https://obd.ametecsindia.com/admin/click2call_data
+C2C_GATEWAY_SECRET=&lt;PROVIDER_SECRET_KEY&gt;
+C2C_WEBHOOK_SECRET=&lt;WEBHOOK_SECRET&gt;
+C2C_WEBHOOK_IPS=            # optional comma-separated allow-list
+C2C_TIMEOUT=15
+C2C_CALLING_HOURS_FROM=09:30
+C2C_CALLING_HOURS_TO=19:30
+C2C_DAILY_LIMIT_PER_NUMBER=100
+QUEUE_CONNECTION=database
+RECORDINGS_DISK=local</pre>
+<pre>// config/click2call.php
+return [
+    'start_url'      =&gt; env('C2C_START_URL'),
+    'cdr_url'        =&gt; env('C2C_CDR_URL'),
+    'gateway_secret' =&gt; env('C2C_GATEWAY_SECRET'),
+    'webhook_secret' =&gt; env('C2C_WEBHOOK_SECRET'),
+    'webhook_ips'    =&gt; array_filter(array_map('trim', explode(',', (string)env('C2C_WEBHOOK_IPS', '')))),
+    'timeout'        =&gt; (int)env('C2C_TIMEOUT', 15),
+    'hours_from'     =&gt; env('C2C_CALLING_HOURS_FROM', '09:30'),
+    'hours_to'       =&gt; env('C2C_CALLING_HOURS_TO', '19:30'),
+    'daily_limit'    =&gt; (int)env('C2C_DAILY_LIMIT_PER_NUMBER', 100),
+];</pre>
+
+<h2>6.3 Routes</h2>
+<pre>// routes/web.php  (behind your login)
+Route::middleware(['auth'])-&gt;prefix('calls')-&gt;group(function () {
+    Route::post('/click2call', [Click2CallController::class, 'start'])-&gt;middleware('throttle:10,1')-&gt;name('c2c.start');
+    Route::get('/{call}/status', [Click2CallController::class, 'status'])-&gt;name('c2c.status');
+    Route::post('/{call}/outcome', [Click2CallController::class, 'outcome'])-&gt;name('c2c.outcome');
+    Route::get('/{call}/recording', [Click2CallController::class, 'recording'])-&gt;name('c2c.recording');
+});
+
+// routes/api.php  (no session; protected by the secret)
+Route::post('/click2call/webhook', [Click2CallWebhookController::class, 'handle'])
+    -&gt;middleware('throttle:120,1')-&gt;name('c2c.webhook');</pre>
+
+<h2>6.4 Service class: talking to the provider</h2>
+<p>Same request as LeadGER (<code>did</code>, <code>a_party_no</code>, <code>b_party_no</code>, <code>ref_id</code>, record flags), with a timeout, TLS verification and a 2xx check added:</p>
+<pre>&lt;?php
+namespace App\Services\Click2Call;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class Click2CallGateway
+{
+    /** Same normalisation as LeadGER: digits only, 91XXXXXXXXXX -&gt; XXXXXXXXXX. */
+    public static function normalize(?string $number): string
+    {
+        $n = preg_replace('/\D/', '', (string)$number);
+        return (strlen($n) === 12 &amp;&amp; str_starts_with($n, '91')) ? substr($n, 2) : $n;
+    }
+
+    /** @return array{ok: bool, provider_call_id: ?string, message: string, raw: mixed} */
+    public function start(string $vmn, string $agent, string $customer, string $refId): array
+    {
+        try {
+            $res = Http::timeout(config('click2call.timeout'))-&gt;acceptJson()
+                -&gt;post(config('click2call.start_url'), [
+                    'did' =&gt; self::normalize($vmn),
+                    'a_party_no' =&gt; self::normalize($agent),
+                    'b_party_no' =&gt; self::normalize($customer),
+                    'ref_id' =&gt; $refId,
+                    'record' =&gt; 1, 'recording' =&gt; 1, 'record_call' =&gt; 1,
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Click2Call] gateway unreachable', ['ref_id' =&gt; $refId, 'error' =&gt; $e-&gt;getMessage()]);
+            return ['ok' =&gt; false, 'provider_call_id' =&gt; null, 'message' =&gt; 'The calling service could not be reached. Please try again.', 'raw' =&gt; null];
+        }
+        $body = $res-&gt;json();
+        // LeadGER: not JSON, or an "error"/"errors" key = failure. Added here: the HTTP status must be 2xx.
+        if (!$res-&gt;successful() || !is_array($body) || isset($body['error']) || isset($body['errors'])) {
+            Log::warning('[Click2Call] start refused', ['ref_id' =&gt; $refId, 'http' =&gt; $res-&gt;status()]);
+            return ['ok' =&gt; false, 'provider_call_id' =&gt; null, 'message' =&gt; 'The call could not be started.', 'raw' =&gt; $body];
+        }
+        $id = $body['call_id'] ?? $body['callId'] ?? $body['uuid'] ?? ($body['response']['call_id'] ?? $refId);
+        return ['ok' =&gt; true, 'provider_call_id' =&gt; (string)$id, 'message' =&gt; 'Call initiated', 'raw' =&gt; $body];
+    }
+
+    /** CDR + recording for a call (LeadGER: click2call_data/{ref_id}/{vmn}, header Secret-Key). */
+    public function callData(string $refId, string $vmn): ?array
+    {
+        try {
+            $res = Http::timeout(5)-&gt;withHeaders(['Secret-Key' =&gt; config('click2call.gateway_secret')])
+                -&gt;get(rtrim(config('click2call.cdr_url'), '/') . '/' . rawurlencode($refId) . '/' . rawurlencode(self::normalize($vmn)));
+        } catch (\Throwable $e) {
+            return null;
+        }
+        $json = $res-&gt;json();
+        if (!is_array($json) || (int)($json['status'] ?? 0) !== 200 || !isset($json['data'])) {
+            return null;
+        }
+        $cdr = $json['data']['response'] ?? [];
+        if (is_string($cdr)) {
+            $cdr = json_decode($cdr, true) ?: [];
+        }
+        return ['cdr' =&gt; (array)$cdr, 'recording_url' =&gt; $json['data']['recording_url'] ?? ($cdr['RecordVoice'] ?? null)];
+    }
+}</pre>
+
+<h2>6.5 Controller: starting a call</h2>
+<pre>&lt;?php
+namespace App\Http\Controllers;
+
+use App\Models\C2cCall;
+use App\Services\Click2Call\CallingRules;
+use App\Services\Click2Call\Click2CallGateway;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+
+class Click2CallController extends Controller
+{
+    public function start(Request $request, Click2CallGateway $gateway, CallingRules $rules)
+    {
+        $data = $request-&gt;validate([
+            'mobile'  =&gt; ['required', 'regex:/^\+?[0-9 ]{10,20}$/'],
+            'vmn'     =&gt; ['required', 'string', 'max:20'],
+            'lead_id' =&gt; ['nullable', 'integer'],
+        ]);
+        $user = $request-&gt;user();
+
+        // 1. the user may use Click2Call and has an agent number (LeadGER: c2c_channel + click_agent_number/mobile)
+        abort_unless($user-&gt;c2c_enabled &amp;&amp; $user-&gt;agent_number, 403, 'Click2Call is not enabled for your account.');
+
+        // 2. the VMN belongs to this user / team, is enabled for Click2Call and not expired (LeadGER: VmnService::check)
+        $vmn = Click2CallGateway::normalize($data['vmn']);
+        abort_unless($user-&gt;allowedVmns()-&gt;contains($vmn), 422, 'This VMN is not available to you.');
+
+        // 3. calling hours + daily attempts per customer number (LeadGER: CallingRestrictionService)
+        $customer = Click2CallGateway::normalize($data['mobile']);
+        if ($why = $rules-&gt;blockReason($customer)) {
+            return response()-&gt;json(['success' =&gt; false, 'message' =&gt; $why], 422);
+        }
+
+        // 4. one call at a time per agent (LeadGER: Cache::lock(..., 6))
+        $lock = Cache::lock('c2c-agent-' . $user-&gt;id, 10);
+        if (!$lock-&gt;get()) {
+            return response()-&gt;json(['success' =&gt; false, 'message' =&gt; 'Another call is being started. Please wait a moment.'], 429);
+        }
+        try {
+            // 5. the call row first, with a unique ref_id the provider echoes back
+            $call = C2cCall::create([
+                'user_id' =&gt; $user-&gt;id, 'lead_id' =&gt; $data['lead_id'] ?? null,
+                'customer_number' =&gt; $customer, 'agent_number' =&gt; Click2CallGateway::normalize($user-&gt;agent_number),
+                'vmn' =&gt; $vmn, 'ref_id' =&gt; (string)Str::uuid(), 'status' =&gt; 'initiated', 'started_at' =&gt; now(),
+            ]);
+            $rules-&gt;countAttempt($customer);
+
+            // 6. ask the provider
+            $res = $gateway-&gt;start($vmn, $call-&gt;agent_number, $customer, $call-&gt;ref_id);
+            if (!$res['ok']) {
+                $call-&gt;update(['status' =&gt; 'failed', 'ended_at' =&gt; now(), 'error' =&gt; $res['message']]);
+                $rules-&gt;releaseAttempt($customer);
+                return response()-&gt;json(['success' =&gt; false, 'message' =&gt; $res['message']], 400);
+            }
+            $call-&gt;update(['provider_call_id' =&gt; $res['provider_call_id']]);
+
+            // "initiated" only: whether anybody answered is known from the call record later
+            return response()-&gt;json(['success' =&gt; true, 'message' =&gt; 'Call initiated successfully', 'id' =&gt; $call-&gt;id]);
+        } finally {
+            $lock-&gt;release();
+        }
+    }
+}</pre>
+
+<h2>6.6 Call status: shared result handling</h2>
+<p>LeadGER uses one function for the webhook, the live poll and the scheduler (<code>processWebhook</code>), so all three produce the same result. Do the same:</p>
+<pre>&lt;?php
+namespace App\Services\Click2Call;
+
+use App\Jobs\DownloadC2cRecording;
+use App\Models\C2cCall;
+use Carbon\Carbon;
+
+class CallResult
+{
+    /** Same rules as LeadGER's Helper::callStateFromDialStatus. */
+    public static function state(?string $dialStatus): ?string
+    {
+        $s = preg_replace('/[^a-z]/', '', strtolower((string)$dialStatus));
+        if ($s === '') return null;
+        if (str_contains($s, 'busy')) return 'busy';
+        foreach (['noanswer', 'unanswer', 'notanswered', 'missed'] as $k) if (str_contains($s, $k)) return 'no-answer';
+        foreach (['fail', 'cancel', 'reject', 'congestion', 'chanunavail'] as $k) if (str_contains($s, $k)) return 'failed';
+        foreach (['answer', 'connect', 'completed', 'success'] as $k) if (str_contains($s, $k)) return 'completed';
+        return null;
+    }
+
+    /** Same rules as LeadGER's CallRecordingService::providerCallFacts. */
+    public static function facts(array $p): array
+    {
+        $a = self::state($p['A_DIAL_STATUS'] ?? $p['a_dial_status'] ?? null);
+        $b = self::state($p['B_DIAL_STATUS'] ?? $p['b_dial_status'] ?? null);
+        $t = fn ($k) =&gt; !empty($p[$k]) ? Carbon::createFromFormat('dmYHis', $p[$k]) : null;
+        $connected = $t('B_PARTY_CONNECTED_TIME');
+        $bEnd = $t('B_PARTY_END_TIME');
+
+        $outcome = $b ?? (($a &amp;&amp; $a !== 'completed') ? 'failed' : ($connected ? 'completed' : null));
+        $talk = ($connected &amp;&amp; $bEnd) ? $bEnd-&gt;diffInSeconds($connected, true)
+            : (int)($p['talk_duration'] ?? $p['billsec'] ?? ($b ? 0 : ($p['duration'] ?? 0)));
+        if ($outcome !== 'completed') $talk = 0;
+
+        $event = strtolower((string)($p['EVENT_TYPE'] ?? ''));
+        $ended = str_contains($event, 'end') || str_contains($event, 'hangup') || $bEnd || !empty($p['A_PARTY_END_TIME'])
+            || ($outcome &amp;&amp; $outcome !== 'completed');
+
+        return ['outcome' =&gt; $outcome, 'talk' =&gt; (int)$talk, 'ended' =&gt; (bool)$ended,
+                'connected_at' =&gt; $connected, 'agent_answered' =&gt; $a === 'completed'];
+    }
+
+    /** Apply a provider record to the call (idempotent: the same record twice changes nothing). */
+    public function apply(C2cCall $call, array $cdr, ?string $recordingUrl): void
+    {
+        $f = self::facts($cdr);
+        $call-&gt;cdr = $cdr;
+        if ($f['connected_at']) $call-&gt;answered_at = $f['connected_at'];
+        if ($f['ended']) {
+            $call-&gt;status = $f['outcome'] ?? 'failed';
+            $call-&gt;ended_at = $call-&gt;ended_at ?? now();
+            $call-&gt;talk_seconds = $f['talk'];
+        } elseif ($f['agent_answered']) {
+            $call-&gt;status = $f['connected_at'] ? 'connected' : 'ringing';
+        }
+        if ($recordingUrl &amp;&amp; $f['outcome'] === 'completed' &amp;&amp; !$call-&gt;recording_url) {
+            $call-&gt;recording_url = $recordingUrl;
+            $call-&gt;recording_status = 'pending';
+            DownloadC2cRecording::dispatch($call-&gt;id);
+        }
+        $call-&gt;save();
+    }
+}</pre>
+
+<h2>6.7 Webhook controller</h2>
+<pre>&lt;?php
+namespace App\Http\Controllers;
+
+use App\Models\C2cCall;
+use App\Services\Click2Call\CallResult;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class Click2CallWebhookController extends Controller
+{
+    public function handle(Request $request, CallResult $result)
+    {
+        // Required secret (LeadGER only rejects a WRONG secret - do not copy that), optional IP allow-list
+        $allowed = config('click2call.webhook_ips');
+        if ($allowed &amp;&amp; !in_array($request-&gt;ip(), $allowed, true)) abort(403);
+        $given = (string)($request-&gt;header('Secret-Key') ?? $request-&gt;header('X-Webhook-Secret') ?? '');
+        if ($given === '' || !hash_equals((string)config('click2call.webhook_secret'), $given)) abort(401);
+
+        $p = $request-&gt;json()-&gt;all() ?: $request-&gt;all();
+        $ref = $p['ref_id'] ?? $p['REF_ID'] ?? $p['reference_id'] ?? null;
+        $providerId = $p['call_id'] ?? $p['CALL_ID'] ?? $p['uuid'] ?? null;
+
+        // Match by our ref_id, then by the provider id. Never "latest call to this number" (LeadGER's last resort).
+        $call = ($ref ? C2cCall::where('ref_id', $ref)-&gt;first() : null)
+            ?? ($providerId ? C2cCall::where('provider_call_id', $providerId)-&gt;first() : null);
+        if (!$call) {
+            Log::info('[Click2Call] webhook for an unknown call', ['ref_id' =&gt; $ref]);   // no phone numbers in logs
+            return response()-&gt;json(['status' =&gt; 'ignored'], 200);
+        }
+
+        $recording = $p['recording_url'] ?? $p['RecordVoice'] ?? $p['record_url'] ?? null;
+        $result-&gt;apply($call, $p, $recording);
+        return response()-&gt;json(['status' =&gt; 'success']);
+    }
+}</pre>
+
+<h2>6.8 Status endpoint for the browser (polling)</h2>
+<pre>// in Click2CallController
+public function status(Request $request, C2cCall $call, Click2CallGateway $gateway, CallResult $result)
+{
+    abort_unless($call-&gt;user_id === $request-&gt;user()-&gt;id || $request-&gt;user()-&gt;isManager(), 403);   // ownership!
+
+    // While the call is live and no final record has arrived, ask the gateway (LeadGER does this on every poll)
+    if (in_array($call-&gt;status, ['initiated', 'ringing', 'connected'], true)) {
+        if ($data = $gateway-&gt;callData($call-&gt;ref_id, $call-&gt;vmn)) {
+            $result-&gt;apply($call, $data['cdr'], $data['recording_url']);
+        }
+    }
+    return response()-&gt;json([
+        'status' =&gt; $call-&gt;status,              // initiated | ringing | connected | completed | busy | no-answer | failed
+        'final' =&gt; in_array($call-&gt;status, ['completed', 'busy', 'no-answer', 'failed'], true),
+        'talk_seconds' =&gt; $call-&gt;talk_seconds,
+        'connected_for' =&gt; $call-&gt;answered_at ? now()-&gt;diffInSeconds($call-&gt;answered_at, true) : null,
+    ]);
+}</pre>
+
+<h2>6.9 Recording download job and sweep</h2>
+<pre>&lt;?php
+namespace App\Jobs;
+
+use App\Models\C2cCall;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+
+class DownloadC2cRecording implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable;
+
+    public $tries = 5;
+    public $backoff = [5, 15, 30, 60, 120];   // same as LeadGER's DownloadRecordingJob
+
+    public function __construct(public int $callId) {}
+
+    public function handle(): void
+    {
+        $call = C2cCall::find($this-&gt;callId);
+        if (!$call || !$call-&gt;recording_url || $call-&gt;recording_status === 'completed') return;
+
+        $res = Http::timeout(60)-&gt;connectTimeout(15)-&gt;get($call-&gt;recording_url);
+        if (!$res-&gt;successful() || $res-&gt;body() === '') {
+            throw new \RuntimeException('Recording not available yet (HTTP ' . $res-&gt;status() . ')');   // retried
+        }
+        $ext = pathinfo(parse_url($call-&gt;recording_url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION) ?: 'wav';
+        $path = 'recordings/' . $call-&gt;started_at-&gt;format('Ymd_His') . '_' . $call-&gt;id . '.' . strtolower($ext);
+        Storage::disk(config('filesystems.default'))-&gt;put($path, $res-&gt;body());   // a PRIVATE disk
+        $call-&gt;update(['recording_path' =&gt; $path, 'recording_status' =&gt; 'completed']);
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        C2cCall::whereKey($this-&gt;callId)-&gt;update(['recording_status' =&gt; 'failed']);
+    }
+}</pre>
+<p>Recordings sometimes arrive minutes after the call. LeadGER's scheduler (<code>app/Console/Kernel.php</code>) runs a sweep that asks the gateway again for calls still waiting:</p>
+<pre>// app/Console/Kernel.php  (LeadGER, Confirmed)
+$schedule-&gt;command('recordings:fetch-pending')-&gt;everyMinute()-&gt;withoutOverlapping();
+$schedule-&gt;command('recordings:fetch-pending --sweep')-&gt;everyFiveMinutes()-&gt;withoutOverlapping();
+$schedule-&gt;command('recordings:fetch-pending --sweep --sweep-minutes=1440')-&gt;dailyAt('23:30')-&gt;withoutOverlapping();</pre>
+<p>Rules used by LeadGER's sweep: calls waiting for a recording in the last 24 h are asked again; after <b>60 minutes</b> without a recording they are marked <code>unavailable</code>; downloads stuck for more than 3 minutes are re-queued; failed downloads are retried (up to 20 attempts, at least 10 minutes apart).</p>
+
+<h2>6.10 LeadGER-specific dependencies to replace</h2>
+<table class="grid">
+  <tr><th style="width:34%">LeadGER dependency</th><th>Replace with</th></tr>
+  <tr><td>License blob <code>settings.full_response</code> (AES-encrypted), <code>crm_id</code> inside every <code>ref_id</code></td><td>Your own config; a plain UUID is enough for <code>ref_id</code>.</td></tr>
+  <tr><td>Roles by name via <code>permissionsGroup</code> ('Admin', 'Manager', 'Telecaller', ...)</td><td>Your authorization (policies / gates).</td></tr>
+  <tr><td>Teams as comma-separated ids (<code>users.team_id</code>, <code>obd_did.team_id</code>)</td><td>A proper pivot table <code>vmn_team</code> / <code>team_user</code>.</td></tr>
+  <tr><td>VMN table <code>obd_did</code> with AES-encrypted expiry; Smart31 sync from the license server</td><td>A simple <code>vmns</code> table (number, enabled, expires_at, team).</td></tr>
+  <tr><td>Two call tables (<code>dialer_logs</code>, <code>call_logs</code>) with overlapping ids</td><td>One <code>calls</code> table with a <code>source</code> column.</td></tr>
+  <tr><td>Leads / campaigns / statuses for the outcome form</td><td>Your own CRM entities, or just a <code>notes</code> field.</td></tr>
+  <tr><td>Multi-company databases (<code>tenants</code>, <code>App\Support\Tenancy</code>)</td><td>Not needed for a single company.</td></tr>
+  <tr><td>Optional Sarvam AI transcription after download</td><td>Optional.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>7. Frontend Integration</h1>
+
+<h2>7.1 What the LeadGER page does (Confirmed)</h2>
+<table class="grid">
+  <tr><th style="width:30%">Part</th><th>LeadGER implementation (<code>calling-workspace.blade.php</code>)</th></tr>
+  <tr><td>Number input</td><td><code>#mobile</code> (maxlength 20). On input: debounced 250 ms check; buttons enabled only with &ge; 10 digits, calling hours open and a usable VMN.</td></tr>
+  <tr><td>VMN selector</td><td><code>#vmn_select</code>; options carry <code>data-available</code> / <code>data-expiry</code>; default = the user's <code>c2c_default_number</code>; last choice in <code>localStorage['leadger_c2c_vmn']</code>.</td></tr>
+  <tr><td>Click2Call button</td><td><code>#btn-call-click2call</code> &rarr; <code>startClick2Call()</code>; campaign card: <code>#btn-camp-c2c</code> &rarr; <code>placeCampaignCall('click2call')</code>.</td></tr>
+  <tr><td>Request</td><td><code>$.ajax POST</code> with <code>{_token, mobile, vmn, lead_id, campaign_id, source, smart31_enabled, vmn1600_enabled}</code>.</td></tr>
+  <tr><td>Polling</td><td><code>GET call-status</code> every 2 s (skips while a request is in flight), stops on a final state or after 15 minutes ("Call result not available").</td></tr>
+  <tr><td>States</td><td><code>showLiveCallStatus()</code>: Calling... &rarr; Ringing &rarr; Connected (live timer) &rarr; Ended (talk time; hides after 10 s) / Failed (busy, no answer, failed; hides after 6 s). No hang-up button for Click2Call (the call is on the phones).</td></tr>
+  <tr><td>Errors</td><td>Server <code>message</code> shown in a "Call Blocked" toast and the live status box. The toast masks the number (first 5 digits + <code>xxxxx</code>).</td></tr>
+</table>
+
+<h2>7.2 Sample HTML</h2>
+<pre>&lt;meta name="csrf-token" content="{{ csrf_token() }}"&gt;
+
+&lt;div class="c2c-card"&gt;
+  &lt;label for="c2c-mobile"&gt;Customer number&lt;/label&gt;
+  &lt;input id="c2c-mobile" type="tel" inputmode="numeric" maxlength="20" placeholder="10-digit mobile number" autocomplete="off"&gt;
+
+  &lt;label for="c2c-vmn"&gt;Call from (VMN)&lt;/label&gt;
+  &lt;select id="c2c-vmn"&gt;
+    @foreach($vmns as $v)
+      &lt;option value="{{ $v-&gt;number }}" @disabled($v-&gt;expired)&gt;+91 {{ $v-&gt;number }}{{ $v-&gt;expired ? ' (expired)' : '' }}&lt;/option&gt;
+    @endforeach
+  &lt;/select&gt;
+
+  &lt;button id="c2c-call" type="button" disabled&gt;Click2Call&lt;/button&gt;
+
+  &lt;div id="c2c-status" class="c2c-status" hidden aria-live="polite"&gt;&lt;/div&gt;
+&lt;/div&gt;</pre>
+
+<h2>7.3 Sample JavaScript (no framework)</h2>
+<pre>(function () {
+  const $ = (id) =&gt; document.getElementById(id);
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  const input = $('c2c-mobile'), vmn = $('c2c-vmn'), btn = $('c2c-call'), box = $('c2c-status');
+  const STATES = {
+    initiated:  ['calling',   'Calling... answer your phone'],
+    ringing:    ['calling',   'Ringing the customer...'],
+    connected:  ['connected', 'Connected'],
+    completed:  ['ended',     'Call ended'],
+    busy:       ['failed',    'Customer line is busy'],
+    'no-answer':['failed',    'Customer did not answer'],
+    failed:     ['failed',    'Call failed'],
+  };
+  let pollTimer = null, busy = false, startedAt = 0;
+
+  // remember the last VMN (LeadGER: localStorage 'leadger_c2c_vmn')
+  try { const saved = localStorage.getItem('c2c_vmn'); if (saved) vmn.value = saved; } catch (e) {}
+  vmn.addEventListener('change', () =&gt; { try { localStorage.setItem('c2c_vmn', vmn.value); } catch (e) {} });
+
+  const digits = () =&gt; input.value.replace(/\D/g, '');
+  input.addEventListener('input', () =&gt; { btn.disabled = digits().length &lt; 10 || !vmn.value || busy; });
+
+  function show(kind, text) {            // kind: calling | connected | ended | failed | error
+    box.hidden = false;
+    box.className = 'c2c-status is-' + kind;
+    box.textContent = text;
+  }
+
+  btn.addEventListener('click', async () =&gt; {
+    if (busy) return;                     // no double clicks
+    busy = true; btn.disabled = true;
+    show('calling', 'Starting the call...');
+    try {
+      const res = await fetch('/calls/click2call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
+        body: JSON.stringify({ mobile: digits(), vmn: vmn.value })
+      });
+      const data = await res.json().catch(() =&gt; ({}));
+      if (!res.ok || !data.success) throw new Error(data.message || 'The call could not be started.');
+      show('calling', 'Calling... answer your phone');   // NOT "connected": nobody has answered yet
+      startedAt = Date.now();
+      poll(data.id);
+    } catch (e) {
+      show('error', e.message);
+      busy = false; btn.disabled = false;
+    }
+  });
+
+  function poll(id) {
+    let inFlight = false;
+    pollTimer = setInterval(async () =&gt; {
+      if (inFlight) return;
+      if (Date.now() - startedAt &gt; 15 * 60 * 1000) { stop('error', 'Call result not available'); return; }
+      inFlight = true;
+      try {
+        const r = await fetch('/calls/' + id + '/status', { headers: { 'Accept': 'application/json' } });
+        const s = await r.json();
+        const [kind, text] = STATES[s.status] || ['calling', 'Calling...'];
+        if (s.final) stop(kind, s.status === 'completed' ? text + ' - talk time ' + fmt(s.talk_seconds) : text);
+        else show(kind, s.status === 'connected' &amp;&amp; s.connected_for != null ? text + ' ' + fmt(s.connected_for) : text);
+      } catch (e) { /* temporary network problem: try again on the next tick */ }
+      inFlight = false;
+    }, 2000);   // LeadGER polls every 2 s
+  }
+
+  function stop(kind, text) {
+    clearInterval(pollTimer);
+    show(kind, text);
+    busy = false; btn.disabled = digits().length &lt; 10;
+  }
+  const fmt = (s) =&gt; String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+})();</pre>
+
+<h2>7.4 UI states</h2>
+<table class="grid">
+  <tr><th style="width:20%">State</th><th style="width:30%">When</th><th>Show</th></tr>
+  <tr><td>Loading</td><td>Request sent, waiting for the server</td><td>"Starting the call..."; button disabled.</td></tr>
+  <tr><td>Calling</td><td>Server accepted (<code>initiated</code>)</td><td>"Calling... answer your phone".</td></tr>
+  <tr><td>Ringing</td><td>Agent answered, customer being dialled</td><td>"Ringing the customer...".</td></tr>
+  <tr><td>Connected</td><td>Customer leg answered (<code>B_PARTY_CONNECTED_TIME</code>)</td><td>"Connected" + live timer.</td></tr>
+  <tr><td>Ended</td><td>Final record, outcome completed</td><td>"Call ended" + talk time; show the outcome form.</td></tr>
+  <tr><td>Failed</td><td>busy / no-answer / failed</td><td>The specific reason. "Your phone did not answer, the customer was not dialled" when the agent leg failed.</td></tr>
+  <tr><td>Error</td><td>Validation, permission, limits, provider down</td><td>The server's <code>message</code>.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>8. Database Structure</h1>
+
+<h2>8.1 LeadGER tables (Confirmed)</h2>
+<p>All tables have the prefix <code>leadger_</code> in MySQL.</p>
+<h3><code>dialer_logs</code> – manual calls</h3>
+<table class="grid">
+  <tr><th style="width:26%">Column</th><th style="width:18%">Type</th><th>Use</th></tr>
+  <tr><td>id</td><td>bigint</td><td>Call row id (returned to the browser as <code>id</code>)</td></tr>
+  <tr><td>created_by</td><td>bigint</td><td>Agent (user id)</td></tr>
+  <tr><td>phone_number</td><td>varchar(30)</td><td>Customer number</td></tr>
+  <tr><td>lead_id</td><td>bigint NULL</td><td>Linked lead (exact number match)</td></tr>
+  <tr><td>vmn_used</td><td>varchar(30)</td><td>VMN used</td></tr>
+  <tr><td>call_type / call_source</td><td>varchar</td><td><code>click2call</code> / <code>manual</code></td></tr>
+  <tr><td>call_state</td><td>varchar(50)</td><td><code>initiated</code>, <code>completed</code>, <code>busy</code>, <code>no-answer</code>, <code>failed</code></td></tr>
+  <tr><td>start_time / answer_time / end_time</td><td>timestamp</td><td>Call times</td></tr>
+  <tr><td>time_taken</td><td>int</td><td>Talk time in seconds</td></tr>
+  <tr><td>duration</td><td>varchar(50)</td><td>Talk time as "mm:ss"</td></tr>
+  <tr><td>reference_id</td><td>varchar(255) UNIQUE</td><td>The <code>ref_id</code> sent to the provider</td></tr>
+  <tr><td>uuid</td><td>varchar(200)</td><td><code>{uuid}_d_{crm_id}_{user_id}_</code></td></tr>
+  <tr><td>provider_call_id</td><td>varchar(191), index</td><td>Provider's call id</td></tr>
+  <tr><td>click_response</td><td>varchar(2000)</td><td>Raw provider record (JSON)</td></tr>
+  <tr><td>click_recording_url</td><td>varchar(2000)</td><td>Provider recording URL</td></tr>
+  <tr><td>recording_id / file_path</td><td>bigint / text</td><td>Link to <code>recordings</code>; local file</td></tr>
+  <tr><td>status_id, substatus_id, feedback, comments</td><td>–</td><td>Outcome saved by the agent</td></tr>
+</table>
+<h3><code>call_logs</code> – campaign calls</h3>
+<p>Same idea: <code>phonenumber</code> varchar(20), <code>lead_id</code>, <code>campaign_id</code>, <code>call_type</code>, <code>call_source='campaign'</code>, <code>call_state</code>, <code>start_time</code>, <code>end_time</code>, <code>duration</code> (int seconds), <code>reference_id</code> UNIQUE, <code>provider_call_id</code>, <code>click_response</code>, <code>click_recording_url</code>, <code>vmn_used</code>, <code>recording</code> (file name), <code>recording_id</code>, <code>next_status</code>, <code>substatus_id</code>, <code>remarks</code>, <code>follow_up_on</code>, <code>created_by</code>.</p>
+<h3><code>recordings</code></h3>
+<p><code>provider_call_id</code> UNIQUE, <code>dialer_log_id</code> UNIQUE, <code>call_log_id</code> UNIQUE, <code>source_code</code> (2 = manual, 0 = campaign), <code>user_id</code>, <code>agent_name</code>, <code>lead_id</code>, <code>customer_name</code>, <code>phone_number</code>, <code>campaign_id</code>, <code>call_date</code>, <code>duration</code>, <code>recording_url</code>, <code>file_path</code>, <code>file_size</code>, <code>download_status</code> (<code>awaiting</code>, <code>pending</code>, <code>downloading</code>, <code>completed</code>, <code>failed</code>, <code>unavailable</code>, <code>deleted</code>), <code>download_attempts</code>, <code>call_status</code>, <code>raw_payload</code>.</p>
+<h3>Other tables</h3>
+<table class="grid">
+  <tr><th style="width:26%">Table</th><th>Columns used by Click2Call</th></tr>
+  <tr><td><code>obd_did</code> (VMNs)</td><td><code>virtual_number</code>, <code>click2call</code> (flag), <code>webrtc</code>, <code>obd</code>, <code>team_id</code> (CSV), <code>expiry</code> (encrypted), <code>tc_verified</code></td></tr>
+  <tr><td><code>smart31_vmn_numbers</code></td><td><code>vmn</code>, <code>c2c</code>, <code>type</code> ("1600"), <code>assigned_groups</code> (CSV)</td></tr>
+  <tr><td><code>users</code></td><td><code>c2c_channel</code> (enabled), <code>click_agent_number</code>, <code>mobile</code>, <code>c2c_default_number</code>, <code>team_id</code></td></tr>
+  <tr><td><code>daily_phone_call_attempts</code></td><td><code>phone_normalized</code>, <code>call_date</code>, <code>attempt_count</code>; UNIQUE (phone, date)</td></tr>
+  <tr><td><code>blocked_call_logs</code></td><td><code>phone_number</code>, <code>user_id</code>, <code>reason</code>, <code>message</code>, <code>channel</code>, <code>blocked_at</code></td></tr>
+  <tr><td><code>click2call_logs</code></td><td>Audit: <code>uuid</code>, <code>reference_id</code>, <code>user_id</code>, <code>vmn</code> (insert only)</td></tr>
+  <tr><td><code>settings</code></td><td><code>calling_hours_from</code>, <code>calling_hours_to</code>, <code>daily_call_limit</code>, <code>full_response</code> (license: <code>crm_id</code>, <code>c2c_channels</code>)</td></tr>
+</table>
+
+<h2>8.2 Recommended schema for another project</h2>
+<p>One table for all Click2Call calls (fields marked <i>optional</i> are not needed for a first version):</p>
+<pre>&lt;?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('vmns', function (Blueprint $t) {
+            $t-&gt;id();
+            $t-&gt;string('number', 20)-&gt;unique();          // 10 digits
+            $t-&gt;boolean('click2call')-&gt;default(true);
+            $t-&gt;foreignId('team_id')-&gt;nullable();         // optional: who may use it
+            $t-&gt;date('expires_at')-&gt;nullable();
+            $t-&gt;timestamps();
+        });
+
+        Schema::create('c2c_calls', function (Blueprint $t) {
+            $t-&gt;id();
+            $t-&gt;foreignId('user_id')-&gt;constrained();      // agent
+            $t-&gt;unsignedBigInteger('lead_id')-&gt;nullable(); // optional: your CRM record
+            $t-&gt;string('agent_number', 20);
+            $t-&gt;string('customer_number', 20)-&gt;index();
+            $t-&gt;string('vmn', 20);
+            $t-&gt;string('ref_id', 64)-&gt;unique();           // sent to the provider
+            $t-&gt;string('provider_call_id', 191)-&gt;nullable()-&gt;index();
+            $t-&gt;string('call_type', 20)-&gt;default('click2call');
+            $t-&gt;string('status', 20)-&gt;default('initiated'); // initiated|ringing|connected|completed|busy|no-answer|failed
+            $t-&gt;timestamp('started_at')-&gt;nullable();
+            $t-&gt;timestamp('answered_at')-&gt;nullable();
+            $t-&gt;timestamp('ended_at')-&gt;nullable();
+            $t-&gt;unsignedInteger('talk_seconds')-&gt;default(0);
+            $t-&gt;json('cdr')-&gt;nullable();                   // provider record (no secrets)
+            $t-&gt;string('error', 255)-&gt;nullable();
+            $t-&gt;text('recording_url')-&gt;nullable();
+            $t-&gt;string('recording_path')-&gt;nullable();
+            $t-&gt;string('recording_status', 20)-&gt;nullable(); // pending|completed|failed|unavailable
+            $t-&gt;text('notes')-&gt;nullable();                 // optional: outcome / feedback
+            $t-&gt;timestamps();
+            $t-&gt;index(['user_id', 'created_at']);
+        });
+
+        Schema::create('c2c_daily_attempts', function (Blueprint $t) {   // optional: per-number daily limit
+            $t-&gt;string('phone', 20);
+            $t-&gt;date('day');
+            $t-&gt;unsignedInteger('attempts')-&gt;default(0);
+            $t-&gt;primary(['phone', 'day']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('c2c_daily_attempts');
+        Schema::dropIfExists('c2c_calls');
+        Schema::dropIfExists('vmns');
+    }
+};</pre>
+<table class="grid">
+  <tr><th style="width:30%">Requirement</th><th>Column (recommended)</th><th>LeadGER equivalent</th></tr>
+  <tr><td>Agent</td><td>user_id</td><td>created_by</td></tr>
+  <tr><td>Customer number</td><td>customer_number</td><td>phone_number / phonenumber</td></tr>
+  <tr><td>VMN</td><td>vmn</td><td>vmn_used</td></tr>
+  <tr><td>Call id</td><td>ref_id, provider_call_id</td><td>reference_id, provider_call_id</td></tr>
+  <tr><td>Call type</td><td>call_type</td><td>call_type</td></tr>
+  <tr><td>Status</td><td>status</td><td>call_state</td></tr>
+  <tr><td>Start / answer / end</td><td>started_at, answered_at, ended_at</td><td>start_time, answer_time, end_time</td></tr>
+  <tr><td>Duration</td><td>talk_seconds</td><td>time_taken / duration</td></tr>
+  <tr><td>Recording</td><td>recording_url, recording_path, recording_status</td><td>click_recording_url, recordings table</td></tr>
+  <tr><td>API response</td><td>cdr (JSON)</td><td>click_response</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h1>9. Call Status Handling</h1>
+
+<h2>9.1 Dial status &rarr; state (Confirmed: <code>Helper::callStateFromDialStatus</code>, <code>Helper.php:159-168</code>)</h2>
+<p>The provider's status text is lower-cased and reduced to letters, then:</p>
+<table class="grid">
+  <tr><th style="width:55%">Text contains</th><th>State</th></tr>
+  <tr><td><code>busy</code></td><td>busy</td></tr>
+  <tr><td><code>noanswer</code>, <code>unanswer</code>, <code>notanswered</code>, <code>missed</code></td><td>no-answer</td></tr>
+  <tr><td><code>fail</code>, <code>cancel</code>, <code>reject</code>, <code>congestion</code>, <code>chanunavail</code></td><td>failed</td></tr>
+  <tr><td><code>answer</code>, <code>connect</code>, <code>completed</code>, <code>success</code></td><td>completed (that leg answered)</td></tr>
+  <tr><td>anything else / empty</td><td>unknown (null)</td></tr>
+</table>
+
+<h2>9.2 Call result (Confirmed: <code>CallRecordingService::providerCallFacts</code>, <code>:318-368</code>)</h2>
+<ul>
+  <li><b>Outcome</b> = the customer leg (<code>B_DIAL_STATUS</code>) when present. Without it: if the agent leg (<code>A_DIAL_STATUS</code>) exists and did not answer &rarr; <b>failed</b> ("your phone did not answer, the customer was not dialled"); else if <code>B_PARTY_CONNECTED_TIME</code> is set &rarr; <b>completed</b>.</li>
+  <li><b>Talk time</b> = <code>B_PARTY_END_TIME − B_PARTY_CONNECTED_TIME</code>, else <code>talk_duration</code>, else <code>billsec</code>, else <code>duration</code> (only when there is no B status). Forced to 0 when the outcome is not completed.</li>
+  <li><b>Ended</b> when <code>EVENT_TYPE</code> contains <code>end</code>/<code>hangup</code>, or a B/A end time exists, or the outcome is final and not completed.</li>
+</ul>
+
+<h2>9.3 States shown to the user</h2>
+<table class="grid">
+  <tr><th style="width:16%">State</th><th>How LeadGER decides it</th></tr>
+  <tr><td>Initiated</td><td>The start request was accepted. Row <code>call_state='initiated'</code>. <b>Not</b> connected.</td></tr>
+  <tr><td>Ringing</td><td>The record shows the agent leg answered (<code>A_DIAL_STATUS</code> answered) but the customer has not answered yet.</td></tr>
+  <tr><td>Connected</td><td><code>B_PARTY_CONNECTED_TIME</code> is present (customer answered); <code>connected_for</code> = seconds since then.</td></tr>
+  <tr><td>Ended</td><td>Ended and outcome completed; talk time from the record.</td></tr>
+  <tr><td>Busy</td><td>Customer leg status contains "busy".</td></tr>
+  <tr><td>Unanswered</td><td>Customer leg "no answer" / "missed" (or agent leg not answered &rarr; shown as failed with that reason).</td></tr>
+  <tr><td>Failed</td><td>fail / cancel / reject / congestion / channel unavailable, or the agent did not answer.</td></tr>
+</table>
+<p>For reports LeadGER labels calls with <code>Helper::callOutcome</code>: talk time &gt; 0 = <b>Connected</b>; busy = Busy; no-answer variants = No Answer; failed/cancelled/rejected = Failed; initiated/ringing/answered/connected = In Progress; else Not Connected.</p>
+
+<h2>9.4 Unique call ids and event matching (Confirmed)</h2>
+<ul>
+  <li><code>ref_id</code> = <code>{Str::uuid}_d_{crm_id}_{user_id}_1</code>, stored in <code>reference_id</code> (UNIQUE in both call tables) and sent to the provider.</li>
+  <li><code>provider_call_id</code> starts as the <code>ref_id</code> and is replaced by the provider's id if the start response contains one.</li>
+  <li>Incoming events are matched (<code>CallRecordingService::findCallRecord</code>) by <code>ref_id</code>, then the provider id, then the <code>uuid</code> prefix, and as a <b>last resort</b> the latest call to the same number in the last 24 h. <b>Do not copy the last resort</b>: with two calls to the same number it can attach a result to the wrong call.</li>
+</ul>
+
+<h2>9.5 Three ways the status arrives</h2>
+<ol>
+  <li><b>Webhook</b> from the provider when the call ends (5.3) – fastest for the final result.</li>
+  <li><b>Live poll</b>: every 2 s the browser asks LeadGER; while the call is live and no final record is stored, LeadGER fetches <code>click2call_data</code> (3 s timeout). This is what drives Ringing / Connected on screen.</li>
+  <li><b>Scheduler sweep</b> every minute / 5 minutes: catches calls whose webhook never arrived.</li>
+</ol>
+<p>All three apply the record through the same function, so the result is the same whichever arrives first (idempotent).</p>
+
+<!-- ======================================================================= -->
+<h1>10. Call Recording Integration</h1>
+<ol>
+  <li>The start request asks for recording (<code>record</code>, <code>recording</code>, <code>record_call</code> = 1).</li>
+  <li>The recording URL arrives in the webhook (<code>recording_url</code>, <code>RecordVoice</code>, ...) or from <code>click2call_data</code> (<code>data.recording_url</code>).</li>
+  <li>Only <b>connected calls with talk time</b> get a recording row (busy / unanswered / failed calls are ignored, <code>processWebhook</code>).</li>
+  <li>One <code>recordings</code> row per call, linked both ways: <code>recordings.dialer_log_id</code> / <code>call_log_id</code> and <code>dialer_logs.recording_id</code> / <code>call_logs.recording_id</code>. A unique <code>provider_call_id</code> prevents duplicates.</li>
+  <li><code>DownloadRecordingJob</code> (queue): 5 tries with back-off 5, 15, 30, 60, 120 s; 60 s timeout; saves to <code>storage/app/recordings/{Ymd_His}_{recording id}_{phone digits}.{ext}</code>; marks <code>completed</code> or <code>failed</code>.</li>
+  <li>If no URL arrives, the scheduler asks again; after 60 minutes the row becomes <code>unavailable</code>.</li>
+  <li>Playback: <code>/admin/reports/download-recordings/{id}/{source}</code>, streamed with HTTP Range when <code>?play=1</code>. Telecallers / Sales Persons only for their own calls (or their leads); other roles all. If the file is not local, LeadGER redirects to the provider URL.</li>
+</ol>
+<table class="warn"><tr><td><b>Recommended for your project:</b> keep recordings on a private disk and serve them only through an authorised route (never a public URL); do not redirect users to the provider's raw recording URL.</td></tr></table>
+
+<!-- ======================================================================= -->
+<h1>11. Security and Authentication</h1>
+
+<h2>11.1 What LeadGER does (Confirmed)</h2>
+<ul>
+  <li>Calls can only be started by logged-in users with Click2Call enabled and an agent number, from a VMN of their team that is not expired, within calling hours and under the daily per-number limit.</li>
+  <li>Per-agent lock (6 s) against double clicks.</li>
+  <li>Provider calls are made only from the backend; the browser never sees provider URLs or secrets.</li>
+  <li>CSRF on all dashboard routes; the webhook is CSRF-exempt and rate-limited (60/min).</li>
+  <li>Recording access is role-checked.</li>
+</ul>
+
+<h2>11.2 Weaknesses in LeadGER – do not copy</h2>
+<table class="risk"><tr><td>These are observed in the current code. They work, but should be fixed in LeadGER and avoided in a new project.</td></tr></table>
+<table class="grid">
+  <tr><th style="width:4%">#</th><th style="width:42%">Issue (where)</th><th>Do this instead</th></tr>
+  <tr><td>1</td><td>Gateway secret and provider URLs are <b>hard-coded</b> in several files (<code>DialerController.php:1168</code>, <code>FetchPendingRecordingsCommand.php:173</code>, <code>CallRecordingService.php:35</code>, <code>config/services.php</code>, ...).</td><td>Only in <code>.env</code> / a secrets manager; read via <code>config()</code>. Rotate the existing secret.</td></tr>
+  <tr><td>2</td><td>Webhook secret is <b>optional</b>: a request without a secret is processed (<code>CallRecordingService.php:40</code>); combined with the phone-number fallback match, anyone could post fake results.</td><td>Require the secret (constant-time compare), optionally an IP allow-list; match only by <code>ref_id</code> / provider id.</td></tr>
+  <tr><td>3</td><td>TLS verification disabled and no timeout on the start request (<code>Helper.php:1495</code>).</td><td>Verify TLS; timeout 10–15 s; connect timeout 5 s.</td></tr>
+  <tr><td>4</td><td>HTTP status not checked on the start response.</td><td>Require 2xx <i>and</i> no error key.</td></tr>
+  <tr><td>5</td><td><code>callStatus</code>, <code>updateCallState</code> and <code>savelog</code> do not check that the call belongs to the user.</td><td>Authorise every call-id endpoint (owner, or manager of the owner's team).</td></tr>
+  <tr><td>6</td><td>Two call tables with overlapping ids; some code updates by id in both (<code>Helper.php:1517-1531</code>, <code>updateCallState</code> without <code>is_campaign</code>).</td><td>One <code>calls</code> table; never update by id in more than one table.</td></tr>
+  <tr><td>7</td><td>Full webhook payloads and provider responses are logged (phone numbers, recording URLs, a <code>secret</code> passed as a query field).</td><td>Log ids and status only; never numbers, URLs or secrets.</td></tr>
+  <tr><td>8</td><td>Unauthenticated GET cron URLs (<code>/api/click2call/fetch</code>, <code>/fetch1</code>, <code>/get-click2call-data</code>) trigger provider requests and downloads.</td><td>Artisan commands on the scheduler only.</td></tr>
+  <tr><td>9</td><td>Legacy lead-page path <code>LeadsController::logCall</code> builds SQL with the raw <code>vmn</code> input (<code>:685</code>) and skips the VMN check.</td><td>Query builder bindings; one start-call path with all checks.</td></tr>
+  <tr><td>10</td><td>The Click2Call user settings pages have no role check (any logged-in user can enable Click2Call for any user).</td><td>Restrict to admins.</td></tr>
+  <tr><td>11</td><td>On a database error the exception text is returned to the browser.</td><td>Log it; return a generic message.</td></tr>
+</table>
+
+<h2>11.3 Checklist for your project</h2>
+<ul>
+  <li><b>Credentials</b>: in <code>.env</code>, never in code or the frontend; separate secrets for the gateway and the webhook.</li>
+  <li><b>Backend-only provider calls</b>: the browser talks only to your backend.</li>
+  <li><b>Authorization</b>: who may call, from which VMN, and who may see which call / recording.</li>
+  <li><b>Phone validation</b>: digits (optionally a leading <code>+</code>), normalise once, 10 digits for India; reject anything else.</li>
+  <li><b>Rate limiting</b>: <code>throttle</code> on the start route, a per-agent lock, and a per-number daily cap.</li>
+  <li><b>Webhook</b>: required secret or signature, IP allow-list if the provider publishes IPs, idempotent processing, HTTP 200 for unknown calls (so the provider does not retry forever).</li>
+  <li><b>Duplicates</b>: unique <code>ref_id</code>; disable the button while a call starts; the lock on the server.</li>
+  <li><b>Recordings</b>: private storage, authorised streaming route, no public links.</li>
+  <li><b>Logs</b>: no secrets, no full phone numbers, no recording URLs.</li>
+</ul>
+
+<!-- ======================================================================= -->
+<h1>12. How to Integrate LeadGER Click2Call into Another Project</h1>
+<p>Follow these steps in order. Each step can be tested before moving on.</p>
+
+<h3>Step 1 – Provider account</h3>
+<ul>
+  <li>Get from your provider: access to the <b>start-call API</b> (LeadGER uses Telozar <code>c2c_call</code>), access to the <b>call-data API</b> (LeadGER uses the Ametecs gateway <code>click2call_data</code>) and its <b>Secret-Key</b>, and at least one <b>VMN</b> enabled for Click2Call.</li>
+  <li>Ask how the start API authenticates you (LeadGER sends no credentials – most likely your server IP is allow-listed). Give them your server's public IP if needed.</li>
+  <li>Give them your <b>webhook URL</b> (e.g. <code>https://your-app.example.com/api/click2call/webhook</code>) and agree on a webhook secret header.</li>
+  <li>Ask for a sample start response and a sample webhook / CDR payload. Check that they contain <code>ref_id</code>, <code>A_DIAL_STATUS</code>, <code>B_DIAL_STATUS</code>, <code>B_PARTY_CONNECTED_TIME</code>, <code>B_PARTY_END_TIME</code> and a recording URL, as used in this guide.</li>
+</ul>
+
+<h3>Step 2 – Configuration</h3>
+<p>Add the <code>.env</code> values and <code>config/click2call.php</code> from 6.2. Set <code>QUEUE_CONNECTION=database</code> and run <code>php artisan queue:table &amp;&amp; php artisan migrate</code> if the jobs table does not exist.</p>
+
+<h3>Step 3 – Database</h3>
+<p>Create the migration from 8.2, run <code>php artisan migrate</code>, insert your VMN(s) into <code>vmns</code>. Add to <code>users</code>: <code>c2c_enabled</code> (boolean) and <code>agent_number</code> (the agent's phone). Create the <code>C2cCall</code> model with <code>$casts = ['cdr' =&gt; 'array', 'started_at' =&gt; 'datetime', 'answered_at' =&gt; 'datetime', 'ended_at' =&gt; 'datetime']</code>.</p>
+
+<h3>Step 4 – Gateway service</h3>
+<p>Add <code>Click2CallGateway</code> (6.4). Test it alone in <code>php artisan tinker</code> with your own two phones as agent and customer:</p>
+<pre>app(\App\Services\Click2Call\Click2CallGateway::class)
+    -&gt;start('&lt;YOUR_VMN&gt;', '&lt;YOUR_PHONE&gt;', '&lt;SECOND_PHONE&gt;', (string)\Illuminate\Support\Str::uuid());</pre>
+<p>Your phone should ring; answer it and the second phone should ring with the VMN as caller ID.</p>
+
+<h3>Step 5 – Calling rules</h3>
+<p>Add a small <code>CallingRules</code> service: <code>blockReason($phone)</code> returns a message outside calling hours (company timezone) or when today's attempts for the number reached the limit; <code>countAttempt</code> / <code>releaseAttempt</code> increment / decrement <code>c2c_daily_attempts</code> atomically (<code>INSERT ... ON DUPLICATE KEY UPDATE</code>).</p>
+
+<h3>Step 6 – Start route and controller</h3>
+<p>Add the routes (6.3) and <code>Click2CallController::start</code> (6.5). Test with the browser or Postman (logged in): the response must be <code>{"success":true,"id":...}</code> and a <code>c2c_calls</code> row with <code>status=initiated</code>.</p>
+
+<h3>Step 7 – Status handling</h3>
+<p>Add <code>CallResult</code> (6.6), the webhook controller (6.7) and the status endpoint (6.8). Exclude the webhook from CSRF (it is under <code>api/</code>, which has no CSRF by default). Test the webhook with <code>curl</code> (13.1).</p>
+
+<h3>Step 8 – Recordings</h3>
+<p>Add <code>DownloadC2cRecording</code> (6.9), start a worker (<code>php artisan queue:work</code>, under Supervisor in production) and the scheduler cron (<code>* * * * * php artisan schedule:run</code>). Add a sweep command that, every few minutes, calls <code>callData()</code> for calls that are still live or still waiting for a recording, and marks them <code>unavailable</code> after 60 minutes. Add an authorised route that streams <code>recording_path</code>.</p>
+
+<h3>Step 9 – Frontend</h3>
+<p>Add the HTML and JavaScript from 7.2 / 7.3 to your page. Pass the user's allowed VMNs to the view.</p>
+
+<h3>Step 10 – First test call</h3>
+<ol>
+  <li>Log in as a user with <code>c2c_enabled=1</code> and an <code>agent_number</code>.</li>
+  <li>Enter a test customer number (a second phone you own), pick the VMN, click <b>Click2Call</b>.</li>
+  <li>Your phone rings &rarr; answer &rarr; the UI shows Ringing; the customer phone rings with the VMN &rarr; answer &rarr; Connected with a timer.</li>
+  <li>Hang up &rarr; within seconds Ended with the talk time; the row has <code>status=completed</code>, <code>talk_seconds</code>, <code>cdr</code>.</li>
+  <li>Within a few minutes <code>recording_status=completed</code> and the recording plays.</li>
+</ol>
+
+<!-- ======================================================================= -->
+<h1>13. Testing and Troubleshooting</h1>
+
+<h2>13.1 Simulating the provider</h2>
+<p>Webhook with <code>curl</code> (replace the placeholders; use the <code>ref_id</code> of a real test row):</p>
+<pre>curl -X POST https://your-app.example.com/api/click2call/webhook \
+  -H "Content-Type: application/json" -H "Secret-Key: &lt;WEBHOOK_SECRET&gt;" \
+  -d '{"ref_id":"&lt;REF_ID&gt;","A_DIAL_STATUS":"ANSWERED","B_DIAL_STATUS":"ANSWERED",
+       "B_PARTY_CONNECTED_TIME":"21102026103015","B_PARTY_END_TIME":"21102026103130",
+       "recording_url":"https://example.com/test.wav"}'</pre>
+<p>In feature tests, fake the provider with <code>Http::fake([...])</code> so no real call is placed.</p>
+
+<h2>13.2 Test cases</h2>
+<table class="grid">
+  <tr><th style="width:4%">#</th><th style="width:22%">Case</th><th style="width:37%">How</th><th>Expected (LeadGER behaviour)</th></tr>
+  <tr><td>1</td><td>Successful initiation</td><td>Valid number, VMN, user enabled</td><td><code>{"success":true,"message":"Call initiated successfully",...}</code>; row <code>initiated</code>; UI "Calling...".</td></tr>
+  <tr><td>2</td><td>Both parties answer</td><td>Answer both phones, talk, hang up</td><td>UI Ringing &rarr; Connected (timer) &rarr; Ended + talk time; row <code>completed</code>; recording row, file downloaded.</td></tr>
+  <tr><td>3</td><td>Customer does not answer</td><td>Do not answer the second phone</td><td>B status "NOANSWER" &rarr; <code>no-answer</code>; UI "Customer did not answer"; no recording.</td></tr>
+  <tr><td>4</td><td>Agent does not answer</td><td>Do not answer the agent phone</td><td>A leg not answered, no B status &rarr; <code>failed</code>; UI "Your phone did not answer, the customer was not dialled".</td></tr>
+  <tr><td>5</td><td>Busy</td><td>Make the customer line busy</td><td>B status "BUSY" &rarr; <code>busy</code>; UI "Customer line is busy".</td></tr>
+  <tr><td>6</td><td>Failed</td><td>Invalid / unreachable customer number</td><td>B status fail/congestion &rarr; <code>failed</code>; UI "Call failed".</td></tr>
+  <tr><td>7</td><td>Invalid mobile number</td><td>Letters, fewer than 10 digits</td><td>422 "Phone number must contain only numeric digits (0–9)." / button disabled below 10 digits.</td></tr>
+  <tr><td>8</td><td>Invalid API credentials</td><td>Wrong gateway secret / start API rejects you</td><td>Start: 400 "Error indicated in response" (or connection failed). Status fetch returns nothing; UI keeps "Calling..." until the webhook / 15 min cap. Check logs.</td></tr>
+  <tr><td>9</td><td>Missing VMN</td><td>No VMN selected / VMN of another team / expired</td><td>422 "Please select VMN." or the VMN check message; toast in the UI.</td></tr>
+  <tr><td>10</td><td>Duplicate requests</td><td>Double-click, or two tabs at once</td><td>Second request 429 "Another call is currently being processed for your account. Please wait a moment."</td></tr>
+  <tr><td>11</td><td>Status update failure</td><td>Webhook not delivered / gateway down</td><td>Poll keeps "Calling..."; scheduler sweep fills the result later; UI stops after 15 min with "Call result not available".</td></tr>
+  <tr><td>12</td><td>Recording retrieval failure</td><td>Recording URL 404 / slow</td><td>Download retried 5 times (5–120 s), then <code>failed</code>; sweep retries later (up to 20); no URL after 60 min &rarr; <code>unavailable</code>.</td></tr>
+  <tr><td>13</td><td>Outside calling hours / daily limit</td><td>Change the settings</td><td>"Calls are allowed only between HH:MM and HH:MM." / "Maximum call attempts reached for this number today (N)."; row in <code>blocked_call_logs</code>.</td></tr>
+</table>
+
+<h2>13.3 Common problems</h2>
+<table class="grid">
+  <tr><th style="width:30%">Symptom</th><th>Check</th></tr>
+  <tr><td>Agent phone never rings</td><td>Start response in the log (<code>Initiate Call Response:</code>); agent number format (10 digits, no 91); VMN enabled for Click2Call at the provider; your server IP allowed by the provider.</td></tr>
+  <tr><td>UI stuck on "Calling..."</td><td>Gateway secret; <code>click2call_data</code> reachable from the server (3 s timeout); webhook URL registered and reachable (firewall, HTTPS); worker and scheduler running.</td></tr>
+  <tr><td>Webhook returns 401</td><td>Secret header name and value; extra spaces; the provider sending the secret as a query parameter.</td></tr>
+  <tr><td>Result attached to the wrong call</td><td>The provider must echo the <code>ref_id</code>; do not match by phone number.</td></tr>
+  <tr><td>Recording "Processing" forever</td><td>Queue worker not running (LeadGER: <code>QUEUE_CONNECTION=database</code> needs <code>queue:work</code>); scheduler cron missing; the recording URL needs authentication.</td></tr>
+  <tr><td>"Another call is currently being processed"</td><td>Wait 6 s (lock TTL); check the cache store is writable.</td></tr>
+  <tr><td>Calls blocked unexpectedly</td><td>Calling hours use the company timezone (<code>webmaster_settings.timezone</code> in LeadGER); daily limit per number.</td></tr>
+</table>
+<p><b>Log prefixes in LeadGER:</b> <code>[Click2Call]</code>, <code>Initiate Call Response:</code>, <code>Initiate Call cURL error:</code>, <code>[TelephonyWebhook]</code>, <code>[CallRecordingService]</code>, <code>[DownloadRecordingJob]</code>, <code>[FetchPendingRecordings]</code>, <code>[CALL_BLOCKED]</code> (file <code>storage/logs/laravel.log</code>).</p>
+
+<!-- ======================================================================= -->
+<h1>14. Complete Integration Checklist</h1>
+<table class="grid">
+  <tr><th style="width:6%">Done</th><th>Item</th></tr>
+  <tr><td>&#9744;</td><td>Provider: start-call API access, call-data API + Secret-Key, VMN(s) enabled for Click2Call</td></tr>
+  <tr><td>&#9744;</td><td>Provider: start-API authentication understood (IP allow-list / account), server IP registered</td></tr>
+  <tr><td>&#9744;</td><td>Provider: webhook URL registered, webhook secret agreed, sample payloads received</td></tr>
+  <tr><td>&#9744;</td><td><code>.env</code> + <code>config/click2call.php</code>; no secrets in code or frontend</td></tr>
+  <tr><td>&#9744;</td><td>Migrations: <code>vmns</code>, <code>c2c_calls</code>, <code>c2c_daily_attempts</code>; users: <code>c2c_enabled</code>, <code>agent_number</code></td></tr>
+  <tr><td>&#9744;</td><td>Gateway service: TLS on, timeouts, 2xx + no error key</td></tr>
+  <tr><td>&#9744;</td><td>Start endpoint: validation, permission, VMN ownership/expiry, calling hours, daily limit, per-agent lock, unique ref_id, row created before the provider call</td></tr>
+  <tr><td>&#9744;</td><td>Status: shared result function; webhook (required secret, match by ref_id / provider id, idempotent); polling endpoint with ownership check</td></tr>
+  <tr><td>&#9744;</td><td>"Initiated" is never shown as "Connected"</td></tr>
+  <tr><td>&#9744;</td><td>Recordings: queue job with retries, private storage, authorised streaming route, sweep for missing recordings</td></tr>
+  <tr><td>&#9744;</td><td>Queue worker under a process manager; scheduler cron every minute</td></tr>
+  <tr><td>&#9744;</td><td>Frontend: input, VMN selector, button disabled while starting, Calling / Ringing / Connected / Ended / Failed states, error messages, polling cap</td></tr>
+  <tr><td>&#9744;</td><td>Rate limits on the start route and the webhook</td></tr>
+  <tr><td>&#9744;</td><td>Logs without secrets, full phone numbers or recording URLs</td></tr>
+  <tr><td>&#9744;</td><td>All 13 test cases in 13.2 pass, including a real call between two phones</td></tr>
+</table>
+
+<h2>Appendix – Source map (LeadGER)</h2>
+<table class="grid">
+  <tr><th style="width:44%">File</th><th>What to read there</th></tr>
+  <tr><td><code>app/Http/Controllers/Dashboard/DialerController.php</code></td><td><code>click2call</code> 236-456, <code>callStatus</code> 1087-1158, <code>fetchGatewayCallRecord</code> 1164-1192, <code>updateCallState</code> 1198-1359, <code>savelog</code> 458-666</td></tr>
+  <tr><td><code>app/Helpers/Helper.php</code></td><td><code>click2call</code> 1337-1356, provider request 1358-1576, <code>callOutcome</code> 128-153, <code>callStateFromDialStatus</code> 159-168</td></tr>
+  <tr><td><code>app/Services/CallRecordingService.php</code></td><td><code>processWebhook</code> 25-271, <code>providerCallFacts</code> 318-368, <code>findCallRecord</code> 375-398, <code>storeOrUpdateRecording</code> 420-537</td></tr>
+  <tr><td><code>app/Services/VmnService.php</code></td><td><code>listFor</code>, <code>check</code> 129-172, pools 24-56</td></tr>
+  <tr><td><code>app/Services/CallingRestrictionService.php</code></td><td>calling hours, daily limit, <code>withCallLock</code> 450-469</td></tr>
+  <tr><td><code>app/Http/Controllers/APIs/TelephonyWebhookController.php</code></td><td>webhook entry 25-40</td></tr>
+  <tr><td><code>app/Jobs/DownloadRecordingJob.php</code>, <code>app/Console/Commands/FetchPendingRecordingsCommand.php</code></td><td>download and sweep</td></tr>
+  <tr><td><code>resources/views/dashboard/calling-workspace.blade.php</code></td><td><code>startClick2Call</code> 5124, <code>pollClick2CallStatus</code> 5068, <code>showLiveCallStatus</code> 4875, <code>placeCampaignCall</code> 3202</td></tr>
+  <tr><td><code>routes/dashboard.php</code>, <code>routes/api.php</code></td><td>routes listed in 5.4 and 5.3</td></tr>
+</table>
+<p class="small">Line numbers refer to the code on branch <code>main</code> as of October 2026 and may shift after later changes.</p>
+
+</body>
+</html>

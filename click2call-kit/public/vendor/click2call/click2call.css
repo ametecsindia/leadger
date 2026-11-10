@@ -1,0 +1,38 @@
+/* Click2Call kit - plain CSS, no framework. Colours follow LeadGER (accent #1464F4). */
+:root { --c2c-accent: #1464F4; --c2c-text: #0F172A; --c2c-muted: #64748B; --c2c-border: #E2E8F0; --c2c-bg: #F7F8FA; }
+.c2c-body { margin: 0; background: var(--c2c-bg); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--c2c-text); font-size: 14px; }
+.c2c-nav { display: flex; gap: 18px; padding: 14px 24px; background: #0F172A; }
+.c2c-nav a { color: #fff; text-decoration: none; font-weight: 600; }
+.c2c-main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+.c2c-card { background: #fff; border: 1px solid var(--c2c-border); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+.c2c-card h2 { margin: 0 0 14px; font-size: 18px; }
+.c2c-muted { color: var(--c2c-muted); font-size: 12.5px; }
+.c2c-field { margin-bottom: 14px; }
+.c2c-field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.c2c-input, .c2c-select { width: 100%; box-sizing: border-box; height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #fff; }
+.c2c-input:focus, .c2c-select:focus { outline: none; border-color: var(--c2c-accent); box-shadow: 0 0 0 3px rgba(20,100,244,.12); }
+.c2c-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.c2c-row > * { flex: 1 1 200px; }
+.c2c-btn { height: 42px; padding: 0 20px; border: none; border-radius: 10px; background: var(--c2c-accent); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; }
+.c2c-btn:disabled { opacity: .5; cursor: not-allowed; }
+.c2c-btn-call { background: #12A66A; }
+.c2c-btn-light { background: #fff; color: var(--c2c-text); border: 1px solid #CBD5E1; }
+.c2c-btn-danger { background: #DC2626; }
+.c2c-btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.c2c-status { margin-top: 16px; padding: 14px 16px; border-radius: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.c2c-status.is-calling { background: #EFF6FF; color: #1D4ED8; }
+.c2c-status.is-connected { background: #ECFDF5; color: #047857; }
+.c2c-status.is-ended { background: #F1F5F9; color: #334155; }
+.c2c-status.is-failed, .c2c-status.is-error { background: #FEF2F2; color: #B91C1C; }
+.c2c-alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 500; }
+.c2c-alert-ok { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+.c2c-alert-error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+.c2c-table { width: 100%; border-collapse: collapse; }
+.c2c-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: #475569; background: #F8FAFC; padding: 10px; border-bottom: 1px solid var(--c2c-border); }
+.c2c-table td { padding: 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.c2c-badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #F1F5F9; color: #475569; }
+.c2c-badge.on { background: #ECFDF5; color: #047857; }
+.c2c-badge.off { background: #FEF2F2; color: #B91C1C; }
+.c2c-table-wrap { overflow-x: auto; }
+.c2c-check, .c2c-field label.c2c-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; margin: 0 14px 0 0; }
+@media (max-width: 600px) { .c2c-main { margin: 12px auto; } .c2c-card { padding: 14px; } }
