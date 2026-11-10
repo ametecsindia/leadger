@@ -644,6 +644,11 @@ WHERE leadger_users.id = ".$User->id." and webrtc = 1");
                 'message' => 'Campaign has expired'
             ], 400);
         }
+        // A Smart31 number: assigned to this agent today, its time slot started, in a calling way the licence includes
+        if ($request->call_type == 'click2call' && \App\Support\Smart31Schedule::isSmart31($request->vmn)
+            && ($smart31Error = \App\Support\Smart31Schedule::callError(Auth::user(), 'c2c', $request->vmn))) {
+            return response()->json(['success' => false, 'error' => true, 'message' => $smart31Error], 422);
+        }
         // Enforce backend outbound calling restrictions (hours + retry limit)
         $callCheck = \App\Services\CallingRestrictionService::canPlaceOutboundCall($request->phonenumber, Auth::user(), $request->call_type, !in_array($request->call_type, ['click2call', 'flexidial'], true));   // Click2Call: counted by Helper::click2call
         if (!$callCheck['allowed']) {

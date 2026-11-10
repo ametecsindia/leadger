@@ -2121,6 +2121,8 @@ WHERE campaign_id = '".$orgCampaign->id."'
         // channel-config endpoint do; a user with neither channel gets calling disabled with a message, not a default channel
         $c2cEnabled = $User->canClick2Call();
         $webrtcEnabled = ($User->webrtc_channel == 1);
+        // Smart31 calling ways the licence includes (['c2c' => bool, 'webrtc' => bool])
+        $smart31Kinds = \App\Support\Smart31Schedule::licensedKinds();
 
         $activeTab = request()->get('tab', 'campaign');
 
@@ -2147,7 +2149,8 @@ WHERE campaign_id = '".$orgCampaign->id."'
             'activeTab',
             'campaignCallingType',
             'c2cEnabled',
-            'webrtcEnabled'
+            'webrtcEnabled',
+            'smart31Kinds'
         ));
     }
 

@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Http\Controllers\Dashboard\DialerController;
 use App\Models\User;
 use App\Services\VmnService;
+use App\Support\Smart31Schedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -22,14 +25,25 @@ class VmnCallOptionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Smart31 numbers are for today and enabled by time slot (Smart31Schedule): today at 10:00 (slot 1), licence with both ways
+        Carbon::setTestNow(Carbon::now(Smart31Schedule::TIMEZONE)->setTime(10, 0));
+        Cache::put(Smart31Schedule::CACHE_KEY, ['c2c' => 50, 'webrtc' => 50], 60);
         $this->admin = User::whereHas('permissionsGroup', fn ($q) => $q->where('name', 'Admin'))->firstOrFail();
         Auth::login($this->admin);
         $this->plain = VmnService::normalize(VmnService::listFor($this->admin, 'click2call')->first()->virtual_number ?? '');
     }
 
+    protected function tearDown(): void
+    {
+        Smart31Schedule::forget();
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     private function addPoolNumber(string $vmn, ?string $type): void
     {
-        DB::table('smart31_vmn_numbers')->insert(['vmn' => $vmn, 'type' => $type, 'c2c' => 1, 'webrtc' => 0, 'obd' => 0, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('smart31_vmn_numbers')->insert(['vmn' => $vmn, 'type' => $type, 'c2c' => 1, 'webrtc' => 0, 'obd' => 0,
+            'usage_date' => Smart31Schedule::now()->toDateString(), 'assigned_groups' => $this->admin->team_id ?: null, 'created_at' => now(), 'updated_at' => now()]);
     }
 
     private function listed(string $method): array
@@ -54,7 +68,7 @@ class VmnCallOptionTest extends TestCase
     {
         DB::table('smart31_vmn_numbers')->delete();
         $this->assertFalse(VmnService::check($this->admin, '9988776655', 'click2call', 'smart31')['ok']);
-        $this->assertStringContainsString('No Smart31 number is configured', VmnService::check($this->admin, '', 'click2call', 'smart31')['message']);
+        $this->assertSame('Please select VMN.', VmnService::check($this->admin, '', 'click2call', 'smart31')['message']);
 
         $this->addPoolNumber('9988776655', 'smart31');
         $this->addPoolNumber('1600123456', '1600');
@@ -88,7 +102,7 @@ class VmnCallOptionTest extends TestCase
             $this->markTestSkipped('No active licence (settings.full_response has no CRM ID), so Click2Call stops before the number check.');
         }
         if ($res->getStatusCode() === 422) {
-            $this->assertSame('Please select a Smart31 number for Click2Call calling.', $body['message']);
+            $this->assertSame('This Smart31 number is not assigned to you for today', $body['message']);
         } else {
             $this->markTestIncomplete('Calling restrictions answered first (' . $res->getStatusCode() . ': ' . $body['message'] . ')');
         }

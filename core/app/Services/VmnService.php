@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Smart31Schedule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -130,6 +131,13 @@ class VmnService
     {
         $label = $channel === 'webrtc' ? 'WebRTC' : 'Click2Call';
         $num = self::normalize($vmn);
+
+        // Smart31 (selected, or a Smart31 number): assigned to this agent today, its time slot started, and a
+        // calling way the licence includes (Smart31Schedule)
+        if ($pool === 'smart31' || ($pool === null && Smart31Schedule::isSmart31($num))) {
+            $error = Smart31Schedule::callError($user, Smart31Schedule::kindFor($channel), $num);
+            return $error ? ['ok' => false, 'message' => $error] : ['ok' => true, 'message' => ''];
+        }
 
         // A call placed with Smart31 / Enabled 1600 selected must use a number of that option
         if ($pool !== null && isset(self::POOLS[$pool])) {

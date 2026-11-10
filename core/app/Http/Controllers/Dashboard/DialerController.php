@@ -208,6 +208,8 @@ class DialerController extends Controller
         // disabled must not get it from a global fallback.
         $c2cEnabled = $User->canClick2Call();
         $webrtcEnabled = ($User->webrtc_channel == 1);
+        // Smart31 calling ways the licence includes (['c2c' => bool, 'webrtc' => bool])
+        $smart31Kinds = \App\Support\Smart31Schedule::licensedKinds();
 
         $allowedCampaigns = \App\Http\Controllers\Dashboard\CampaignsController::getAllowedCampaignsForUser($User);
         $selectedCampaignId = session('selected_campaign_id') ?: ($Campaign ? $Campaign->id : null);
@@ -236,7 +238,8 @@ class DialerController extends Controller
             'campaignCallingType',
             'recentNumbers',
             'c2cEnabled',
-            'webrtcEnabled'
+            'webrtcEnabled',
+            'smart31Kinds'
         ));
     }
     
@@ -848,9 +851,28 @@ class DialerController extends Controller
         ]);
     }
 
+    /**
+     * Smart31 numbers of this agent for today and the calling type, by time slot (Smart31Schedule::lines): enabled first
+     * (default = newest enabled), disabled ones with their start time; empty when the licence does not include that way.
+     */
     public function getSmart31Vmns(Request $request)
     {
-        return $this->poolVmnsResponse($request, 'smart31');
+        $callingType = strtolower($request->get('type', 'webrtc')) === 'click2call' ? 'click2call' : 'webrtc';
+        $res = \App\Support\Smart31Schedule::lines(Auth::user(), \App\Support\Smart31Schedule::kindFor($callingType));
+        $prefix = $callingType === 'click2call' ? 'Click2Call VMN: ' : 'WebRTC VMN: ';
+        $vmns = collect($res['lines'])->map(fn ($l) => [
+            'number' => $l['vmn'],
+            'display' => $prefix . $l['vmn'],
+            'available' => $l['enabled'],
+            'expiry' => null,
+        ] + $l)->values();
+
+        return response()->json([
+            'success' => true,
+            'calling_type' => $callingType,
+            'vmns' => $vmns,
+            'count' => $vmns->count(),
+        ] + $res);
     }
 
     public function get1600Vmns(Request $request)

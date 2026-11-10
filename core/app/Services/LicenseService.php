@@ -135,6 +135,7 @@ class LicenseService
     public static function deleteLicense(?string $envPath = null): array
     {
         $updated = DB::table('settings')->update(['full_response' => null, 'user_count' => null, 'features' => null]);
+        \App\Support\Smart31Schedule::forget();
 
         $envCleared = false;
         $context = Tenancy::context();

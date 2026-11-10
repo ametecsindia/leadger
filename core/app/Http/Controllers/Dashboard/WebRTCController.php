@@ -150,6 +150,12 @@ class WebRTCController extends Controller
             return $missing;
         }
 
+        // A Smart31 number: assigned to this agent today, its time slot started, in a calling way the licence includes
+        if ($request->call_type === 'webrtc' && \App\Support\Smart31Schedule::isSmart31($request->vmn)
+            && ($smart31Error = \App\Support\Smart31Schedule::callError(Auth::user(), 'webrtc', $request->vmn))) {
+            return response()->json(['success' => false, 'error' => true, 'message' => $smart31Error], 422);
+        }
+
         // Enforce backend outbound calling restrictions (hours + retry limit)
         $callCheck = \App\Services\CallingRestrictionService::canPlaceOutboundCall($request->phonenumber, Auth::user(), $request->call_type, $request->call_type !== 'webrtc');   // WebRTC: counted by webrtcCall
         if (!$callCheck['allowed']) {
@@ -1232,65 +1238,20 @@ public function smart31GroupUpdate(Request $request)
 
     return redirect()->route('obdDid')->with('success', 'Smart31 group updated successfully.');
 }
+/**
+ * Smart31 Click2Call / WebRTC numbers of the logged-in agent for today, by time slot (Smart31Schedule::lines):
+ * vmn / wvmn = the default (newest enabled) number or null, plus slot, message and all lines. Empty when the licence
+ * does not include that calling way.
+ */
 public function getVmn(Request $request)
 {
-    $today = Carbon::today()->toDateString();
-    $userId = auth()->id();
-
-    // Get all group_ids of logged-in user
-    $userTeamIds = DB::table('users')
-        ->where('id', $userId)
-        ->value('team_id'); // single string like "1,2,3"
-
-    $userGroupIds = array_filter(explode(',', $userTeamIds));
-  
-    // Query VMN where assigned_groups contains any of the user's groups
-    $vmnNumber = DB::table('smart31_vmn_numbers')
-        ->where('usage_date','=', $today)
-        ->where('c2c', '=', '1')
-
-        ->where('webrtc', '=', '0')
-     	
-  
-        ->where(function($query) use ($userGroupIds) {
-            foreach($userGroupIds as $groupId) {
-                $query->orWhereRaw("FIND_IN_SET(?, assigned_groups)", [$groupId]);
-            }
-        })
-    
-        ->value('vmn');
-
-    return response()->json(['vmn' => $vmnNumber]);
+    $res = \App\Support\Smart31Schedule::lines(Auth::user(), 'c2c');
+    return response()->json(['vmn' => collect($res['lines'])->firstWhere('default', true)['vmn'] ?? null] + $res);
 }
 public function getwVmn(Request $request)
 {
-	
-    $today = Carbon::today()->toDateString();
-   
-    $userId = auth()->id();
-   
-    $userTeamIds = DB::table('users')
-        ->where('id', $userId)
-        ->value('team_id'); // single string like "1,2,3"
-
-    $userGroupIds = array_filter(explode(',', $userTeamIds));
-    
-    $vmnNumber = DB::table('smart31_vmn_numbers')
-        ->where('usage_date','=', $today)
-        ->where('c2c', '=', '0')
-
-        ->where('webrtc', '=', '1')
-
-
-        ->where(function($query) use ($userGroupIds) {
-            foreach($userGroupIds as $groupId) {
-                $query->orWhereRaw("FIND_IN_SET(?, assigned_groups)", [$groupId]);
-            }
-        })
-        
-        ->value('vmn');
-    
-    return response()->json(['wvmn' => $vmnNumber]);
+    $res = \App\Support\Smart31Schedule::lines(Auth::user(), 'webrtc');
+    return response()->json(['wvmn' => collect($res['lines'])->firstWhere('default', true)['vmn'] ?? null] + $res);
 }
 public function ssoLogout(Request $request)
 {

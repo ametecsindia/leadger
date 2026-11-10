@@ -261,7 +261,7 @@
 /* ── Main Row of 2 Equal-Height Cards ────────────────────── */
 .cw-main-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);   /* two equal cards; content never widens one */
     gap: 20px;
     margin-bottom: 20px;
     align-items: stretch;
@@ -1792,15 +1792,42 @@
 .cw-switch-confirm-card p { margin: 0 0 16px; font-size: 14.5px; font-weight: 700; color: var(--cw-navy); }
 .cw-switch-confirm-btns { display: flex; justify-content: flex-end; gap: 10px; }
 
-/* ── Make a Call card (Manual Dial): sized to its content, call button centered under the options ── */
-.cw-main-grid > .cw-make-call-card { height: auto !important; min-height: 0; align-self: start !important; }
-.cw-make-call-card .cw-card-body.cw-mc-body { gap: 14px !important; min-height: 0; }
+/* ── Make a Call card (Manual Dial): compact, same height as the Call Outcome card next to it (both stretch to the row) ── */
+.cw-main-grid > .cw-make-call-card { min-height: 0; }
+.cw-main-grid > .cw-outcome-card { min-height: 0; }
+.cw-make-call-card .cw-card-body.cw-mc-body { gap: 12px !important; min-height: 0; }
 .cw-mc-phone { flex-shrink: 0; }
-.cw-mc-phone { --lg-control-h: 50px; --lg-fs-body: 22px; }   /* design-system sizes inputs from these variables */
-.cw-mc-phone .cw-phone-input-large { padding-left: 14px; }
-/* Mobile Number box: compact width (the clear x stays inside it); full width on phones */
-.cw-mc-phone .cw-phone-input-wrap { max-width: 320px; }
-@media (max-width: 480px) { .cw-mc-phone .cw-phone-input-wrap { max-width: none; } }
+/* Mobile Number bar: full width, phone icon on the left, clear x in a grey circle on the right */
+.cw-mc-phone { --lg-control-h: 44px; --lg-radius-control: 10px; --lg-fs-body: 15px; }   /* design-system sizes inputs from these variables */
+.cw-mc-phone .cw-phone-input-large { padding: 0 44px 0 42px; font-weight: 500; }
+.cw-mc-phone .cw-phone-input-large::placeholder { color: #64748B; font-weight: 400; }
+.cw-mc-phone .cw-phone-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; color: var(--cw-navy, #0F172A); pointer-events: none; display: inline-flex;
+}
+.cw-mc-phone .cw-phone-icon svg { width: 18px; height: 18px; }
+.cw-mc-phone .cw-phone-clear-btn { right: 10px; width: 26px; height: 26px; font-size: 11px; }
+
+/* Smart31 (shown while "Smart31 Only" is ticked): Smart31 VMN (Click2Call) and WebRTC VMN as two light tiles side by side */
+.cw-s31-cols { display: flex; gap: 12px; }
+.cw-s31-col {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+    background: var(--cw-blue-light, #EEF4FF); border: 1px solid var(--cw-border, #D6E2FB); border-radius: 10px;
+    --lg-control-h: 38px; --lg-radius-control: 8px; --lg-fs-body: 13px;
+}
+.cw-s31-col .cw-label {
+    display: flex !important; align-items: center; gap: 8px;
+    font-size: 13px !important; font-weight: 700 !important; margin: 0 !important; color: var(--cw-navy, #0F172A);
+}
+.cw-s31-col .cw-label svg { width: 18px; height: 18px; color: var(--cw-blue, #1F5FFF); flex-shrink: 0; }
+/* room for "+91... (Default)": tighter padding (native select and select2) */
+html body #content .cw-s31-col .select2-container .select2-selection__rendered,
+html body #content .cw-s31-col select.cw-select { padding-left: 10px !important; padding-right: 26px !important; text-align: left; }
+.cw-mc-smart31 .cw-vmn-line { margin-top: 0; }
+.cw-mc-smart31 .cw-mc-help { margin-top: 6px; }
+@media (max-width: 640px) {
+    .cw-s31-cols { flex-direction: column; }
+}
 .cw-mc-scroll { display: flex; flex-direction: column; gap: 14px; }
 .cw-mc-scroll > * { flex-shrink: 0; }
 /* Click2Call / WebRTC VMN as two equal option tiles; the tile of the channel(s) the entered number will use is highlighted */
@@ -1847,7 +1874,6 @@
 .cw-mc-opt:has(input:checked) { border-color: var(--cw-blue); background: var(--cw-blue-light, #EFF6FF); }
 .cw-mc-opt input:checked + .cw-mc-box { background: var(--cw-blue); border-color: var(--cw-blue); color: #FFFFFF; }
 .cw-mc-opt input:focus-visible + .cw-mc-box { box-shadow: 0 0 0 3px rgba(31, 95, 255, 0.2); }
-.cw-mc-smart31 .cw-vmn-line { margin-top: 6px; }
 .cw-mc-help { margin-top: 4px; font-size: 11.5px; color: #64748B; }
 .cw-mc-scroll .cw-recent-numbers-section { gap: 6px; }
 .cw-mc-scroll .cw-recent-chips-wrap { flex-wrap: nowrap; overflow: hidden; }
@@ -1861,6 +1887,16 @@
     font-size: 14.5px; font-weight: 700; color: #FFFFFF; border-radius: 10px; gap: 8px;
 }
 .cw-mc-buttons .cw-compact-call-btn i { font-size: 14px; }
+/* While "Smart31 Only" is ticked: the two buttons share the card width under the Smart31 tiles (Click2Call blue, WebRTC purple) */
+.cw-mc-body:has(#smart31_toggle:checked) .cw-mc-buttons { flex-wrap: nowrap; gap: 12px; }
+.cw-mc-body:has(#smart31_toggle:checked) .cw-mc-buttons .cw-compact-call-btn { flex: 1 1 0 !important; width: auto !important; }
+.cw-mc-body:has(#smart31_toggle:checked) .cw-mc-buttons .cw-compact-call-btn.c2c-btn:not(:disabled) {
+    background: linear-gradient(135deg, #1F6FFF 0%, #1557E0 100%); box-shadow: 0 6px 16px rgba(31, 95, 255, 0.28);
+}
+.cw-mc-body:has(#smart31_toggle:checked) .cw-mc-buttons .cw-compact-call-btn.webrtc-btn:not(:disabled) {
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); box-shadow: 0 6px 16px rgba(124, 58, 237, 0.28);
+}
+@media (max-width: 480px) { .cw-mc-body:has(#smart31_toggle:checked) .cw-mc-buttons { flex-wrap: wrap; } }
 .cw-mc-buttons .cw-compact-call-btn.c2c-btn {
     background: linear-gradient(135deg, #17B978 0%, #0E9A63 100%);
     box-shadow: 0 4px 12px rgba(23, 185, 120, 0.28);
@@ -2028,7 +2064,7 @@
                         $campC2cSel = collect($vmnList ?? [])->first(fn ($r) => $r->virtual_number == $campC2cDefault) ?? collect($vmnList ?? [])->first();
                         $campWSel = collect($wvmnList ?? [])->first(fn ($r) => $r->virtual_number == $campWDefault) ?? collect($wvmnList ?? [])->first();
                     @endphp
-                    <div class="cw-vmn-columns cw-camp-vmn-columns">
+                    <div class="cw-vmn-columns cw-camp-vmn-columns" id="cw-camp-vmn-columns">
                         <div id="camp-c2c-vmn-group" class="cw-field-group cw-vmn-col {{ ($c2cEnabled ?? true) ? '' : 'is-channel-off' }}" style="margin-bottom: 0; display: flex;">
                             <label class="cw-label" for="camp_c2c_vmn_select" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Click2Call VMN</label>
                             <select id="camp_c2c_vmn_select" class="cw-select" style="width: 100%;" onchange="onCampVmnChange()" {{ count($vmnList ?? []) ? '' : 'disabled' }}>
@@ -2127,29 +2163,56 @@
 
                     <!-- Row 2: Call Options (Smart31 Only & Enabled 1600) -->
                     <div class="cw-call-options-row">
+                        {{-- Smart31 Only: only when the user has a channel whose Smart31 calling way the licence includes --}}
+                        @if((($smart31Kinds['c2c'] ?? true) && ($c2cEnabled ?? true)) || (($smart31Kinds['webrtc'] ?? true) && ($webrtcEnabled ?? true)))
                         <label class="cw-call-option-label" id="camp-opt-smart31-label">
                             <input type="checkbox" id="camp_smart31_toggle" name="smart31_enabled" value="1" onchange="toggleCampSmart31(this.checked)">
                             <span>Smart31 Only</span>
                         </label>
+                        @endif
                         <label class="cw-call-option-label" id="camp-opt-1600-label">
                             <input type="checkbox" id="camp_vmn1600_toggle" name="vmn1600_enabled" value="1" onchange="toggleCamp1600(this.checked)">
                             <span>Enabled 1600</span>
                         </label>
                     </div>
 
-                    <!-- Campaign Smart31 VMN Box -->
-                    <div id="camp-smart31-vmn-box" style="display:none; margin-bottom:12px;">
-                        <div class="cw-field-group" style="margin-bottom:0;">
-                            <label class="cw-label" style="color: var(--cw-blue);">
-                                <i class="fa fa-shield"></i> <span id="camp-smart31-vmn-title">Smart31 VMN</span>
-                            </label>
-                            <select name="smart31_vmn" id="camp_smart31_vmn_select" class="cw-select" style="border-color: var(--cw-blue);"></select>
-                            <div style="margin-top:5px; font-size:11.5px; display:flex; align-items:center; gap:6px;">
-                                <span style="width:7px; height:7px; border-radius:50%; background:var(--cw-green); display:inline-block;"></span>
-                                <span style="color:var(--cw-green); font-weight:700;">Smart31 Active</span>
+                    <!-- Campaign Smart31 panel (same as Manual Dial): Smart31 VMN (Click2Call) and WebRTC VMN tiles, each only when
+                         that calling way is allowed for the user (their channel AND the licence) -->
+                    @php
+                        $campS31C2c = ($smart31Kinds['c2c'] ?? true) && ($c2cEnabled ?? true);
+                        $campS31Webrtc = ($smart31Kinds['webrtc'] ?? true) && ($webrtcEnabled ?? true);
+                    @endphp
+                    @if($campS31C2c || $campS31Webrtc)
+                    <div id="camp-smart31-vmn-box" class="cw-mc-smart31" style="display:none; margin-bottom:12px;">
+                        <div class="cw-s31-cols">
+                            @if($campS31C2c)
+                            <div class="cw-s31-col">
+                                <label class="cw-label" for="camp_smart31_vmn_select">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 6v12M23 11v2"/></svg>
+                                    Smart31 VMN
+                                </label>
+                                <select name="smart31_vmn" id="camp_smart31_vmn_select" class="cw-select" style="width: 100%;" onchange="lgPaintCampSmart31()" disabled>
+                                    <option value="">Loading...</option>
+                                </select>
+                                <div class="cw-vmn-line is-none" id="camp-smart31-status"><span class="cw-vmn-line-dot"></span><span class="cw-vmn-status-text">Loading...</span></div>
                             </div>
+                            @endif
+                            @if($campS31Webrtc)
+                            <div class="cw-s31-col">
+                                <label class="cw-label" for="camp_smart31_webrtc_vmn_select">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
+                                    WebRTC VMN
+                                </label>
+                                <select name="smart31_webrtc_vmn" id="camp_smart31_webrtc_vmn_select" class="cw-select" style="width: 100%;" onchange="lgPaintCampSmart31()" disabled>
+                                    <option value="">Loading...</option>
+                                </select>
+                                <div class="cw-vmn-line is-none" id="camp-smart31-webrtc-status"><span class="cw-vmn-line-dot"></span><span class="cw-vmn-status-text">Loading...</span></div>
+                            </div>
+                            @endif
                         </div>
+                        <div class="cw-mc-help" id="camp-smart31-help" style="display: none;">Uncheck Smart31 Only to call from your Click2Call / WebRTC VMN.</div>
                     </div>
+                    @endif
 
                     <!-- Campaign 1600 VMN Box -->
                     <div id="camp-vmn1600-vmn-box" style="display:none; margin-bottom:12px;">
@@ -2360,6 +2423,7 @@
                     <div class="cw-field-group cw-mc-phone" style="margin-bottom: 0;">
                         <label class="cw-label" for="mobile" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Mobile Number *</label>
                         <div class="cw-phone-input-wrap">
+                            <span class="cw-phone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg></span>
                             <input type="text"
                                    id="mobile"
                                    class="cw-phone-input-large"
@@ -2390,8 +2454,12 @@
                         $wDefault = (string)(Auth::user()->webrtc_default_number ?? '');
                         $c2cSel = collect($vmnList ?? [])->first(fn ($r) => $r->virtual_number == $c2cDefault) ?? collect($vmnList ?? [])->first();
                         $wSel = collect($wvmnList ?? [])->first(fn ($r) => $r->virtual_number == $wDefault) ?? collect($wvmnList ?? [])->first();
+                        // Smart31 calling ways for this user: their own channel AND the licence (Smart31Schedule::licensedKinds)
+                        $s31C2c = ($smart31Kinds['c2c'] ?? true) && ($c2cEnabled ?? true);
+                        $s31Webrtc = ($smart31Kinds['webrtc'] ?? true) && ($webrtcEnabled ?? true);
                     @endphp
-                    <div class="cw-vmn-columns">
+                    <!-- Hidden while "Smart31 Only" is ticked: the Smart31 panel below shows the numbers then -->
+                    <div class="cw-vmn-columns" id="cw-mc-vmn-columns">
                         <!-- Click2Call VMN -->
                         <div id="c2c-vmn-group" class="cw-field-group cw-vmn-col {{ ($c2cEnabled ?? true) ? '' : 'is-channel-off' }}" style="margin-bottom: 0; display: flex;">
                             <label class="cw-label" for="vmn_select" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Click2Call VMN</label>
@@ -2428,13 +2496,16 @@
                         </div>
                     </div>
 
-                    <!-- 3. Click2Call options: Smart31 Only / Enabled 1600 (independent) -->
-                    <div class="cw-mc-opts" role="group" aria-label="Click2Call calling options">
+                    <!-- 3. Calling options: Smart31 Only / Enabled 1600 (independent) -->
+                    <div class="cw-mc-opts" role="group" aria-label="Calling options">
+                        {{-- Smart31 Only: when the user has a channel whose Smart31 calling way the licence includes --}}
+                        @if($s31C2c || $s31Webrtc)
                         <label class="cw-mc-opt" for="smart31_toggle" id="tile-smart31">
                             <input type="checkbox" id="smart31_toggle" name="smart31_enabled" value="1" onchange="toggleSmart31(this.checked)">
                             <span class="cw-mc-box"><i class="fa fa-check"></i></span>
                             <span class="cw-mc-opt-text">Smart31 Only</span>
                         </label>
+                        @endif
                         <label class="cw-mc-opt" for="vmn1600_toggle" id="tile-1600">
                             <input type="checkbox" id="vmn1600_toggle" name="vmn1600_enabled" value="1" onchange="toggle1600(this.checked)">
                             <span class="cw-mc-box"><i class="fa fa-check"></i></span>
@@ -2442,15 +2513,39 @@
                         </label>
                     </div>
 
-                    <!-- 4. Smart31 VMN: shown only while "Smart31 Only" is checked; the call then uses this number -->
+                    <!-- 4. Smart31 panel: shown only while "Smart31 Only" is checked; Click2Call then uses the Smart31 VMN and
+                         WebRTC the Smart31 WebRTC VMN. Each column only when that calling way is allowed for the user. -->
+                    @if($s31C2c || $s31Webrtc)
                     <div id="cw-smart31-block" class="cw-mc-smart31" style="display: none;">
-                        <label class="cw-label" for="smart31_vmn_select" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;"><i class="fa fa-shield" style="color: var(--cw-blue);"></i> Smart31 VMN</label>
-                        <select id="smart31_vmn_select" class="cw-select" style="width: 100%;" onchange="lgPaintSmart31()" disabled>
-                            <option value="">Loading...</option>
-                        </select>
-                        <div class="cw-vmn-line is-none" id="cw-smart31-status"><span class="cw-vmn-line-dot"></span><span class="cw-vmn-status-text">Loading...</span></div>
-                        <div class="cw-mc-help" id="cw-smart31-help" style="display: none;">Uncheck Smart31 Only to call from your Click2Call VMN.</div>
+                        <div class="cw-s31-cols">
+                            @if($s31C2c)
+                            <div class="cw-s31-col">
+                                <label class="cw-label" for="smart31_vmn_select">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 6v12M23 11v2"/></svg>
+                                    Smart31 VMN
+                                </label>
+                                <select id="smart31_vmn_select" class="cw-select" style="width: 100%;" onchange="lgPaintSmart31()" disabled>
+                                    <option value="">Loading...</option>
+                                </select>
+                                <div class="cw-vmn-line is-none" id="cw-smart31-status"><span class="cw-vmn-line-dot"></span><span class="cw-vmn-status-text">Loading...</span></div>
+                            </div>
+                            @endif
+                            @if($s31Webrtc)
+                            <div class="cw-s31-col">
+                                <label class="cw-label" for="smart31_webrtc_vmn_select">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
+                                    WebRTC VMN
+                                </label>
+                                <select id="smart31_webrtc_vmn_select" class="cw-select" style="width: 100%;" onchange="lgPaintSmart31()" disabled>
+                                    <option value="">Loading...</option>
+                                </select>
+                                <div class="cw-vmn-line is-none" id="cw-smart31-webrtc-status"><span class="cw-vmn-line-dot"></span><span class="cw-vmn-status-text">Loading...</span></div>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="cw-mc-help" id="cw-smart31-help" style="display: none;">Uncheck Smart31 Only to call from your Click2Call / WebRTC VMN.</div>
                     </div>
+                    @endif
 
                     @php
                         $callingHoursStatus = \App\Services\CallingRestrictionService::getCallingHoursUiStatus();
@@ -3244,7 +3339,16 @@ function placeCampaignCall(type) {
 
     var isSmart31 = $('#camp_smart31_toggle').is(':checked');
     var is1600 = $('#camp_vmn1600_toggle').is(':checked');
-    var vmn = isSmart31 ? $('#camp_smart31_vmn_select').val() : (is1600 ? $('#camp_vmn1600_vmn_select').val() : '');
+    // Smart31 Only: Click2Call uses the Smart31 VMN tile, WebRTC the WebRTC VMN tile
+    var $campS31 = $(type === 'webrtc' ? '#camp_smart31_webrtc_vmn_select' : '#camp_smart31_vmn_select');
+    var vmn = isSmart31 ? ($campS31.val() || '') : (is1600 ? $('#camp_vmn1600_vmn_select').val() : '');
+    if (isSmart31 && !vmn) {
+        // Smart31 Only ticked: never fall back to another number (outside hours / no number enabled yet)
+        var s31Msg = $campS31.length ? lgSmart31NoneText($campS31) : 'Smart31 ' + (type === 'webrtc' ? 'WebRTC' : 'Click2Call') + ' is not included in your licence';
+        toastr.error(s31Msg);
+        lgAdNotify('call_failed', { reason: 'vmn', message: s31Msg });
+        return;
+    }
     if (!vmn) {
         // Each call type uses the Campaign Call card's own VMN for that channel (never the other channel's number)
         vmn = lgCampUsableVmn(type === 'webrtc' ? 'webrtc' : 'click2call');
@@ -4342,14 +4446,18 @@ function copyCampaignPhone() {
 }
 
 /* ── Campaign Queue: Smart31 & 1600 toggle + VMN loading ─── */
+// Smart31 Only on the Campaign Call card works like Manual Dial: the Click2Call / WebRTC VMN columns are replaced by the
+// Smart31 VMN and WebRTC VMN tiles while it is ticked
 function toggleCampSmart31(enabled) {
+    var $b = $('#camp-smart31-vmn-box').stop(true, true);
     if (enabled) {
         $('#camp_vmn1600_toggle').prop('checked', false);
         $('#camp-vmn1600-vmn-box').hide();
-        $('#camp-smart31-vmn-box').show();
         loadCampSmart31Vmns();
+        $('#cw-camp-vmn-columns').hide();
+        $b.slideDown(180);
     } else {
-        $('#camp-smart31-vmn-box').hide();
+        $b.slideUp(180, function () { $('#cw-camp-vmn-columns').show(); });
         if ($('#camp_vmn1600_toggle').is(':checked')) {
             $('#camp-vmn1600-vmn-box').show();
             loadCamp1600Vmns();
@@ -4360,42 +4468,67 @@ function toggleCampSmart31(enabled) {
 function toggleCamp1600(enabled) {
     if (enabled) {
         $('#camp_smart31_toggle').prop('checked', false);
-        $('#camp-smart31-vmn-box').hide();
+        $('#camp-smart31-vmn-box').stop(true, true).hide();
+        $('#cw-camp-vmn-columns').show();
         $('#camp-vmn1600-vmn-box').show();
         loadCamp1600Vmns();
     } else {
         $('#camp-vmn1600-vmn-box').hide();
         if ($('#camp_smart31_toggle').is(':checked')) {
+            $('#cw-camp-vmn-columns').hide();
             $('#camp-smart31-vmn-box').show();
             loadCampSmart31Vmns();
         }
     }
 }
 
-function loadCampSmart31Vmns() {
+// Both campaign Smart31 dropdowns (Click2Call: #camp_smart31_vmn_select, WebRTC: #camp_smart31_webrtc_vmn_select), each only when rendered
+function loadCampSmart31Vmns(refresh) {
     if (!$('#camp_smart31_toggle').is(':checked')) return;
-    var $btn   = $('#btn-campaign-call-toggle');
-    var cType  = ($btn.attr('data-call-type') || 'webrtc').toLowerCase();
-    $.ajax({
-        url: "{{ route('dialerSmart31Vmns') }}",
-        type: 'GET',
-        data: { type: cType },
-        dataType: 'json',
-        success: function(res) {
-            var $select = $('#camp_smart31_vmn_select').empty();
-            if (res.success && res.vmns && res.vmns.length > 0) {
-                $.each(res.vmns, function(i, item) {
-                    $select.append($('<option>', { value: item.number, text: item.display }));
-                });
-                $('#camp-smart31-vmn-title').text(cType === 'click2call' ? 'Click2Call VMN' : 'WebRTC VMN');
-            } else {
-                $select.append('<option value="">No VMN available</option>');
-            }
-        },
-        error: function() {
-            $('#camp_smart31_vmn_select').empty().append('<option value="">Error loading VMNs</option>');
+    [['#camp_smart31_vmn_select', 'click2call'], ['#camp_smart31_webrtc_vmn_select', 'webrtc']].forEach(function (c) {
+        var $select = $(c[0]);
+        if (!$select.length) return;
+        if (!refresh) {
+            $select.html('<option value="">Loading...</option>').prop('disabled', true).data('lgLoading', true);
+            lgPaintCampSmart31();
         }
+        $.ajax({
+            url: "{{ route('dialerSmart31Vmns') }}",
+            type: 'GET',
+            data: { type: c[1] },
+            dataType: 'json',
+            complete: function() { $select.data('lgLoading', false); },
+            success: function(res) {
+                $select.data('lgLoading', false);
+                var any = lgSmart31Fill($select, res, 'No Smart31 number configured');
+                $select.prop('disabled', !any).trigger('change.select2');
+                lgPaintCampSmart31();
+            },
+            error: function() {
+                if (refresh) return;   // keep the current list; the next refresh tries again
+                $select.data('lgLoading', false);
+                $select.html('<option value="">No Smart31 number configured</option>').prop('disabled', true).trigger('change.select2');
+                lgPaintCampSmart31();
+            }
+        });
     });
+}
+
+/** Status line under each campaign Smart31 dropdown ("Smart31 Active" / "WebRTC Active" / why none can be used). */
+function lgPaintCampSmart31() {
+    var anyNone = false;
+    [['#camp_smart31_vmn_select', '#camp-smart31-status', 'Smart31 Active'], ['#camp_smart31_webrtc_vmn_select', '#camp-smart31-webrtc-status', 'WebRTC Active']].forEach(function (c) {
+        var $sel = $(c[0]);
+        if (!$sel.length) return;
+        var $line = $(c[1]).removeClass('is-unavailable is-none');
+        var info = lgVmnInfo($sel);
+        var text;
+        if ($sel.data('lgLoading')) { $line.addClass('is-none'); text = 'Loading...'; }
+        else if (info.none) { $line.addClass('is-none'); text = lgSmart31NoneText($sel); anyNone = true; }
+        else { text = c[2]; }
+        $line.find('.cw-vmn-status-text').text(text);
+    });
+    $('#camp-smart31-help').toggle(anyNone);
 }
 
 function loadCamp1600Vmns() {
@@ -4565,11 +4698,18 @@ function toggleSmart31(enabled) {
     var $b = $('#cw-smart31-block').stop(true, true);
     if (enabled) {
         loadSmart31Vmns();
+        $('#cw-mc-vmn-columns').hide();   // the Smart31 panel shows the numbers instead
         $b.slideDown(180);
     } else {
-        $b.slideUp(180);
+        $b.slideUp(180, function () { $('#cw-mc-vmn-columns').show(); });
     }
-    lgCallBtnsState();   // Click2Call now uses (or stops using) the Smart31 VMN
+    lgCallBtnsState();   // Click2Call / WebRTC now use (or stop using) the Smart31 numbers
+}
+
+/** Smart31 number for a Quick Dial call ('click2call' / 'webrtc'): its panel dropdown while "Smart31 Only" is ticked and that way is allowed. */
+function lgSmart31Select(channel) {
+    if (!$('#smart31_toggle').is(':checked')) return $();
+    return $(channel === 'webrtc' ? '#smart31_webrtc_vmn_select' : '#smart31_vmn_select');
 }
 
 // Enabled 1600: swaps the Click2Call VMN list to the 1600 numbers (as before).
@@ -4596,41 +4736,94 @@ function lgPoolOptions(res) {
     return opts;
 }
 
-function loadSmart31Vmns() {
-    var $select = $('#smart31_vmn_select');
-    $select.html('<option value="">Loading...</option>').prop('disabled', true);
-    lgPaintSmart31(true);
-    $.ajax({
-        url: "{{ route('dialerSmart31Vmns') }}",
-        type: 'GET',
-        data: { type: 'click2call' },
-        dataType: 'json',
-        success: function(res) {
-            var opts = lgPoolOptions(res);
-            $select.empty().append(opts.length ? opts : '<option value="">No Smart31 number configured</option>');
-            // configured number first: the first available one
-            var $first = $select.find('option[data-available="1"]').first();
-            if ($first.length) $select.val($first.val());
-            $select.prop('disabled', !opts.length).trigger('change.select2');
-            lgPaintSmart31();
-        },
-        error: function() {
-            $select.html('<option value="">No Smart31 number configured</option>').prop('disabled', true).trigger('change.select2');
+// Both Smart31 panel dropdowns (Click2Call: #smart31_vmn_select, WebRTC: #smart31_webrtc_vmn_select), each only when rendered
+function loadSmart31Vmns(refresh) {
+    [['#smart31_vmn_select', 'click2call'], ['#smart31_webrtc_vmn_select', 'webrtc']].forEach(function (c) {
+        var $select = $(c[0]);
+        if (!$select.length) return;
+        if (!refresh) {
+            $select.html('<option value="">Loading...</option>').prop('disabled', true).data('lgLoading', true);
             lgPaintSmart31();
         }
+        $.ajax({
+            url: "{{ route('dialerSmart31Vmns') }}",
+            type: 'GET',
+            data: { type: c[1] },
+            dataType: 'json',
+            complete: function() { $select.data('lgLoading', false); },
+            success: function(res) {
+                $select.data('lgLoading', false);
+                var any = lgSmart31Fill($select, res, 'No Smart31 number configured');
+                $select.prop('disabled', !any).trigger('change.select2');
+                lgPaintSmart31();
+            },
+            error: function() {
+                if (refresh) return;   // keep the current list; the next refresh tries again
+                $select.data('lgLoading', false);
+                $select.html('<option value="">No Smart31 number configured</option>').prop('disabled', true).trigger('change.select2');
+                lgPaintSmart31();
+            }
+        });
     });
 }
 
+/**
+ * Smart31 dropdown from the server's time-slot lines (Smart31Schedule): enabled numbers first, the newest enabled one is
+ * the default "(Default)"; disabled ones stay visible, greyed, "(Disabled, from 12:01 PM)". The agent's own pick of an
+ * enabled number is kept while the slot stays the same. Returns true when there is at least one number.
+ */
+function lgSmart31Fill($select, res, emptyText) {
+    var lines = (res && res.success && res.lines) || [];
+    var prev = $select.val(), prevSlot = $select.data('lgSlot');
+    $select.empty();
+    $.each(lines, function (i, l) {
+        $select.append($('<option>', {
+            value: l.vmn,
+            disabled: !l.enabled,
+            'data-available': l.enabled ? 1 : 0,
+            text: '+91' + l.vmn + (l['default'] ? ' (Default)' : (l.enabled ? '' : ' (Disabled, from ' + l.available_from + ')'))
+        }));
+    });
+    if (!lines.length) $select.append($('<option>', { value: '', text: (res && res.message) || emptyText }));
+    var keep = prev && prevSlot === res.slot && lines.some(function (l) { return l.enabled && l.vmn === prev; });
+    var def = lines.filter(function (l) { return l['default']; })[0];
+    $select.val(keep ? prev : (def ? def.vmn : (lines.length ? null : '')));
+    $select.data('lgSlot', res ? res.slot : null).data('lgMsg', (res && res.message) || '').trigger('change.select2');
+    return lines.length > 0;
+}
+
+/** Why no Smart31 number can be used right now (outside hours / none enabled yet / none configured). */
+function lgSmart31NoneText($select) {
+    if ($select.data('lgMsg')) return $select.data('lgMsg');
+    var $next = $select.find('option[disabled][value!=""]').first();   // a number whose slot has not started (not a disabled select)
+    return $next.length ? 'No Smart31 number is enabled yet. Next: ' + $next.text() : 'Smart31 not configured';
+}
+
+// Numbers follow the time slots without a page reload: refresh every 30 seconds and when the window gets focus again
+function lgSmart31Refresh() {
+    if ($('#smart31_toggle').is(':checked')) loadSmart31Vmns(true);
+    if ($('#camp_smart31_toggle').is(':checked')) loadCampSmart31Vmns(true);
+}
+$(function () {
+    setInterval(lgSmart31Refresh, 30000);
+    $(window).on('focus', lgSmart31Refresh);
+});
+
 function lgPaintSmart31(loading) {
-    var $line = $('#cw-smart31-status').removeClass('is-unavailable is-none');
-    var info = lgVmnInfo($('#smart31_vmn_select'));
-    var text;
-    if (loading) { $line.addClass('is-none'); text = 'Loading...'; }
-    else if (info.none) { $line.addClass('is-none'); text = 'Smart31 not configured'; }
-    else if (!info.available) { $line.addClass('is-unavailable'); text = 'Expired' + (info.expiry ? ' · Expired on ' + info.expiry : ''); }
-    else { text = 'Smart31 Active' + (info.expiry ? ' · Valid till ' + info.expiry : ''); }
-    $line.find('.cw-vmn-status-text').text(text);
-    $('#cw-smart31-help').toggle(!loading && info.none);
+    var anyNone = false;
+    [['#smart31_vmn_select', '#cw-smart31-status', 'Smart31 Active'], ['#smart31_webrtc_vmn_select', '#cw-smart31-webrtc-status', 'WebRTC Active']].forEach(function (c) {
+        var $sel = $(c[0]);
+        if (!$sel.length) return;
+        var $line = $(c[1]).removeClass('is-unavailable is-none');
+        var info = lgVmnInfo($sel);
+        var text;
+        if (loading || $sel.data('lgLoading')) { $line.addClass('is-none'); text = 'Loading...'; }   // this list is still loading
+        else if (info.none) { $line.addClass('is-none'); text = lgSmart31NoneText($sel); anyNone = true; }
+        else if (!info.available) { $line.addClass('is-unavailable'); text = 'Expired' + (info.expiry ? ' · Expired on ' + info.expiry : ''); }
+        else { text = c[2] + (info.expiry ? ' · Valid till ' + info.expiry : ''); }
+        $line.find('.cw-vmn-status-text').text(text);
+    });
+    $('#cw-smart31-help').toggle(!loading && anyNone);
     lgCallBtnsState();
 }
 
@@ -4736,6 +4929,10 @@ function lgUsableVmn(channel, $sel, channelOn) {
         toastr.error((channel === 'webrtc' ? 'WebRTC' : 'Click2Call') + ' calling is not enabled for your account.');
         return null;
     }
+    if (info.none && channel === 'smart31' && ($sel.data('lgMsg') || $sel.find('option[disabled][value!=""]').length)) {
+        toastr.error(lgSmart31NoneText($sel));   // outside calling hours / no number enabled yet
+        return null;
+    }
     if (info.none) {
         var opt = channel === 'smart31' ? 'Smart31 Only' : (channel === 'webrtc' ? '' : lgC2cOption());
         toastr.error(opt ? 'No ' + opt.replace(' Only', '') + ' number is configured for Click2Call. Uncheck ' + opt + ' to call from your Click2Call VMN.'
@@ -4814,8 +5011,9 @@ function lgVmnUsable($select) {
 function lgCallBtnsState() {
     var numberOk = ($('#mobile').val() || '').replace(/[^0-9]/g, '').length >= 10;
     var closed = !!window.callingHoursClosed;
-    var c2cVmnOk = lgVmnUsable($($('#smart31_toggle').is(':checked') ? '#smart31_vmn_select' : '#vmn_select'));
-    var webVmnOk = lgVmnUsable($('#webrtc_vmn_select'));
+    var $s31c = lgSmart31Select('click2call'), $s31w = lgSmart31Select('webrtc');
+    var c2cVmnOk = lgVmnUsable($s31c.length ? $s31c : $('#vmn_select'));
+    var webVmnOk = lgVmnUsable($s31w.length ? $s31w : $('#webrtc_vmn_select'));
     var reason = function (vmnOk, label) {
         return closed ? 'Calling is closed' : (!vmnOk ? 'No available ' + label + ' VMN: choose a valid, unexpired number' : '');
     };
@@ -5189,9 +5387,10 @@ function startClick2Call() {
     window._currentCallChannel = 'click2call';
     syncVmnDetailsBox('click2call');
 
-    var isSmart31 = $('#smart31_toggle').is(':checked');
+    var $s31 = lgSmart31Select('click2call');
+    var isSmart31 = $s31.length > 0;   // "Smart31 Only" ticked and Smart31 Click2Call allowed
     var is1600 = $('#vmn1600_toggle').is(':checked');
-    var vmn = lgUsableVmn(isSmart31 ? 'smart31' : 'click2call');   // Smart31 VMN or Click2Call VMN; blocked when expired / not configured
+    var vmn = isSmart31 ? lgUsableVmn('smart31', $s31, lgChannelOn('click2call')) : lgUsableVmn('click2call');   // blocked when expired / not enabled yet / not configured
     if (!vmn) return;
 
     var $btn = $('#btn-call-click2call');
@@ -5271,9 +5470,10 @@ function startWebRTCCall() {
     window._activeCallIsCampaign = false;
     syncVmnDetailsBox('webrtc');
 
-    var isSmart31 = $('#smart31_toggle').is(':checked');
+    var $s31 = lgSmart31Select('webrtc');
+    var isSmart31 = $s31.length > 0;   // "Smart31 Only" ticked and Smart31 WebRTC allowed: the Smart31 WebRTC VMN
     var is1600 = $('#vmn1600_toggle').is(':checked');
-    var vmn = lgUsableVmn('webrtc');   // WebRTC VMN only (never the Click2Call number); blocked when expired / not configured
+    var vmn = isSmart31 ? lgUsableVmn('smart31', $s31, lgChannelOn('webrtc')) : lgUsableVmn('webrtc');   // never the Click2Call number
     if (!vmn) return;
 
     var $btn = $('#btn-call-webrtc');
