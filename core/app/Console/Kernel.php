@@ -21,6 +21,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('tenants:each "recordings:fetch-pending --sweep"')->everyFiveMinutes()->withoutOverlapping(20);
         // Nightly: anything from the last 24 hours that still has no recording
         $schedule->command('tenants:each "recordings:fetch-pending --sweep --sweep-minutes=1440"')->dailyAt('23:30')->withoutOverlapping(120);
+        // Copy new call recordings into the Google Cloud Storage bucket (nothing happens until GCS_* is set in .env)
+        $schedule->command('tenants:each "recordings:to-bucket"')->everyFiveMinutes()->withoutOverlapping(60);
         // Inbound Calls report: pull the provider's inbound call logs, and nightly link calls to leads / agents added later
         $schedule->command('inbound-calls:pull --hours=3')->everyMinute()->withoutOverlapping(10);   // new calls within a minute; a crashed run frees the lock after 10 min
         // copy of the companies list in TENANCY_COPY_DATABASE (master: TENANCY_DB_DATABASE) - nothing to do without one

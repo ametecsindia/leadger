@@ -89,6 +89,13 @@ return [
         // the provider's times carry no timezone: they are in this one (the report's "Today" is also this timezone)
         'timezone' => env('TELEPHONY_TIMEZONE', 'Asia/Kolkata'),
     ],
+    // Call recordings in a private Google Cloud Storage bucket (App\Services\GcsBucket); off while either is empty.
+    // key_file: path of the service account JSON key, outside the web folder (never commit it)
+    'gcs' => [
+        'bucket' => env('GCS_RECORDINGS_BUCKET', ''),
+        'key_file' => env('GCS_KEY_FILE', ''),
+        'prefix' => trim((string)env('GCS_RECORDINGS_PREFIX', 'recordings'), '/'),
+    ],
     // WebRTC agents (App\Services\SmartPingAgent): the company account at SmartPing for add-agent
     'smartping' => [
         'url' => env('SMARTPING_URL', 'https://sip.telozar.com'),   // add-agent lives on sip.telozar.com (smartcloud.smartping.io: "account does not exist")

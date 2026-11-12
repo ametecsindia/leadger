@@ -660,12 +660,13 @@ class CallRecordingService
             return ['ok' => false, 'code' => 500, 'message' => 'The recording could not be deleted. Nothing was changed.'];
         }
 
-        // 3. Committed: remove the moved files for good
+        // 3. Committed: remove the moved files for good, and the bucket copy
         foreach ($moved as $orig => $tmp) {
             if (!@unlink($tmp)) {
                 Log::warning("[RecordingDelete] Recording #{$recording->id} deleted but leftover file could not be removed: {$tmp}");
             }
         }
+        \App\Services\GcsBucket::forget($sourceCode, $id);
 
         Log::info("AUDIT LOG: Call recording deleted by User ID {$userId}: source {$sourceCode} #{$id}, recording #{$recording->id}, files: " . json_encode(array_keys($moved)));
         return ['ok' => true, 'code' => 200, 'message' => 'Recording deleted successfully.'];

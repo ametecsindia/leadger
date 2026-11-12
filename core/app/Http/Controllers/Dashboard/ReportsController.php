@@ -637,6 +637,9 @@ where 1=1 ";
             if (in_array($userRole, ['Telecaller', 'Sales Person']) && $rec->user_id != $userId) {
                 abort(403, 'Unauthorized access to recording.');
             }
+            if ($toBucket = \App\Services\GcsBucket::redirect(3, (int)$id, request()->has('play'))) {
+                return $toBucket;   // private bucket copy, 10-minute link
+            }
             $path = \App\Services\CallRecordingService::realAudioPath($rec->file_path);
             if ($path) {
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -667,6 +670,9 @@ where 1=1 ";
             $recordingRec = $dialerLog->recording_id ? \App\Models\Recording::find($dialerLog->recording_id) : null;
             if ($recordingRec && $recordingRec->download_status === 'deleted') {
                 abort(404, 'This recording was deleted.');
+            }
+            if ($toBucket = \App\Services\GcsBucket::redirect(2, (int)$id, request()->has('play'))) {
+                return $toBucket;   // private bucket copy, 10-minute link
             }
             if (!$filePath && $recordingRec) {
                 $filePath = $recordingRec->file_path ?: $recordingRec->recording_url;
@@ -743,6 +749,9 @@ where 1=1 ";
             $recordingRec = $callLog->recording_id ? \App\Models\Recording::find($callLog->recording_id) : null;
             if ($recordingRec && $recordingRec->download_status === 'deleted') {
                 abort(404, 'This recording was deleted.');
+            }
+            if ($toBucket = \App\Services\GcsBucket::redirect(0, (int)$id, request()->has('play'))) {
+                return $toBucket;   // private bucket copy, 10-minute link
             }
             $candidatePaths = [
                 $fullPath,
