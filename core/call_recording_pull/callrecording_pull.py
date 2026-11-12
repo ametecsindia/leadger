@@ -1,346 +1,298 @@
-import os
-import pika
-import json
-import mysql.connector
-from datetime import datetime
-import logging
-import requests
-import subprocess
-from threading import Thread, Event
-from configparser import ConfigParser
-import sys
+"""
+LeadGER call recording consumer (RabbitMQ).
 
-logging.basicConfig(filename=datetime.now().strftime('rabbitmq_consumer_%Y-%m-%d.log'), level=logging.INFO)
+The call provider puts one message per finished call on a RabbitMQ queue named after the company's CRM ID (from its
+licence). This program listens on the queue of every company and saves the recording link and call details in that
+company's database:
+  - Auto Dialer call (reference has "_d_")  -> leadger_dialer_logs
+  - incoming call (incoming = 1)              -> leadger_incoming_vmn_logs + Laravel live alert
+  - Click2Call / WebRTC call                  -> leadger_call_logs
+
+Companies: for every .env path in config.ini [path]: the main database's own company AND every company of its
+companies list (leadger_tenants). A CRM ID used by two companies is listened to once (and a warning is logged).
+
+Settings (config.ini on the server, not in git): [rabbitmq] host / port / user / password, [licence] key (required),
+[laravel] php (PHP binary, e.g. php8.3; default php).
+"""
+import json
+import logging
+import os
+import subprocess
+import time
+from configparser import ConfigParser
+from datetime import datetime
+from threading import Thread, Event
+
+import mysql.connector
+import pika
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+logging.basicConfig(
+    filename=os.path.join(BASE_DIR, datetime.now().strftime('rabbitmq_consumer_%Y-%m-%d.log')),
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+)
+
+config = ConfigParser()
+config.read(os.path.join(BASE_DIR, 'config.ini'))
+
+# Connection settings and the licence key come only from config.ini on the server (never from this file)
+RABBIT_HOST = config.get('rabbitmq', 'host', fallback='')
+RABBIT_PORT = config.getint('rabbitmq', 'port', fallback=5672)
+RABBIT_USER = config.get('rabbitmq', 'user', fallback='')
+RABBIT_PASSWORD = config.get('rabbitmq', 'password', fallback='')
+LICENCE_KEY = config.get('licence', 'key', fallback='')
+PHP_BINARY = config.get('laravel', 'php', fallback='php')
+_missing = [n for n, v in (('[rabbitmq] host', RABBIT_HOST), ('[rabbitmq] user', RABBIT_USER),
+                           ('[rabbitmq] password', RABBIT_PASSWORD), ('[licence] key', LICENCE_KEY)) if not v]
+if _missing and __name__ == '__main__':
+    raise SystemExit('config.ini is missing: ' + ', '.join(_missing))
+
+# Database errors worth trying again (server gone, connection lost): the message goes back on the queue
+RETRY_ERRORS = (mysql.connector.errors.InterfaceError, mysql.connector.errors.OperationalError)
+
 
 def load_laravel_env(env_path):
+    """KEY=value lines of a Laravel .env (quotes removed; comments and lines without '=' skipped)."""
     env_vars = {}
     with open(env_path) as f:
         for line in f:
-            if line.strip() and not line.startswith('#'):
-                key, value = line.strip().split('=', 1)
-                env_vars[key] = value
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
+            env_vars[key.strip()] = value
     return env_vars
 
-def get_crm_ids_and_db_connections(env_vars):
-    crm_ids = []
-    db_connections = []
-    connection = None
-    try:
-        db_password = env_vars.get('DB_PASSWORD')
-        connection = mysql.connector.connect(
-            host=env_vars['DB_HOST'],
-            user=env_vars['DB_USERNAME'],
-            password=db_password,
-            database=env_vars['DB_DATABASE']
-        )
+
+def read_crm_id(db_connection, prefix):
+    """CRM ID from the company's licence (settings.full_response), or None."""
+    with mysql.connector.connect(**db_connection) as connection:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM leadger_tenants")
-        clients = cursor.fetchall()
+        cursor.execute(
+            f"SELECT FROM_BASE64(AES_DECRYPT(full_response, %s)) AS full_response FROM {prefix}settings ORDER BY id LIMIT 1",
+            (LICENCE_KEY,))
+        row = cursor.fetchone()
+    if not row or not row['full_response']:
+        return None
+    raw = row['full_response']
+    if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode('utf-8', 'ignore')
+    try:
+        return str(json.loads(raw)['data']['crm_id'])
+    except (ValueError, KeyError, TypeError):
+        return None
 
-        if not clients:
-            logging.info("No tenants found. Falling back to current DB.")
-            cursor.execute("SELECT id, site_title_en, FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response FROM leadger_settings")
-            rows = cursor.fetchall()
-            for row in rows:
-                if row['full_response']:
-                    full_response = json.loads(row['full_response'])
-                    crm_ids.append(full_response['data']['crm_id'])
-                    db_connections.append({
-                        'host': env_vars['DB_HOST'],
-                        'user': env_vars['DB_USERNAME'],
-                        'password': db_password,
-                        'database': env_vars['DB_DATABASE']
-                    })
+
+def get_companies(env_path, env_vars):
+    """[(crm_id, db_connection, env_path)] for the main database and every company of its companies list."""
+    prefix = env_vars.get('DB_TABLE_PREFIX', 'leadger_')
+    main = {
+        'host': env_vars['DB_HOST'],
+        'port': int(env_vars.get('DB_PORT', 3306) or 3306),
+        'user': env_vars['DB_USERNAME'],
+        'password': env_vars.get('DB_PASSWORD', ''),
+        'database': env_vars['DB_DATABASE'],
+    }
+    connections = [('main ' + main['database'], main)]
+    try:
+        with mysql.connector.connect(**main) as connection:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(f"SHOW TABLES LIKE '{prefix}tenants'")
+            if cursor.fetchone():
+                cursor.execute(f"SELECT subdomain, db_host, db_name, db_user, db_password FROM {prefix}tenants ORDER BY id")
+                for t in cursor.fetchall():
+                    connections.append((t['subdomain'], {
+                        'host': t['db_host'], 'port': main['port'], 'user': t['db_user'],
+                        'password': t['db_password'] or '', 'database': t['db_name'],
+                    }))
+    except mysql.connector.Error as e:
+        logging.error(f"Companies list could not be read ({main['database']}): {e}")
+
+    companies = []
+    for name, db in connections:
+        try:
+            crm_id = read_crm_id(db, prefix)
+        except mysql.connector.Error as e:
+            logging.error(f"{name}: database could not be read ({db['database']}): {e}")
+            continue
+        if not crm_id:
+            logging.warning(f"{name}: no licence / CRM ID in {db['database']}, skipped")
+            continue
+        companies.append((crm_id, db, env_path, name))
+    return companies
+
+
+def process_call_recording(call_msg, db_connection, env_path):
+    """True when the message is done (saved, or cannot ever be saved); False to put it back on the queue."""
+    try:
+        lead_ref = str(call_msg.get('lead_id') or '')
+        parts = lead_ref.split('_')
+        if len(parts) > 1 and parts[1] == 'd':
+            process_dialer_call(call_msg, db_connection)
+        elif call_msg.get('incoming') == 1:
+            process_incoming_call(call_msg, db_connection, env_path)
         else:
-            for client in clients:
-                try:
-                    client_connection = mysql.connector.connect(
-                        host=client['db_host'],
-                        user=client['db_user'],
-                        password=client['db_password'],
-                        database=client['db_name']
-                    )
-                    client_cursor = client_connection.cursor(dictionary=True)
-                    client_cursor.execute("SELECT id, site_title_en, FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response FROM leadger_settings")
-                    rows = client_cursor.fetchall()
-                    for row in rows:
-                        if row['full_response']:
-                            full_response = json.loads(row['full_response'])
-                            crm_ids.append(full_response['data']['crm_id'])
-                            db_connections.append({
-                                'host': client['db_host'],
-                                'user': client['db_user'],
-                                'password': client['db_password'],
-                                'database': client['db_name']
-                            })
-                except Exception as e:
-                    logging.error(f"Client DB error: {e}")
-                finally:
-                    if client_connection.is_connected():
-                        client_cursor.close()
-                        client_connection.close()
+            process_other_call(call_msg, db_connection)
+        return True
+    except RETRY_ERRORS as e:
+        logging.error(f"Database not reachable, message put back on the queue: {e}")
+        return False
     except Exception as e:
-        logging.error(f"Main DB error: {e}")
-    finally:
-        if connection and connection.is_connected():
-            cursor.close()
-            connection.close()
-    return crm_ids, db_connections
+        logging.error(f"Message could not be saved (dropped): {e} | message: {call_msg}")
+        return True
 
-def process_call_recording(call_msg, db_connection, env_vars):
-    try:
-        logging.info(f"Processing call message: {call_msg}")
-        if ('lead_id' in call_msg) and call_msg['lead_id'].split('_')[1] == "d":
-            process_dialer_call(call_msg, db_connection, env_vars)
-        elif ('incoming' in call_msg) and call_msg['incoming'] == 1:
-            process_incoming_call(call_msg, db_connection, env_vars)
-        else:
-            process_other_call(call_msg, db_connection, env_vars)
-    except Exception as e:
-        logging.error(f"process_call_recording error: {e}")
 
-def process_dialer_call(call_msg, db_connection, env_vars):
-    try:
-        logging.info(f"Processing dialer call: {call_msg['lead_id']}")
-        with mysql.connector.connect(**db_connection) as connection:
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM leadger_dialer_logs WHERE reference_id = %(uuid)s", {'uuid': call_msg['lead_id']})
-            log = cursor.fetchone()
-            if not log:
-                logging.error(f"Dialer log not found: {call_msg['lead_id']}")
-                return
-            seconds = call_msg['duration']
-            minutes = seconds // 60
-            seconds = seconds % 60
-            duration = '{:02d}:{:02d}'.format(minutes, seconds)
-            destination_path = call_msg['recording_url']
-            cursor.execute(
-                """
-                UPDATE leadger_dialer_logs 
-                SET click_response = %(response)s, 
-                    click_recording_url = %(recording_url)s, 
-                    file_path = %(file_path)s, 
-                    duration = %(duration)s 
-                WHERE reference_id = %(id)s
-                """,
-                {
-                    'response': call_msg['response'],
-                    'recording_url': call_msg['recording_url'],
-                    'file_path': destination_path,
-                    'duration': duration,
-                    'id': log['reference_id']
-                }
-            )
-            if cursor.rowcount == 0:
-                logging.warning(f"No rows updated for dialer log ID: {log['id']}")
-            else:
-                logging.info(f"Recording updated for dialer log ID: {log['id']}")
-            connection.commit()
-    except Exception as ex:
-        logging.error(f"process_dialer_call error: {ex}")
+def mm_ss(seconds):
+    seconds = int(seconds or 0)
+    return '{:02d}:{:02d}'.format(seconds // 60, seconds % 60)
 
-def process_other_call(call_msg, db_connection, env_vars):
-    try:
-        call_log_id = call_msg['lead_id']
-        logging.info(f"Processing other call: reference_id = {call_log_id}")
 
-        with mysql.connector.connect(**db_connection) as connection:
-            cursor = connection.cursor(dictionary=True)
+def process_dialer_call(call_msg, db_connection):
+    with mysql.connector.connect(**db_connection) as connection:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT id, reference_id FROM leadger_dialer_logs WHERE reference_id = %s", (call_msg['lead_id'],))
+        log = cursor.fetchone()
+        if not log:
+            logging.error(f"Dialer log not found: {call_msg['lead_id']} ({db_connection['database']})")
+            return
+        cursor.execute(
+            """UPDATE leadger_dialer_logs
+               SET click_response = %s, click_recording_url = %s, file_path = %s, duration = %s
+               WHERE reference_id = %s""",
+            (call_msg.get('response'), call_msg.get('recording_url'), call_msg.get('recording_url'),
+             mm_ss(call_msg.get('duration')), log['reference_id']))
+        connection.commit()
+        logging.info(f"Recording saved for dialer log {log['id']} ({db_connection['database']})")
 
-            # 1. Fetch log
-            cursor.execute("SELECT * FROM leadger_call_logs WHERE reference_id = %(id)s", {'id': call_log_id})
-            log = cursor.fetchone()
-            if not log:
-                logging.error(f"Call log not found: {call_log_id}")
-                return
 
-            # 2. Extract lead_id prefix (lead_id = 125000005_M8_90022_2_1 ? 125000005)
-            lead_id_prefix = call_log_id.split('_')[0]
+def process_other_call(call_msg, db_connection):
+    reference_id = call_msg['lead_id']
+    with mysql.connector.connect(**db_connection) as connection:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM leadger_call_logs WHERE reference_id = %s", (reference_id,))
+        log = cursor.fetchone()
+        if not log:
+            logging.error(f"Call log not found: {reference_id} ({db_connection['database']})")
+            return
+        cursor.execute(
+            """UPDATE leadger_call_logs
+               SET updated_at = %s, click_response = %s, click_recording_url = %s
+               WHERE reference_id = %s""",
+            (datetime.now(), call_msg.get('response'), call_msg.get('recording_url'), reference_id))
+        connection.commit()
+        logging.info(f"Recording saved for call log {log['id']} ({db_connection['database']})")
 
-            # 3. Lookup campaign_id via lead_id prefix from leadger_leads
-            cursor.execute("SELECT campaign_id FROM leadger_leads WHERE id = %s", (lead_id_prefix,))
-            lead_row = cursor.fetchone()
-            campaign_id = lead_row['campaign_id'] if lead_row else None
 
-            # Optional: log missing lead/campaign lookup
-            if not campaign_id:
-                logging.warning(f"Campaign ID not found for lead ID prefix: {lead_id_prefix}")
+def process_incoming_call(call_msg, db_connection, env_path):
+    recording_url = '' if call_msg.get('recording_url') == 'No Voice' else (call_msg.get('recording_url') or '')
+    with mysql.connector.connect(**db_connection) as connection:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """INSERT INTO leadger_incoming_vmn_logs
+               (call_id, dni, a_party_no, a_start_time, a_dial_status, cli, recording_url, duration, response, file_path)
+               VALUES (%s, %s, %s, %s, '', %s, %s, %s, %s, '')""",
+            (call_msg.get('call_id'), call_msg.get('dni'), call_msg.get('a_party_no'),
+             iso_to_mysql(call_msg.get('a_start_time')), call_msg.get('cli'), recording_url,
+             call_msg.get('duration'), call_msg.get('response')))
+        connection.commit()
+        log_id = cursor.lastrowid
+    logging.info(f"Incoming call saved: log {log_id} ({db_connection['database']})")
+    trigger_laravel_event(db_connection, log_id, env_path)
 
-            # 4. Fetch campaign (optional, if you need campaign data elsewhere)
-            campaign = None
-            if campaign_id:
-                cursor.execute("SELECT * FROM leadger_campaigns WHERE id = %s", (campaign_id,))
-                campaign = cursor.fetchone()
-
-            # 5. Format duration
-            seconds = call_msg['duration']
-            minutes = seconds // 60
-            seconds = seconds % 60
-            duration = '{:02d}:{:02d}'.format(minutes, seconds)
-
-            # 6. Construct filename
-            filename = f"{call_msg['created_at'].replace(':', '-')}_0_{call_msg['b_party_no']}.wav"
-            destination_path = call_msg['recording_url']
-
-            # 7. Update log
-            query = """
-                UPDATE leadger_call_logs 
-                SET updated_at=%(uploaded_at)s, 
-                    
-                 
-                    created_by=%(uploaded_by)s, 
-                   
-                    
-                    click_response=%(response)s, 
-                    click_recording_url=%(recording_url)s 
-                WHERE reference_id = %(id)s
-            """
-            params = {
-                'uploaded_at': datetime.now(),
-                             'uploaded_by': log['created_by'],
-                
-                 'response': call_msg['response'],
-                'recording_url': call_msg['recording_url'],
-                'id': call_log_id
-            }
-
-            cursor.execute(query, params)
-            if cursor.rowcount == 0:
-                logging.warning(f"No rows updated for log ID: {call_log_id}")
-            else:
-                logging.info(f"Recording updated for log ID: {call_log_id}")
-
-            connection.commit()
-
-    except Exception as ex:
-        logging.error(f"process_other_call error: {ex}")
-
-def process_incoming_call(call_msg, db_connection, env_vars):
-    try:
-        logging.info(f"Processing incoming call: ref_id = {call_msg.get('ref_id')}")
-        with mysql.connector.connect(**db_connection) as connection:
-            cursor = connection.cursor(dictionary=True)
-            seconds = call_msg['duration']
-            duration = seconds
-            lead_id = call_msg['ref_id'].split('_')[0]
-            a_start_time = convert_iso_to_custom_format(call_msg['a_start_time'])
-            outgoing_call = convert_iso_to_custom_format(call_msg['called_time'])
-            recording_url = '' if call_msg['recording_url'] == 'No Voice' else call_msg['recording_url']
-            insert_query = """
-                INSERT INTO leadger_incoming_vmn_logs 
-                (call_id, dni, a_party_no, a_start_time, a_dial_status, cli, recording_url, duration, response, file_path)
-                VALUES (%s, %s, %s, %s, '', %s, %s, %s, %s, '')
-            """
-            cursor.execute(insert_query, (
-                call_msg['call_id'], call_msg['dni'], call_msg['a_party_no'],
-                a_start_time, call_msg['cli'], recording_url, duration,
-                call_msg['response']
-            ))
-            connection.commit()
-            log_id = cursor.lastrowid
-
-            # Call Laravel to fire the event
-            trigger_laravel_event(db_connection, log_id, env_path)
-    except Exception as ex:
-        logging.error(f"process_incoming_call error: {ex}")
-
-def get_laravel_paths_from_env_path(env_path):
-    # Remove the trailing "/.env" to get the Laravel root
-    laravel_root = os.path.dirname(env_path)
-    artisan_path = os.path.join(laravel_root, "artisan")
-    return artisan_path, laravel_root
 
 def trigger_laravel_event(db_conn, log_id, env_path):
+    """Live incoming-call alert in LeadGER (php artisan event:fire-incoming-log)."""
+    laravel_root = os.path.dirname(env_path)
     try:
-        # Get artisan path and Laravel root directory from .env path
-        artisan_path, laravel_root = get_laravel_paths_from_env_path(env_path)
-
-        # Run the Laravel artisan command with database info and log_id
-        result = subprocess.run([
-            "php",
-            artisan_path,
-            "event:fire-incoming-log",
-            db_conn['database'],
-            db_conn['user'],
-            db_conn['password'],
-            db_conn['host'],
-            str(log_id)
-        ],
-        cwd=laravel_root,
-        capture_output=True,
-        text=True)
-
-        # Print command output or error
+        result = subprocess.run(
+            [PHP_BINARY, os.path.join(laravel_root, 'artisan'), 'event:fire-incoming-log',
+             db_conn['database'], db_conn['user'], db_conn['password'], db_conn['host'], str(log_id)],
+            cwd=laravel_root, capture_output=True, text=True, timeout=60)
         if result.returncode == 0:
-            print(f"[{db_conn['database']}] Event fired successfully:\n{result.stdout}")
+            logging.info(f"Live alert sent for incoming log {log_id} ({db_conn['database']})")
         else:
-            print(f"[{db_conn['database']}] Event firing failed:\n{result.stderr}")
-
+            logging.error(f"Live alert failed for incoming log {log_id} ({db_conn['database']}): {result.stderr.strip()[:500]}")
     except Exception as e:
-        print(f"Error while calling Laravel event for {db_conn['database']}: {e}")
+        logging.error(f"Live alert could not run for incoming log {log_id} ({db_conn['database']}): {e}")
 
-def convert_iso_to_custom_format(iso_str, format="%Y-%m-%d %H:%M:%S"):
-    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
-    return dt.strftime(format)
 
-def do_work(crm_id, db_connection, env_vars, stop_event):
-    connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='34.93.0.136',
-        port=5672,
-        credentials=pika.PlainCredentials('guest', 'guest')
-    ))
-    channel = connection.channel()
-    channel.queue_declare(queue=crm_id, durable=True)
+def iso_to_mysql(iso_str):
+    if not iso_str:
+        return None
+    return datetime.fromisoformat(str(iso_str).replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
 
-    def callback(ch, method, properties, body):
-        if stop_event.is_set():
-            return
-        call_msg = json.loads(body.decode())
-        print(f"[{crm_id}] Received message: {call_msg}")
-        logging.info(f"[{crm_id}] Received message: {call_msg}")
-        process_call_recording(call_msg, db_connection, env_vars)
 
-    channel.basic_consume(queue=crm_id, on_message_callback=callback, auto_ack=True)
-
+def do_work(crm_id, db_connection, env_path, name, stop_event):
+    """Listen on the queue <crm_id>; reconnect after a lost connection."""
     while not stop_event.is_set():
         try:
-            channel.start_consuming()
+            connection = pika.BlockingConnection(pika.ConnectionParameters(
+                host=RABBIT_HOST, port=RABBIT_PORT, heartbeat=60,
+                credentials=pika.PlainCredentials(RABBIT_USER, RABBIT_PASSWORD)))
+            channel = connection.channel()
+            channel.queue_declare(queue=crm_id, durable=True)
+            channel.basic_qos(prefetch_count=1)
+
+            def callback(ch, method, properties, body):
+                try:
+                    call_msg = json.loads(body.decode('utf-8'))
+                except ValueError:
+                    logging.error(f"[{crm_id}] Not a JSON message, dropped: {body[:200]!r}")
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    return
+                logging.info(f"[{crm_id}] Received: {call_msg}")
+                if process_call_recording(call_msg, db_connection, env_path):
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                else:
+                    time.sleep(5)
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+            channel.basic_consume(queue=crm_id, on_message_callback=callback, auto_ack=False)
+            logging.info(f"[{crm_id}] Listening for {name} ({db_connection['database']})")
+            print(f"[{crm_id}] listening for {name} ({db_connection['database']})", flush=True)
+            while not stop_event.is_set():
+                connection.process_data_events(time_limit=1)
+            connection.close()
         except Exception as e:
-            logging.error(f"do_work error: {e}")
-            channel.stop_consuming()
+            logging.error(f"[{crm_id}] RabbitMQ connection lost: {e}; reconnecting in 10 s")
+            stop_event.wait(10)
 
-    connection.close()
 
-if __name__ == "__main__":
-    config = ConfigParser()
-    config.read('config.ini')
-    print("Parsed ENV paths from config.ini:")
-    print(list(config['path'].items()))
+if __name__ == '__main__':
+    if not config.has_section('path'):
+        raise SystemExit('config.ini has no [path] section')
 
-    crm_ids_all = []
-    db_connections_all = []
-
+    companies, seen = [], {}
     for key, env_path in config['path'].items():
         env_vars = load_laravel_env(env_path)
-        crm_ids, db_connections = get_crm_ids_and_db_connections(env_vars)
-        crm_ids_all.extend(crm_ids)
-        db_connections_all.extend(db_connections)
-        print("CRM IDs found:", crm_ids)
-        print("DB Connections found:", db_connections)
+        for crm_id, db, path, name in get_companies(env_path, env_vars):
+            if crm_id in seen:
+                logging.warning(f"CRM ID {crm_id} of {name} is also used by {seen[crm_id]}: recordings of that CRM ID go to {seen[crm_id]} only")
+                print(f"WARNING: CRM ID {crm_id} of {name} is also used by {seen[crm_id]}", flush=True)
+                continue
+            seen[crm_id] = name
+            companies.append((crm_id, db, path, name))
+
+    print('Companies found (CRM ID -> company, database):', flush=True)
+    for crm_id, db, path, name in companies:
+        print(f'  {crm_id} -> {name}, {db["database"]}', flush=True)   # never the password
+    if not companies:
+        raise SystemExit('No company with a licence / CRM ID found: nothing to listen to')
 
     stop_event = Event()
-    threads = []
-
-    for crm_id, db_connection in zip(crm_ids_all, db_connections_all):
-        thread = Thread(target=do_work, args=(crm_id, db_connection, env_vars, stop_event))
+    threads = [Thread(target=do_work, args=(crm_id, db, path, name, stop_event), daemon=True)
+               for crm_id, db, path, name in companies]
+    for thread in threads:
         thread.start()
-        threads.append(thread)
-
     try:
-        for thread in threads:
-            thread.join()
+        while any(t.is_alive() for t in threads):
+            time.sleep(1)
     except KeyboardInterrupt:
         stop_event.set()
         for thread in threads:
-            thread.join()
-    print("Main thread exiting")
+            thread.join(timeout=5)
+    print('Stopped')

@@ -1116,10 +1116,6 @@ class RecordingsController extends Controller
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
         }
-        if (!class_exists(\ZipArchive::class)) {
-            return response()->json(['success' => false, 'message' => 'ZIP support (PHP zip extension) is not available on the server.'], 500);
-        }
-
         $items = [];
         foreach ((array)$request->input('items', []) as $item) {
             $id = (int)($item['id'] ?? 0);
@@ -1145,8 +1141,9 @@ class RecordingsController extends Controller
 
         $token = bin2hex(random_bytes(20));
         $zipPath = $dir . DIRECTORY_SEPARATOR . $token . '.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        // PHP zip module when the server has it, otherwise the plain-PHP writer (same ZIP, files stored as they are)
+        $zip = class_exists(\ZipArchive::class) ? new \ZipArchive() : new \App\Services\ZipFileWriter();
+        if ($zip->open($zipPath, 1 | 8) !== true) {   // ZipArchive::CREATE | ZipArchive::OVERWRITE
             return response()->json(['success' => false, 'message' => 'The ZIP file could not be created.'], 500);
         }
 
@@ -1174,7 +1171,7 @@ class RecordingsController extends Controller
                 ? $zip->addFile($audio['path'], $name)
                 : $zip->addFromString($name, $audio['contents']);
             if ($ok) {
-                $zip->setCompressionName($name, \ZipArchive::CM_STORE);   // audio is already compressed
+                $zip->setCompressionName($name, 0);   // ZipArchive::CM_STORE: audio is already compressed
                 $names[strtolower($name)] = true;
                 $added++;
             } else {
