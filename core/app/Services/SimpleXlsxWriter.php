@@ -3,7 +3,8 @@
 namespace App\Services;
 
 /**
- * Minimal single-sheet .xlsx writer (Office Open XML via ZipArchive; no extra Composer package).
+ * Minimal single-sheet .xlsx writer (Office Open XML; no extra Composer package). Uses ZipArchive when PHP has the zip
+ * module, otherwise writes the .xlsx (a zip file) itself, so the export works on servers without php-zip.
  * Column types: 'text' (stored as text, so phone numbers / IDs keep every digit), 'date' (Carbon/DateTime,
  * shown dd-mmm-yyyy), 'time' (Carbon/DateTime, shown hh:mm AM/PM), 'datetime' (shown dd-mmm-yyyy hh:mm AM/PM),
  * 'datetime_long' (shown dd mmm yyyy hh:mm AM/PM), 'int' (number, #,##0), 'percent' (fraction, shown 0.0%),
@@ -23,11 +24,7 @@ class SimpleXlsxWriter
      */
     public static function write(array $headers, array $rows, array $types, array $widths, string $sheetName = 'Sheet1', array $preamble = []): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'xlsx');
-        $zip = new \ZipArchive();
-        if ($zip->open($path, \ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException('Could not create the Excel file.');
-        }
+        $zip = new XlsxParts();
 
         $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -94,8 +91,7 @@ class SimpleXlsxWriter
         }
         $sheet .= '</sheetData><autoFilter ref="A' . $headerRow . ':' . self::col(count($headers) - 1) . ($headerRow + count($rows)) . '"/></worksheet>';
         $zip->addFromString('xl/worksheets/sheet1.xml', $sheet);
-        $zip->close();
-        return $path;
+        return $zip->save();
     }
 
     private static function row(int $r, array $values, array $types): string
