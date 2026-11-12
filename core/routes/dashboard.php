@@ -316,6 +316,7 @@ Route::get('/campaigns/{id}/delete', [CampaignsController::class, 'delete'])->na
 Route::post('/campaigns/{id}/destroy', [CampaignsController::class, 'destroyAjax'])->name('campaignsDestroyAjax');
 Route::get('/campaigns/{id}/export-leads', [CampaignsController::class, 'exportLeads'])->name('campaignsExportLeads');
 Route::post('/campaigns/leadsList/{id?}', [CampaignsController::class, 'leadsList'])->name('leadsList');
+Route::get('/leads/export/{format}/{id?}', [CampaignsController::class, 'leadsExport'])->name('leadsExport')->whereIn('format', ['xlsx', 'csv']);
 Route::post('/campaigns/transferList/{id?}', [CampaignsController::class, 'transferList'])->name('transferList');
 
 Route::get('/campaigns/transfer-accounts', [CampaignsController::class, 'transferAccountsPage'])->name('campaignsTransferAccounts');

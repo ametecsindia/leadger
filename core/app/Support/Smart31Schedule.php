@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
  * (Click2Call / WebRTC) the company's licence includes.
  *
  *  - Up to 3 numbers per agent and calling way: usage_date today, assigned to one of the agent's teams
- *    (assigned_groups; an agent without a team is not filtered), in the order they were added (id).
+ *    (assigned_groups; an agent without a team and an Admin are not filtered), in the order they were added (id).
  *    Number N is enabled from slot N on; before the first slot and after the last one all are disabled.
  *  - Licence data (settings.full_response "data"): c2c_channels / webrtc_channels above 0 allow that way;
  *    a key missing from the licence allows it too, so older licences keep working.
@@ -67,7 +67,8 @@ class Smart31Schedule
     public static function numbers($user, string $kind)
     {
         $q = DB::table('smart31_vmn_numbers')->whereDate('usage_date', self::now()->toDateString())->where($kind, 1);
-        $teams = VmnService::teamIds($user);
+        // Admin: every Smart31 number of today, assigned to a group or not; the group filter is for the other roles (Telecallers)
+        $teams = VmnService::isAdmin($user) ? [] : VmnService::teamIds($user);
         if ($teams) {
             $q->where(function ($w) use ($teams) {
                 foreach ($teams as $t) {

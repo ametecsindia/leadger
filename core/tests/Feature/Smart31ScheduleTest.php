@@ -141,6 +141,21 @@ class Smart31ScheduleTest extends TestCase
         $this->assertContains(self::A, array_column($res['lines'], 'vmn'));
     }
 
+    public function test_an_admin_sees_the_numbers_of_every_group()
+    {
+        $this->at(15, 30);   // slot 3: numbers 1-3 enabled
+        $admin = self::userInTeams(self::OTHER_TEAM);   // in a team that has only E
+        $admin->setRelation('permissionsGroup', (new \App\Models\Permissions())->forceFill(['name' => 'Admin']));
+        $this->assertSame([self::C, self::B, self::A], array_column(Smart31Schedule::lines($admin, 'c2c')['lines'], 'vmn'),
+            'Admin: numbers of other groups too, in the order added (first 3)');
+        $this->assertNull(Smart31Schedule::callError($admin, 'c2c', self::A), 'Admin may call a number of another group');
+
+        $telecaller = self::userInTeams(self::OTHER_TEAM);
+        $telecaller->setRelation('permissionsGroup', (new \App\Models\Permissions())->forceFill(['name' => 'Telecaller']));
+        $this->assertSame([self::E], array_column(Smart31Schedule::lines($telecaller, 'c2c')['lines'], 'vmn'), 'Telecaller: only their group');
+        $this->assertSame('This Smart31 number is not assigned to you for today', Smart31Schedule::callError($telecaller, 'c2c', self::A));
+    }
+
     public function test_backend_refusals()
     {
         $this->at(10, 0);

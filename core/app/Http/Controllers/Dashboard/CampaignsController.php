@@ -1415,6 +1415,73 @@ public function transferList(Request $request, $CampaignId = '')
 
 
 
+    /**
+     * Lead list download (Excel .xlsx / CSV): every lead of the current search, campaign, agent, status and card
+     * filter, in the table's sort - the same query and the same role scope as the table (leadsList), numbers masked
+     * as there. GET /leads/export/{xlsx|csv}/{campaign?}?<the table's filters>&sort=&dir=
+     */
+    public function leadsExport(Request $request, string $format, $CampaignId = '')
+    {
+        $sub = Request::create('/', 'POST', array_merge(
+            $request->only(['find_q', 'find_campaign', 'find_user', 'find_action', 'filter', 'status', 'date', 'followup_tab', 'unassigned']),
+            [
+                'start' => 0, 'length' => 0,   // 0 = no LIMIT: every matching lead
+                'columns' => [['data' => (string)$request->input('sort', 'id')]],
+                'order' => [['column' => 0, 'dir' => $request->input('dir') === 'asc' ? 'asc' : 'desc']],
+            ]
+        ));
+        $sub->setUserResolver($request->getUserResolver());
+
+        $clean = fn ($v) => ($v = trim(html_entity_decode(strip_tags((string)$v), ENT_QUOTES))) === '' || $v === '—' ? '-' : $v;
+        if ($request->input('filter') === 'followup') {
+            // Follow-ups page: the columns of its table, for the selected tab (Pending / Overdue / Done)
+            $tab = in_array($request->input('followup_tab'), ['Pending', 'Overdue', 'Done'], true) ? $request->input('followup_tab') : 'Pending';
+            $headers = ['Lead ID', 'Name', 'Mobile', 'Campaign', 'Agent', 'Status', 'Feedback', 'Follow-up Date', 'Follow-up Time',
+                'Remarks', 'Follow-up Status'];
+            $widths = [12, 22, 15, 22, 18, 14, 22, 15, 14, 36, 16];
+            $line = function (array $r) use ($clean, $tab) {
+                $at = !empty($r['follow_up_on']) ? strtotime($r['follow_up_on']) : false;
+                return array_map($clean, [$r['id'], $r['name'], $r['phonenumber'], $r['campaign_name'], $r['assign'], $r['status_name'],
+                    $r['substatus_name'], $at ? date('Y-m-d', $at) : '', $at ? date('H:i', $at) : '', $r['remarks'], $tab]);
+            };
+            $fileName = 'follow-ups-' . strtolower($tab) . '-' . date('Y-m-d');
+        } else {
+            $headers = ['Lead ID', 'Name', 'Mobile', 'Alternate Mobile', 'City', 'Product', 'Campaign', 'Agent', 'Sales Person',
+                'Status', 'Substatus', 'Last Call', 'Next Follow-up', 'Remarks', 'Email', 'Company'];
+            $widths = [12, 22, 15, 15, 14, 18, 20, 18, 18, 14, 16, 20, 20, 36, 24, 20];
+            $line = fn (array $r) => array_map($clean, [$r['id'], $r['name'], $r['phonenumber'], $r['phonenumber_2'], $r['city'],
+                $r['product'], $r['campaign_name'], $r['assign'], $r['sales_person'], $r['status_name'], $r['substatus_name'],
+                $r['last_call_display'], $r['next_followup_display'], $r['remarks'], $r['email'], $r['company']]);
+            $fileName = 'leads-' . date('Y-m-d');
+        }
+
+        try {
+            $rows = $this->leadsList($sub, $CampaignId)->getData(true)['data'] ?? [];
+            if ($format === 'xlsx') {
+                $path = \App\Services\SimpleXlsxWriter::write($headers, array_map($line, $rows), array_fill(0, count($headers), 'text'),
+                    $widths, $request->input('filter') === 'followup' ? 'Follow-ups' : 'Leads');
+                return response()->download($path, $fileName . '.xlsx', [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ])->deleteFileAfterSend(true);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[LeadsExport] ' . $e->getMessage());
+            return redirect()->back()->with('errorMessage', 'The leads could not be downloaded. Please try again.');
+        }
+
+        // CSV: UTF-8 with BOM; text that starts like a formula is prefixed with '
+        $safe = fn ($v) => (is_string($v) && strlen($v) > 1 && in_array($v[0], ['=', '+', '-', '@', "\t", "\r"], true)) ? "'" . $v : $v;
+        return response()->streamDownload(function () use ($rows, $headers, $line, $safe) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, $headers);
+            foreach ($rows as $r) {
+                fputcsv($out, array_map($safe, $line($r)));
+            }
+            fclose($out);
+        }, $fileName . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     public function transfer($id)
     {
         // General for all pages

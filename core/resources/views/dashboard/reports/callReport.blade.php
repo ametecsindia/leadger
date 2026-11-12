@@ -211,9 +211,6 @@
         </table>
         {{-- Export the calls for the current filters, search and sort (every matching row, not only this page) --}}
         <div class="cr-export-row">
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#475569;cursor:pointer;" title="Add a column with the link of each call recording">
-                <input type="checkbox" id="crWithUrl"> Include recording URL
-            </label>
             <button type="button" class="cr-dl-btn cr-dl-excel" id="crExportXlsx" data-lg-perm="reports.call_report.export" title="Download these calls as an Excel file">
                 <i class="fa fa-file-excel"></i> Excel
             </button>
@@ -572,7 +569,6 @@
     /* ---- export: same filters, search, card view and sort as the table ---- */
     function exportCalls(format, btn) {
         var q = new URLSearchParams(requestParams());
-        if (document.getElementById('crWithUrl').checked) q.set('with_url', '1');
         if (table) {
             var ord = table.order()[0];
             if (ord) { q.set('sort', columns[ord[0]].name); q.set('dir', ord[1]); }

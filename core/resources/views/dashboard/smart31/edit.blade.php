@@ -163,6 +163,28 @@
     color: #EF4444;
 }
 
+/* "Select all" next to the Team Groups label */
+.lg-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.lg-label-row .lg-form-label { margin-bottom: 0; }
+.lg-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--lg-accent);
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+.lg-select-all input { width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: var(--lg-accent); }
+
 .lg-multiselect {
     width: 100%;
     min-height: 200px;
@@ -421,9 +443,17 @@
 
             <div class="lg-card-body">
                 <div class="lg-form-group">
-                    <label for="assigned_groups" class="lg-form-label">
-                        Team Groups <span class="lg-required">*</span>
-                    </label>
+                    <div class="lg-label-row">
+                        <label for="assigned_groups" class="lg-form-label">
+                            Team Groups <span class="lg-required">*</span>
+                        </label>
+                        @if(count($teams))
+                        <label class="lg-select-all" for="assigned_groups_all">
+                            <input type="checkbox" id="assigned_groups_all" onchange="selectAllGroups(this.checked)">
+                            <span>Select all</span>
+                        </label>
+                        @endif
+                    </div>
                     <select name="assigned_groups[]" id="assigned_groups" class="lg-multiselect" multiple size="7" required onchange="updateSelectedPreview()">
                         @foreach($teams as $id => $name)
                             <option value="{{ $id }}" {{ in_array($id, $assignedIds) ? 'selected' : '' }}>
@@ -484,6 +514,13 @@ function updateSelectedPreview() {
     const selectedOptions = Array.from(select.selectedOptions);
     countBadge.innerText = `${selectedOptions.length} selected`;
 
+    // "Select all" is ticked only while every team group is selected
+    const all = document.getElementById('assigned_groups_all');
+    if (all) {
+        all.checked = select.options.length > 0 && selectedOptions.length === select.options.length;
+        all.indeterminate = selectedOptions.length > 0 && selectedOptions.length < select.options.length;
+    }
+
     if (selectedOptions.length === 0) {
         container.innerHTML = '<span class="lg-no-teams-note">No team groups selected.</span>';
         return;
@@ -498,8 +535,23 @@ function updateSelectedPreview() {
     });
 }
 
+/** Select (or clear) every team group; also updates a Select2 box when the page turned the list into one. */
+function selectAllGroups(checked) {
+    const select = document.getElementById('assigned_groups');
+    if (!select) return;
+    Array.from(select.options).forEach(opt => { opt.selected = checked; });
+    if (window.jQuery) {
+        jQuery(select).trigger('change');   // Select2 redraws; the inline onchange updates the preview
+    } else {
+        updateSelectedPreview();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     updateSelectedPreview();
+    if (window.jQuery) {
+        jQuery('#assigned_groups').on('select2:select select2:unselect', updateSelectedPreview);
+    }
 });
 </script>
 @endpush

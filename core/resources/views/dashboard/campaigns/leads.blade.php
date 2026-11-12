@@ -94,6 +94,23 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.03);
             transition: all 0.15s ease;
         }
+        /* Download button + its Excel / CSV menu */
+        .lg-download-wrap { position: relative; display: inline-block; }
+        .lg-download-menu {
+            display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; min-width: 170px;
+            background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+        }
+        .lg-download-wrap.open .lg-download-menu { display: block; }
+        .lg-download-menu a {
+            display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px;
+            font-size: 13px; font-weight: 600; color: #334155 !important; text-decoration: none !important; white-space: nowrap;
+        }
+        .lg-download-menu a:hover { background: #EFF6FF; color: #1464F4 !important; }
+        html[data-theme="dark"] .lg-download-menu { background: #0F1A2E; border-color: #24324D; }
+        html[data-theme="dark"] .lg-download-menu a { color: #E2E8F0 !important; }
+        html[data-theme="dark"] .lg-download-menu a:hover { background: #1B2A47; color: #FFFFFF !important; }
+
         .lg-btn-followups:hover {
             background: #F8FAFC;
             border-color: #94A3B8;
@@ -635,6 +652,21 @@
             </div>
         </div>
         <div class="lg-header-right">
+            {{-- Download: every lead of the current filters (not only this page), as Excel or CSV --}}
+            <div class="lg-download-wrap" id="lg-download-wrap">
+                <button type="button" class="lg-btn-followups" id="lg-download-btn" onclick="toggleLeadsDownload(event)" title="Download the leads of the current filters" aria-haspopup="true" aria-expanded="false">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Download</span>
+                </button>
+                <div class="lg-download-menu" id="lg-download-menu" role="menu">
+                    <a href="javascript:void(0)" role="menuitem" onclick="downloadLeads('xlsx')">Excel (.xlsx)</a>
+                    <a href="javascript:void(0)" role="menuitem" onclick="downloadLeads('csv')">CSV (.csv)</a>
+                </div>
+            </div>
             @if($isFollowUp)
                 <button type="button" class="lg-btn-followups" onclick="autoDialerStart()" title="Start Auto Dialer">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1764,6 +1796,37 @@
 
             $.fn.dataTable.ext.errMode = 'none';
         });
+
+        function toggleLeadsDownload(e) {
+            e.stopPropagation();
+            var open = $('#lg-download-wrap').toggleClass('open').hasClass('open');
+            $('#lg-download-btn').attr('aria-expanded', open ? 'true' : 'false');
+        }
+        $(document).on('click', function () { $('#lg-download-wrap').removeClass('open'); $('#lg-download-btn').attr('aria-expanded', 'false'); });
+
+        /** Download every lead of the table's current filters and sort (server side, same rules as the table). */
+        function downloadLeads(format) {
+            $('#lg-download-wrap').removeClass('open');
+            var params = {
+                find_q: $('#find_q').val() || '',
+                find_campaign: $('#find_campaign').val() || '',
+                find_user: $('#find_user').val() || '',
+                find_action: $('#filter_action').val() || '',
+                filter: isFollowUpPage ? 'followup' : (window.activeLeadFilter || ''),
+                status: window.activeLeadStatus || '',
+                date: window.activeLeadDate || ''
+            };
+            if (isFollowUpPage) params.followup_tab = currentTabFilter;
+            if (dataTable) {
+                var ord = dataTable.order()[0] || [0, 'desc'];
+                var col = dataTable.settings()[0].aoColumns[ord[0]];
+                params.sort = (col && typeof col.data === 'string') ? col.data : 'id';
+                params.dir = ord[1] === 'asc' ? 'asc' : 'desc';
+            }
+            var url = "{{ route('leadsExport', ['format' => ':fmt', 'id' => $id ?: null]) }}".replace(':fmt', format);
+            window.location.href = url + (url.indexOf('?') === -1 ? '?' : '&') + $.param(params);
+            if (typeof toastr !== 'undefined') toastr.info('Preparing your download...');
+        }
 
         function print_as(stat) {
             if (stat === 'excel') {
