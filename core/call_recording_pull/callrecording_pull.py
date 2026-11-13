@@ -4,7 +4,7 @@ LeadGER call recording consumer (RabbitMQ).
 The call provider puts one message per finished call on a RabbitMQ queue named after the company's CRM ID (from its
 licence). This program listens on the queue of every company and saves the recording link and call details in that
 company's database:
-  - Auto Dialer call (reference has "_d_")  -> leadger_dialer_logs
+  - Manual Dial / WebRTC call ("_d_")       -> leadger_dialer_logs, else leadger_call_logs (WebRTC campaign call)
   - incoming call (incoming = 1)              -> leadger_incoming_vmn_logs + Laravel live alert
   - Click2Call / WebRTC call                  -> leadger_call_logs
 
@@ -132,7 +132,9 @@ def process_call_recording(call_msg, db_connection, env_path):
         lead_ref = str(call_msg.get('lead_id') or '')
         parts = lead_ref.split('_')
         if len(parts) > 1 and parts[1] == 'd':
-            process_dialer_call(call_msg, db_connection)
+            # "_d_" = Manual Dial / WebRTC call: manual ones are in dialer_logs, WebRTC campaign calls in call_logs
+            if not process_dialer_call(call_msg, db_connection):
+                process_other_call(call_msg, db_connection)
         elif call_msg.get('incoming') == 1:
             process_incoming_call(call_msg, db_connection, env_path)
         else:
@@ -157,8 +159,7 @@ def process_dialer_call(call_msg, db_connection):
         cursor.execute("SELECT id, reference_id FROM leadger_dialer_logs WHERE reference_id = %s", (call_msg['lead_id'],))
         log = cursor.fetchone()
         if not log:
-            logging.error(f"Dialer log not found: {call_msg['lead_id']} ({db_connection['database']})")
-            return
+            return False   # not a manual call: the caller looks in call_logs
         cursor.execute(
             """UPDATE leadger_dialer_logs
                SET click_response = %s, click_recording_url = %s, file_path = %s, duration = %s
@@ -167,6 +168,7 @@ def process_dialer_call(call_msg, db_connection):
              mm_ss(call_msg.get('duration')), log['reference_id']))
         connection.commit()
         logging.info(f"Recording saved for dialer log {log['id']} ({db_connection['database']})")
+        return True
 
 
 def process_other_call(call_msg, db_connection):
