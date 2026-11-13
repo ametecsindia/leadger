@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Call recordings in a private Google Cloud Storage bucket, in plain PHP (curl + openssl, no extra package).
  *
- * - recordings:to-bucket copies each recording's audio into the bucket (one folder per company) and notes it in the
+ * - recordings:to-bucket copies each recording's audio into the bucket (recordings/<month>/<CRM ID>/<call date>/) and notes it in the
  *   company's own table recording_bucket_files (source_code + log_id, like the Recordings page rows).
  * - Play / Download of such a recording redirects to a signed link that works for 10 minutes only; the bucket itself
  *   stays private. Access rules are checked by LeadGER before the link is made.

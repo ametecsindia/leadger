@@ -91,6 +91,7 @@ return [
     ],
     // Call recordings in a private Google Cloud Storage bucket (App\Services\GcsBucket); off while either is empty.
     // key_file: path of the service account JSON key, outside the web folder (never commit it)
+    // files: <prefix>/<month>/<CRM ID>/<call date>/<type>_<id>_<file> (same layout as SmartDCM's recordings)
     'gcs' => [
         'bucket' => env('GCS_RECORDINGS_BUCKET', ''),
         'key_file' => env('GCS_KEY_FILE', ''),

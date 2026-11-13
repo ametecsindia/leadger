@@ -29,6 +29,7 @@ class RecordingsToBucketCommand extends Command
             return self::SUCCESS;
         }
         GcsBucket::ensureTable();
+        $folder = $this->crmFolder();
 
         $limit = (int)$this->option('limit');
         $since = $this->option('all') ? null : now()->subHours(max(1, (int)$this->option('hours')));
@@ -42,7 +43,7 @@ class RecordingsToBucketCommand extends Command
                 }
                 foreach ($ids as $id) {
                     $lastId = $id;
-                    $this->copyOne($sourceCode, $id) ? $done++ : $failed++;
+                    $this->copyOne($sourceCode, $id, $folder) ? $done++ : $failed++;
                     if ($limit > 0 && $done + $failed >= $limit) {
                         break;
                     }
@@ -84,7 +85,26 @@ class RecordingsToBucketCommand extends Command
             ->where(fn ($w) => $w->where('r.file_path', '!=', '')->orWhere('r.recording_url', '!=', ''));
     }
 
-    private function copyOne(int $sourceCode, int $id): bool
+    /** The company's CRM ID from its licence (folder in the bucket); without a licence: company-<site>. */
+    private function crmFolder(): string
+    {
+        $settings = DB::table('settings')->select(DB::raw("FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response"))->first();
+        $crmId = preg_replace('/[^A-Za-z0-9_-]/', '', (string)(json_decode($settings->full_response ?? '{}', true)['data']['crm_id'] ?? ''));
+        return $crmId !== '' ? $crmId : 'company-' . (Tenancy::storageKey() ?: 'main');
+    }
+
+    /** Day of the call (Y-m-d) for the bucket folder. */
+    private function callDate(int $sourceCode, int $id): string
+    {
+        $when = match ($sourceCode) {
+            0 => DB::table('call_logs')->where('id', $id)->value('created_at'),
+            2 => DB::table('dialer_logs')->where('id', $id)->value('created_at'),
+            default => DB::table('recordings')->where('id', $id)->selectRaw('COALESCE(call_date, created_at) as d')->value('d'),
+        };
+        return $when ? \Carbon\Carbon::parse($when)->format('Y-m-d') : now()->format('Y-m-d');
+    }
+
+    private function copyOne(int $sourceCode, int $id, string $folder): bool
     {
         $key = ['source_code' => $sourceCode, 'log_id' => $id];
         $row = DB::table(GcsBucket::TABLE)->where($key)->first();
@@ -95,8 +115,11 @@ class RecordingsToBucketCommand extends Command
                 throw new \RuntimeException($audio['error']);
             }
             $name = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($audio['name'])) ?: 'recording.wav';
-            $object = implode('/', [config('services.gcs.prefix') ?: 'recordings', Tenancy::storageKey() ?: 'main',
-                [0 => 'campaign-calls', 2 => 'manual-calls'][$sourceCode] ?? 'other-recordings', now()->format('Y-m'), "{$id}_{$name}"]);
+            // same layout as SmartDCM: <prefix>/<month>/<CRM ID>/<call date>/<type>_<id>_<file>,
+            // e.g. recordings/2026-11/90022/2026-11-12/campaign_1234_xxx.wav (each CRM ID has its own folder)
+            $type = [0 => 'campaign', 2 => 'manual'][$sourceCode] ?? 'recording';
+            $day = $this->callDate($sourceCode, $id);
+            $object = implode('/', [config('services.gcs.prefix') ?: 'recordings', substr($day, 0, 7), $folder, $day, "{$type}_{$id}_{$name}"]);
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
             $type = ['mp3' => 'audio/mpeg', 'ogg' => 'audio/ogg', 'm4a' => 'audio/mp4', 'aac' => 'audio/aac'][$ext] ?? 'audio/wav';
 

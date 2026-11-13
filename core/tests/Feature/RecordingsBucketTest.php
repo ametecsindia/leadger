@@ -111,7 +111,8 @@ class RecordingsBucketTest extends TestCase
 
         $this->assertSame('done', $row->status);
         $this->assertSame(filesize($rec->file_path), (int)$row->size);
-        $this->assertStringStartsWith('recordings/main/other-recordings/' . now()->format('Y-m') . '/' . $rec->id . '_test_bucket_', $row->object);
+        // recordings/<month>/<CRM ID>/<call date>/<type>_<id>_<file>
+        $this->assertMatchesRegularExpression('#^recordings/' . now()->format('Y-m') . '/[A-Za-z0-9_-]+/' . now()->format('Y-m-d') . '/recording_' . $rec->id . '_test_bucket_[0-9a-f]+\.wav$#', $row->object);
         Http::assertSent(fn (HttpRequest $r) => str_contains($r->url(), '/upload/storage/v1/b/lg-test-bucket/o?')
             && str_contains($r->url(), 'ifGenerationMatch=0') && $r->hasHeader('Authorization', 'Bearer test-token')
             && $r->body() === file_get_contents($rec->file_path));
