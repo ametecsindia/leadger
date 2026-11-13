@@ -95,6 +95,8 @@ return [
     'gcs' => [
         'bucket' => env('GCS_RECORDINGS_BUCKET', ''),
         'key_file' => env('GCS_KEY_FILE', ''),
+        // true on a Google Cloud server: use the server's own service account instead of a key file
+        'server_account' => (bool)env('GCS_USE_SERVER_ACCOUNT', false),
         'prefix' => trim((string)env('GCS_RECORDINGS_PREFIX', 'recordings'), '/'),
     ],
     // WebRTC agents (App\Services\SmartPingAgent): the company account at SmartPing for add-agent

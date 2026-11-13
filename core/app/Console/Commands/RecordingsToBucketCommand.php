@@ -25,7 +25,7 @@ class RecordingsToBucketCommand extends Command
     public function handle(): int
     {
         if (!GcsBucket::enabled()) {
-            $this->line('Bucket not set up (GCS_RECORDINGS_BUCKET / GCS_KEY_FILE): nothing to do.');
+            $this->line('Bucket not set up (GCS_RECORDINGS_BUCKET + GCS_KEY_FILE or GCS_USE_SERVER_ACCOUNT): nothing to do.');
             return self::SUCCESS;
         }
         GcsBucket::ensureTable();

@@ -59,8 +59,12 @@ class RecordingsBucketTest extends TestCase
         Http::fake([
             'oauth2.googleapis.com/*' => Http::response(['access_token' => 'test-token', 'expires_in' => 3600]),
             'storage.googleapis.com/upload/*' => fn (HttpRequest $r) => Http::response(['size' => (string)strlen($r->body())]),
-            'storage.googleapis.com/storage/v1/*' => fn (HttpRequest $r) => $r->method() === 'DELETE'
-                ? Http::response('', 204) : Http::response('BUCKET-AUDIO', 200, ['Content-Type' => 'audio/wav']),
+            'metadata.google.internal/*' => Http::response(['access_token' => 'server-token', 'expires_in' => 3599]),
+            'storage.googleapis.com/storage/v1/*' => fn (HttpRequest $r) => match (true) {
+                $r->method() === 'DELETE' => Http::response('', 204),
+                $r->hasHeader('Range') => Http::response('UCK', 206, ['Content-Type' => 'audio/wav', 'Content-Range' => 'bytes 1-3/12']),
+                default => Http::response('BUCKET-AUDIO', 200, ['Content-Type' => 'audio/wav']),
+            },
             '*' => Http::response('not found', 404),
         ]);
     }
@@ -168,6 +172,32 @@ class RecordingsBucketTest extends TestCase
         $this->assertNull(DB::table(GcsBucket::TABLE)->where(['source_code' => 3, 'log_id' => $rec->id])->first());
         Http::assertSent(fn (HttpRequest $r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/o/' . rawurlencode($row->object)));
         $this->assertNull(GcsBucket::redirect(3, $rec->id, false));
+    }
+
+    public function test_the_servers_own_account_works_without_a_key_file()
+    {
+        config(['services.gcs.key_file' => '', 'services.gcs.server_account' => true]);
+        $rec = $this->recording();
+        $row = $this->copy($rec);
+        $this->assertSame('done', $row->status);
+        Http::assertSent(fn (HttpRequest $r) => str_contains($r->url(), 'metadata.google.internal') && $r->hasHeader('Metadata-Flavor', 'Google'));
+        Http::assertSent(fn (HttpRequest $r) => str_contains($r->url(), '/upload/storage/v1/b/lg-test-bucket/o?') && $r->hasHeader('Authorization', 'Bearer server-token'));
+
+        // no key: the audio comes through LeadGER (after the access check), not as a signed link
+        $res = $this->download($rec, false);
+        $this->assertInstanceOf(\Symfony\Component\HttpFoundation\StreamedResponse::class, $res);
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertStringStartsWith('attachment; filename="recording_' . $rec->id . '_', $res->headers->get('Content-Disposition'));
+        ob_start(); $res->sendContent(); $this->assertSame('BUCKET-AUDIO', ob_get_clean());
+
+        // the player asks for a part: Range is passed on and answered with 206
+        request()->headers->set('Range', 'bytes=1-3');
+        $res = $this->download($rec, true);
+        $this->assertSame(206, $res->getStatusCode());
+        $this->assertSame('bytes 1-3/12', $res->headers->get('Content-Range'));
+        $this->assertStringStartsWith('inline', $res->headers->get('Content-Disposition'));
+        ob_start(); $res->sendContent(); $this->assertSame('UCK', ob_get_clean());
+        request()->headers->remove('Range');
     }
 
     public function test_without_bucket_settings_nothing_changes()

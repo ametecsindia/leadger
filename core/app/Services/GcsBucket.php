@@ -13,21 +13,34 @@ use Illuminate\Support\Facades\Schema;
  *
  * - recordings:to-bucket copies each recording's audio into the bucket (recordings/<month>/<CRM ID>/<call date>/) and notes it in the
  *   company's own table recording_bucket_files (source_code + log_id, like the Recordings page rows).
- * - Play / Download of such a recording redirects to a signed link that works for 10 minutes only; the bucket itself
- *   stays private. Access rules are checked by LeadGER before the link is made.
+ * - Play / Download of such a recording (access rules are checked by LeadGER first): with a key file, a redirect to a
+ *   signed link that works for 10 minutes only; with the server's own account, the audio is sent through LeadGER.
  *
- * Off (nothing happens, everything works as before) until .env has GCS_RECORDINGS_BUCKET and GCS_KEY_FILE
- * (path of the service account JSON key, kept outside the web folder).
+ * Login: GCS_KEY_FILE (service account JSON key, outside the web folder), or GCS_USE_SERVER_ACCOUNT=true on a Google
+ * Cloud server (the VM's own service account, no key file). Off (everything works as before) until
+ * GCS_RECORDINGS_BUCKET and one of the two are set.
  */
 class GcsBucket
 {
     public const TABLE = 'recording_bucket_files';
     private const API = 'https://storage.googleapis.com';
+    private const METADATA_TOKEN = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token';
 
     public static function enabled(): bool
     {
+        return (string)config('services.gcs.bucket') !== '' && (self::hasKeyFile() || self::serverAccount());
+    }
+
+    private static function hasKeyFile(): bool
+    {
         $key = (string)config('services.gcs.key_file');
-        return (string)config('services.gcs.bucket') !== '' && $key !== '' && is_readable($key);
+        return $key !== '' && is_readable($key);
+    }
+
+    /** The Google Cloud server's own service account is used (no key file). */
+    private static function serverAccount(): bool
+    {
+        return !self::hasKeyFile() && (bool)config('services.gcs.server_account');
     }
 
     public static function bucket(): string
@@ -69,17 +82,45 @@ class GcsBucket
         }
     }
 
-    /** Redirect to a 10-minute signed link of the bucket copy (play in the browser or download), or null. */
+    /**
+     * The bucket copy for Play / Download, or null (then the server / provider copy is used as before):
+     * a 10-minute signed link (key file), or the audio sent through LeadGER (server account; Range is passed on, so
+     * the player can seek).
+     */
     public static function redirect(int $sourceCode, int $logId, bool $play)
     {
         $row = self::find($sourceCode, $logId);
         if (!$row || !$row->object) {
             return null;
         }
+        $name = basename($row->object);
         try {
-            return redirect()->away(self::signedUrl($row->object, 600, $play ? null : basename($row->object)));
+            if (!self::serverAccount()) {
+                return redirect()->away(self::signedUrl($row->object, 600, $play ? null : $name));
+            }
+            $range = request()->header('Range');
+            $res = self::http()->withToken(self::accessToken())->withOptions(['stream' => true])->timeout(120)
+                ->withHeaders($range ? ['Range' => $range] : [])->get(self::objectUrl($row->object) . '?alt=media');
+            if (!in_array($res->status(), [200, 206], true)) {
+                throw new \RuntimeException('HTTP ' . $res->status());
+            }
+            $headers = array_filter([
+                'Content-Type' => $res->header('Content-Type') ?: 'audio/wav',
+                'Content-Length' => $res->header('Content-Length'),
+                'Content-Range' => $res->header('Content-Range'),
+                'Accept-Ranges' => 'bytes',
+                'Content-Disposition' => ($play ? 'inline' : 'attachment') . '; filename="' . str_replace('"', '', $name) . '"',
+                'Cache-Control' => 'private, no-store',
+            ]);
+            $body = $res->toPsrResponse()->getBody();
+            return response()->stream(function () use ($body) {
+                while (!$body->eof()) {
+                    echo $body->read(65536);
+                    flush();
+                }
+            }, $res->status(), $headers);
         } catch (\Throwable $e) {
-            Log::warning("[GcsBucket] Signed link failed for {$row->object}: " . $e->getMessage());
+            Log::warning("[GcsBucket] Bucket copy could not be served for {$row->object}: " . $e->getMessage());
             return null;   // fall back to the server / provider copy
         }
     }
@@ -172,9 +213,23 @@ class GcsBucket
         return self::API . $path . '?' . $canonicalQuery . '&X-Goog-Signature=' . bin2hex($signature);
     }
 
-    /** OAuth access token of the service account (cached for 50 minutes). */
+    /** OAuth access token: of the key file's service account (cached 50 minutes) or of the server's own account. */
     private static function accessToken(): string
     {
+        if (self::serverAccount()) {
+            $cacheKey = 'gcs_server_access_token';
+            if ($token = Cache::get($cacheKey)) {
+                return $token;
+            }
+            // Google Cloud metadata server: only reachable from the server itself
+            $res = Http::timeout(10)->withHeaders(['Metadata-Flavor' => 'Google'])->get(self::METADATA_TOKEN);
+            if (!$res->successful() || !$res->json('access_token')) {
+                throw new \RuntimeException('Server account login failed: HTTP ' . $res->status() . ' (is this a Google Cloud server?)');
+            }
+            $token = (string)$res->json('access_token');
+            Cache::put($cacheKey, $token, max(60, min(3000, (int)$res->json('expires_in') - 120)));
+            return $token;
+        }
         return Cache::remember('gcs_access_token_' . md5(self::bucket() . config('services.gcs.key_file')), 3000, function () {
             $key = self::key();
             $b64 = fn (string $s) => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
