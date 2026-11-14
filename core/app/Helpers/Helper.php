@@ -1642,10 +1642,12 @@ class Helper
                                     'created_at' => $group->created_at ?? now(),
                                     'updated_at' => $group->updated_at ?? now(),
                                     'group_name' => $group->group_name,
-                                    'assigned_groups' => $group->assigned_groups ,
+                                    // the company's own assignment (Smart31 group page) wins over the server's empty value
+                                    'assigned_groups' => $assigned_groups ?: ($group->assigned_groups ?? null),
                                 ]);
                             }
                         }
+                        \App\Support\Smart31Schedule::inheritAssignments();
                     }
                     } else {
                         \Log::warning("VMN fetch failed: HTTP $httpCode for CRM $crm_id, Response: $response");

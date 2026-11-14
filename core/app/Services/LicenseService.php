@@ -111,6 +111,7 @@ class LicenseService
                     ]);
                     $added++;
                 }
+                \App\Support\Smart31Schedule::inheritAssignments();   // new days keep the teams the group was assigned to
                 $steps['smart31'] = ['ok' => true, 'text' => $added > 0 ? "Smart31 VMNs: {$added} added" : 'Smart31 VMNs: up to date'];
             }
         } catch (\Throwable $e) {

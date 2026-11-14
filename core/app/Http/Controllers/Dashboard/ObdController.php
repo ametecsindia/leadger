@@ -846,6 +846,8 @@ where obd_campaign_id = $id
                         $group->group_name
                     ]);
                 }
+                // the numbers were inserted again without teams: give each group back the teams it was assigned to
+                \App\Support\Smart31Schedule::inheritAssignments();
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();

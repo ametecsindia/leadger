@@ -27,6 +27,7 @@ class VmnCallOptionTest extends TestCase
         parent::setUp();
         // Smart31 numbers are for today and enabled by time slot (Smart31Schedule): today at 10:00 (slot 1), licence with both ways
         Carbon::setTestNow(Carbon::now(Smart31Schedule::TIMEZONE)->setTime(10, 0));
+        config(['cache.default' => 'array']);   // the dropdown answer is cached 1 minute: flushed when a test adds numbers
         Cache::put(Smart31Schedule::CACHE_KEY, ['c2c' => 50, 'webrtc' => 50], 60);
         $this->admin = User::whereHas('permissionsGroup', fn ($q) => $q->where('name', 'Admin'))->firstOrFail();
         Auth::login($this->admin);
@@ -44,6 +45,9 @@ class VmnCallOptionTest extends TestCase
     {
         DB::table('smart31_vmn_numbers')->insert(['vmn' => $vmn, 'type' => $type, 'c2c' => 1, 'webrtc' => 0, 'obd' => 0,
             'usage_date' => Smart31Schedule::now()->toDateString(), 'assigned_groups' => $this->admin->team_id ?: null, 'created_at' => now(), 'updated_at' => now()]);
+        $licence = Cache::get(Smart31Schedule::CACHE_KEY);
+        Cache::flush();   // the 1-minute dropdown cache (live: a new number shows within a minute)
+        Cache::put(Smart31Schedule::CACHE_KEY, $licence, 60);
     }
 
     private function listed(string $method): array

@@ -49,6 +49,48 @@ order by n.created_at desc limit ".env('BACKEND_PAGINATION'));
         return view("dashboard.notifications.list", compact("Notifications", "GeneralWebmasterSections"));
     }
 
+    /**
+     * Bell + "Incoming call" popup: the user's inbound call notifications changed since ?since= (unix seconds of
+     * updated_at, first call: the latest 15), the unread count. One indexed query on (user_id, updated_at).
+     */
+    public function poll(Request $request)
+    {
+        $userId = (int)Auth::id();
+        if (!\App\Services\InboundCallNotifier::ready()) {
+            return response()->json(['unread' => 0, 'items' => [], 'now' => time()]);
+        }
+        $since = (int)$request->query('since', 0);
+        $q = DB::table('notifications')->where('user_id', $userId)->whereNotNull('call_id');
+        $items = (clone $q)->when($since > 0, fn ($w) => $w->where('updated_at', '>=', date('Y-m-d H:i:s', $since)))
+            ->orderByDesc('updated_at')->orderByDesc('id')->limit(15)
+            ->get(['id', 'type', 'title', 'body', 'data', 'open_status', 'created_at', 'updated_at'])
+            ->map(fn ($n) => [
+                'id' => (int)$n->id,
+                'type' => $n->type,
+                'title' => $n->title,
+                'body' => $n->body,
+                'data' => json_decode((string)$n->data, true) ?: [],
+                'read' => (int)$n->open_status === 1,
+                'updated' => strtotime($n->updated_at),
+            ]);
+        return response()->json([
+            'unread' => (clone $q)->where('open_status', 0)->count(),
+            'items' => $items,
+            'now' => time(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /** Mark the user's call notifications read: all ("Mark all read"), or ?id= one. */
+    public function readCalls(Request $request)
+    {
+        if (\App\Services\InboundCallNotifier::ready()) {
+            DB::table('notifications')->where('user_id', Auth::id())->whereNotNull('call_id')
+                ->when($request->filled('id'), fn ($q) => $q->where('id', (int)$request->input('id')))
+                ->update(['open_status' => 1]);
+        }
+        return response()->json(['success' => true]);
+    }
+
     public function view($id)
     {
         // General for all pages

@@ -275,6 +275,11 @@ class LoginController extends Controller
                 $userLogs->info = 'User Logout';
                 $userLogs->save();
             }
+            try {
+                \App\Services\ActiveCallService::endForUser((int)$user->id);   // no call stays "On call" after logout
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[ActiveCalls] Not closed on logout: ' . $e->getMessage());
+            }
             $this->ssoLogout($request);
         }
 

@@ -51,10 +51,34 @@ class FireIncomingLogEvent extends Command
             return 1;
         }
 
+        // Inbound Calls report + bell / popup notifications + Dashboard active calls (the RabbitMQ message is the call's
+        // end: answered with talk time, otherwise missed). Never stops the event below.
+        $this->recordInbound($database, (array)$log);
+
         // Trigger the event
         event(new NewIncomingVmnLog((object) $log));
 
         $this->info("Event fired for Log ID: {$logId} in database: {$database}");
         return 0;
+    }
+
+    /** Save the call in inbound_calls of the company whose database is $database (InboundCallService). */
+    private function recordInbound(string $database, array $log): void
+    {
+        try {
+            foreach (\App\Support\Tenancy::companies() as $company) {
+                \App\Support\Tenancy::apply($company);
+                if (DB::connection()->getDatabaseName() === $database) {
+                    $r = (new \App\Services\InboundCallService())->record($log + ['event_type' => 'Call End'], 'rabbitmq');
+                    $this->line('Inbound call: ' . $r['result'] . ' (' . $r['message'] . ')');
+                    return;
+                }
+            }
+            $this->warn("Inbound call not saved: no company uses database {$database}");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[InboundCalls] RabbitMQ incoming log not saved: ' . $e->getMessage());
+        } finally {
+            \App\Support\Tenancy::apply(\App\Support\Tenancy::central());
+        }
     }
 }

@@ -78,12 +78,30 @@ $headerCampaignCount = $headerCampaigns->count();
                 @if(!empty($alerts) && $alerts > 0)
                     <span style="position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; border: 2px solid #0F172A;"></span>
                 @endif
+                {{-- unread inbound call notifications (ringing / missed), filled by the poll below --}}
+                <span id="lgCallBadge" style="display: none; position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #EF4444; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 18px; text-align: center; border: 2px solid #0F172A; box-sizing: content-box;"></span>
             </a>
             <div class="dropdown-menu dropdown-menu-right animated fadeInUp" aria-labelledby="headerNotificationBell" style="right: 0; left: auto; top: calc(100% + 8px); width: 320px; z-index: 1060; padding: 0; border: none; background: transparent; box-shadow: none;">
                 <div style="background: #0B1E40; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 12px 30px rgba(0,0,0,0.5); overflow: hidden;">
                     <div class="p-2 border-bottom d-flex justify-content-between align-items-center" style="border-color: rgba(255,255,255,0.08) !important; padding: 12px 16px;">
                         <span class="font-weight-bold text-white" style="font-size: 13px;">Notifications</span>
                         <span class="badge" style="font-size: 11px; background-color: var(--lg-accent); color: #fff; border-radius: 100px; padding: 3px 8px;">{{ $alerts }} New</span>
+                    </div>
+                    {{-- Inbound calls: ringing / on a call / missed (newest first) --}}
+                    <div id="lgCallNotifBox" onclick="event.stopPropagation()" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px 2px;">
+                            <span style="font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: rgba(255,255,255,0.65);">Calls</span>
+                            <a href="javascript:void(0)" onclick="lgCallNotifReadAll()" style="font-size: 11.5px; color: #60A5FA; font-weight: 600;">Mark all read</a>
+                        </div>
+                        <ul id="lgCallNotifList" class="list-unstyled m-0" style="padding: 4px 12px 6px; max-height: 240px; overflow-y: auto;">
+                            <li style="padding: 8px 4px; font-size: 12px; color: rgba(255,255,255,0.6);">No call notifications</li>
+                        </ul>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 16px 10px; gap: 8px;">
+                            <label style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.8) !important; opacity: 1; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="lgCallSoundToggle" onchange="lgCallSoundSet(this.checked)"> Ring sound
+                            </label>
+                            <a href="javascript:void(0)" id="lgDesktopAlertsBtn" onclick="lgDesktopAlertsAsk()" style="display: none; font-size: 11.5px; color: #60A5FA; font-weight: 600;">Enable desktop alerts</a>
+                        </div>
                     </div>
                     <ul class="list-group list-group-gap m-a-0" style="padding: 6px 12px; max-height: 280px; overflow-y: auto;">
                         @forelse($webmailsAlerts as $webmailsAlert)
@@ -209,3 +227,5 @@ $headerCampaignCount = $headerCampaigns->count();
         }
     });
 </script>
+
+@include('dashboard.layouts.call-notifications')

@@ -339,12 +339,12 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
                 <span>Online Agents</span>
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
             </div>
-            <div class="lg-kpi-val tnum">{{ $onlineAgentsCount }}</div>
+            <div id="cardOnlineVal" class="lg-kpi-val tnum">{{ $onlineAgentsCount }}</div>
             <p class="lg-kpi-sub">of {{ \App\Models\User::where('status', 1)->count() }} total logged in</p>
         </a>
 
         <!-- 2. On Call Now -->
-        <a href="#floor" id="cardOnCallNow" onclick="handleOnCallClick(event)" class="lg-kpi-card live" tabindex="0" role="link" title="Jump to Live Telecaller Activity Floor filtered to on-call agents">
+        <a href="#floor" id="cardOnCallNow" onclick="handleOnCallClick(event)" class="lg-kpi-card live" tabindex="0" role="link" title="Show the calls in progress right now" aria-haspopup="dialog" aria-controls="lgLiveCallsPanel">
             <div class="lg-kpi-top" style="color: var(--lg-accent); font-weight: 600;">
                 <span>On Call Now</span>
                 <span style="position: relative; display: flex; width: 12px; height: 12px;">
@@ -362,7 +362,7 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
                 <span>Calls Today</span>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
             </div>
-            <div class="lg-kpi-val tnum">{{ number_format($callsTodayCount) }}</div>
+            <div id="cardCallsTodayVal" class="lg-kpi-val tnum">{{ number_format($callsTodayCount) }}</div>
             <p class="lg-kpi-sub">
                 @if($callsYesterdayCount > 0)
                     @php $callDiff = round((($callsTodayCount - $callsYesterdayCount) / $callsYesterdayCount) * 100); @endphp
@@ -379,8 +379,8 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
                 <span>Connected</span>
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
             </div>
-            <div class="lg-kpi-val tnum">{{ number_format($callsConnectedTodayCount) }}</div>
-            <p class="lg-kpi-sub">
+            <div id="cardConnectedVal" class="lg-kpi-val tnum">{{ number_format($callsConnectedTodayCount) }}</div>
+            <p class="lg-kpi-sub" id="cardConnectRate">
                 {{ $callsTodayCount > 0 ? round(($callsConnectedTodayCount / $callsTodayCount) * 100, 1) . '%' : '0%' }} connect rate
             </p>
         </a>
@@ -660,8 +660,15 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
     }
   }
 
+  // "On Call Now" card: the compact "Live active calls" panel (the floor filter stays one click away in the panel)
   function handleOnCallClick(e) {
     if (e && e.preventDefault) e.preventDefault();
+    lgLiveCallsOpen();
+  }
+
+  function showOnCallOnFloor(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    lgLiveCallsClose();
     const stEl = document.getElementById('st');
     if (stEl) {
         stEl.value = 'call';
@@ -754,11 +761,7 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Sync On Call Now count to agents dataset
-    const onCallCount = AGENTS.filter(a => a[1] === 'call').length;
-    const cardValEl = document.getElementById('cardOnCallVal');
-    if (cardValEl) cardValEl.textContent = onCallCount;
-
+    // On Call Now comes from the server (calls answered by both sides, not ended) and is refreshed every 5 seconds
     const liveCountEl = document.getElementById('liveCount');
     if (liveCountEl) liveCountEl.textContent = AGENTS.filter(a => a[1] !== 'off').length;
 
@@ -770,8 +773,9 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
 
     // Check URL hash or query param for on-call jump
     if (window.location.hash === '#floor' || new URLSearchParams(window.location.search).get('filter') === 'on_call') {
-        handleOnCallClick();
+        showOnCallOnFloor();
     }
+    lgLivePoll();
 
     // Keyboard navigation (Enter key on clickable cards)
     document.querySelectorAll('.lg-kpi-card, .lg-funnel-card').forEach(card => {
@@ -792,6 +796,121 @@ $activeCampaigns = $activeCampaigns ?? collect([]);
       if (syncEl) syncEl.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()].map(v => String(v).padStart(2, '0')).join(':');
     }
   }, 1000);
+</script>
+<!-- "Live active calls" panel (opened from the On Call Now card) -->
+<style>
+  .lg-lc-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.25); z-index: 1070; display: none; }
+  .lg-lc-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 380px; max-width: 100vw; background: #FFFFFF; border-left: 1px solid #E2E8F0;
+    box-shadow: -12px 0 30px rgba(15, 23, 42, 0.12); z-index: 1071; display: none; flex-direction: column; font-size: 13px; color: #0F172A; }
+  .lg-lc-panel.open, .lg-lc-backdrop.open { display: flex; }
+  .lg-lc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 18px; border-bottom: 1px solid #E2E8F0; }
+  .lg-lc-head h3 { font-size: 15px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .lg-lc-count { display: inline-flex; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: #EFF6FF; border: 1px solid #BFDBFE; color: var(--lg-accent); font-size: 12px; font-weight: 700; align-items: center; justify-content: center; }
+  .lg-lc-close { border: none; background: transparent; font-size: 22px; line-height: 1; color: #64748B; cursor: pointer; padding: 2px 6px; }
+  .lg-lc-list { flex: 1; overflow-y: auto; padding: 10px 14px; margin: 0; list-style: none; }
+  .lg-lc-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 8px; border-bottom: 1px solid #F1F5F9; }
+  .lg-lc-dir { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #EFF6FF; color: var(--lg-accent); }
+  .lg-lc-dir.in { background: #ECFDF5; color: #047857; }
+  .lg-lc-main { flex: 1; min-width: 0; }
+  .lg-lc-agent { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lg-lc-sub { color: #64748B; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lg-lc-chan { display: inline-block; margin-top: 3px; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 600; background: #F1F5F9; color: #475569; }
+  .lg-lc-timer { flex-shrink: 0; font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--lg-accent); }
+  .lg-lc-empty { padding: 40px 10px; text-align: center; color: #64748B; }
+  .lg-lc-foot { padding: 12px 18px; border-top: 1px solid #E2E8F0; background: #F8FAFC; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #64748B; }
+  .lg-lc-foot a { color: var(--lg-accent); font-weight: 600; cursor: pointer; text-decoration: none; }
+</style>
+<div class="lg-lc-backdrop" id="lgLiveCallsBackdrop" onclick="lgLiveCallsClose()"></div>
+<aside class="lg-lc-panel" id="lgLiveCallsPanel" role="dialog" aria-modal="true" aria-labelledby="lgLiveCallsTitle">
+  <div class="lg-lc-head">
+    <h3 id="lgLiveCallsTitle">Live active calls <span class="lg-lc-count tnum" id="lgLiveCallsCount">{{ $onCallNowCount }}</span></h3>
+    <button type="button" class="lg-lc-close" onclick="lgLiveCallsClose()" aria-label="Close">&times;</button>
+  </div>
+  <ul class="lg-lc-list" id="lgLiveCallsList"><li class="lg-lc-empty">Loading…</li></ul>
+  <div class="lg-lc-foot">
+    <span>Refreshes every 5 seconds</span>
+    <a onclick="showOnCallOnFloor(event)">Show on activity floor</a>
+  </div>
+</aside>
+<script>
+  /*
+   * Live numbers: On Call Now (calls answered by both sides and not ended), its list, the agents on call on the activity
+   * floor, Calls Today / Connected / Online Agents. Asked every 5 seconds while this tab is visible (none while hidden).
+   */
+  (function () {
+    const URL_LIVE = "{{ route('dashboardLiveCalls') }}";
+    const CHANNEL = { click2call: 'Click2Call', webrtc: 'WebRTC', inbound: 'Inbound' };
+    let offset = 0, calls = [], timer = null, inFlight = false;
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const mmss = ms => { const s = Math.max(0, Math.floor((Date.now() + offset - ms) / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+    const setText = (id, v) => { const el = document.getElementById(id); if (el && el.textContent !== String(v)) el.textContent = v; };
+
+    function renderList() {
+      const list = document.getElementById('lgLiveCallsList');
+      if (!list) return;
+      setText('lgLiveCallsCount', calls.length);
+      list.innerHTML = calls.length ? calls.map(c => {
+        const inbound = c.direction === 'inbound';
+        const arrow = inbound
+          ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="17 17 7 17 7 7"/></svg>'
+          : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>';
+        const context = [c.lead, c.campaign].filter(Boolean).join(' · ');
+        return `<li class="lg-lc-item">
+          <span class="lg-lc-dir ${inbound ? 'in' : ''}" title="${inbound ? 'Inbound' : 'Outbound'}">${arrow}</span>
+          <span class="lg-lc-main">
+            <span class="lg-lc-agent d-block">${esc(c.agent)}</span>
+            <span class="lg-lc-sub d-block">${esc(c.customer || '—')}${context ? ' · ' + esc(context) : ''}</span>
+            <span class="lg-lc-chan">${esc(CHANNEL[c.channel] || c.channel)}</span>
+          </span>
+          <span class="lg-lc-timer tnum" data-lc-since="${c.answered_ms}">${mmss(c.answered_ms)}</span>
+        </li>`;
+      }).join('') : '<li class="lg-lc-empty">No active calls right now</li>';
+    }
+
+    function apply(d) {
+      offset = (d.server_ms || Date.now()) - Date.now();
+      calls = d.calls || [];
+      setText('cardOnCallVal', d.on_call);
+      setText('cardCallsTodayVal', Number(d.calls_today).toLocaleString('en-US'));
+      setText('cardConnectedVal', Number(d.connected_today).toLocaleString('en-US'));
+      const rate = d.calls_today > 0 ? Math.round(d.connected_today / d.calls_today * 1000) / 10 + '%' : '0%';
+      setText('cardConnectRate', rate + ' connect rate');
+      setText('cardOnlineVal', d.online_agents);
+      // activity floor: On call (with the timer from the answer) / Ready, from the same calls
+      let changed = false;
+      AGENTS.forEach(a => {
+        const since = (d.agents || {})[a[10]] || null;
+        const st = since ? 'call' : (a[1] === 'call' ? 'ready' : a[1]);
+        if (st !== a[1] || (since || null) !== (a[9] || null)) { a[1] = st; a[9] = since; changed = true; }
+      });
+      if (changed) renderFloor();
+      if (document.getElementById('lgLiveCallsPanel').classList.contains('open')) renderList();
+    }
+
+    window.lgLivePoll = function () {
+      if (document.hidden || inFlight) return;
+      inFlight = true;
+      fetch(URL_LIVE, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) apply(d); })
+        .catch(() => {})
+        .finally(() => { inFlight = false; });
+    };
+    window.lgLiveCallsOpen = function () {
+      document.getElementById('lgLiveCallsPanel').classList.add('open');
+      document.getElementById('lgLiveCallsBackdrop').classList.add('open');
+      renderList();
+      lgLivePoll();
+    };
+    window.lgLiveCallsClose = function () {
+      document.getElementById('lgLiveCallsPanel').classList.remove('open');
+      document.getElementById('lgLiveCallsBackdrop').classList.remove('open');
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lgLiveCallsClose(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) lgLivePoll(); });
+    timer = setInterval(lgLivePoll, 5000);
+    setInterval(() => document.querySelectorAll('[data-lc-since]').forEach(el => { el.textContent = mmss(+el.dataset.lcSince); }), 1000);
+  })();
 </script>
 <script>
   // /admin#license-info -> the License Info tab of the Profile page (Sarvam API key, license)

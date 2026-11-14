@@ -66,7 +66,11 @@ class Smart31Schedule
     /** The agent's Smart31 numbers for today and this kind (10 digits, in the order added, at most one per slot). */
     public static function numbers($user, string $kind)
     {
-        $q = DB::table('smart31_vmn_numbers')->whereDate('usage_date', self::now()->toDateString())->where($kind, 1);
+        // today as a range (same rows as DATE(usage_date) = today, but an index on usage_date can be used)
+        $q = DB::table('smart31_vmn_numbers')
+            ->where('usage_date', '>=', self::now()->toDateString())
+            ->where('usage_date', '<', self::now()->addDay()->toDateString())
+            ->where($kind, 1);
         // Admin: every Smart31 number of today, assigned to a group or not; the group filter is for the other roles (Telecallers)
         $teams = VmnService::isAdmin($user) ? [] : VmnService::teamIds($user);
         if ($teams) {
@@ -110,6 +114,18 @@ class Smart31Schedule
             'message' => $slot === 0 ? self::hoursMessage() : null,
             'lines' => array_merge($enabled, $lines->where('enabled', false)->values()->all()),
         ];
+    }
+
+    /**
+     * lines() kept for 1 minute per company host, agent, kind, day and slot: the dropdown endpoints are asked often, the
+     * numbers change once a day, and a new slot (or day) is a new key so it shows at once. The check when a call is
+     * placed (callError) is never cached.
+     */
+    public static function cachedLines($user, string $kind): array
+    {
+        $key = 'smart31:' . request()->getHost() . ':' . ($user->id ?? 0) . ':' . $kind . ':'
+            . self::now()->toDateString() . ':' . self::slot();
+        return Cache::remember($key, 60, fn () => self::lines($user, $kind));
     }
 
     /** Why this agent may not call now with this Smart31 number in this way, or null when allowed. */
@@ -163,6 +179,32 @@ class Smart31Schedule
     public static function licenceError(string $kind): ?string
     {
         return (self::licensedKinds()[$kind] ?? false) ? null : 'Smart31 ' . self::LABELS[$kind] . ' is not included in your licence';
+    }
+
+    /**
+     * The teams a Smart31 group was assigned to (Smart31 group edit page) for its rows that have none: the license server
+     * sends each number again for every new day, and Add Voucher re-inserts all numbers, both without the company's
+     * own assignment. Taken from the group's latest assigned row, else from smart31_history (kept by Add Voucher).
+     *
+     * @return int rows given their group's teams
+     */
+    public static function inheritAssignments(): int
+    {
+        $empty = fn ($q) => $q->whereNull('assigned_groups')->orWhere('assigned_groups', '');
+        $groups = DB::table('smart31_vmn_numbers')->where($empty)->whereNotNull('group_name')->where('group_name', '!=', '')
+            ->distinct()->pluck('group_name');
+        $hasHistory = \Illuminate\Support\Facades\Schema::hasTable('smart31_history');
+        $updated = 0;
+        foreach ($groups as $group) {
+            $latest = fn ($table) => DB::table($table)->where('group_name', $group)->whereNotNull('assigned_groups')
+                ->where('assigned_groups', '!=', '')->orderByDesc('usage_date')->orderByDesc('id')->value('assigned_groups');
+            $teams = $latest('smart31_vmn_numbers') ?: ($hasHistory ? $latest('smart31_history') : null);
+            if ($teams) {
+                $updated += DB::table('smart31_vmn_numbers')->where('group_name', $group)->where($empty)
+                    ->update(['assigned_groups' => $teams, 'updated_at' => now()]);
+            }
+        }
+        return $updated;
     }
 
     public static function forget(): void

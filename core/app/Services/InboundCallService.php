@@ -60,7 +60,41 @@ class InboundCallService
             }
             $r['message'] = 'Saved; unmapped VMN: ' . $unmapped;
         }
+        if (!empty($r['call'])) {
+            self::afterSave($r['call']);
+        }
         return $r;
+    }
+
+    /**
+     * After a saved event: Dashboard active call (answered and not ended -> on call; ended -> closed) and the
+     * notifications (InboundCallNotifier). Never breaks saving the call: errors are logged only.
+     */
+    public static function afterSave(InboundCall $call): void
+    {
+        try {
+            $key = 'inbound:' . $call->call_id;
+            if ($call->end_time || $call->status === 'missed') {
+                ActiveCallService::ended($key, $call->status === 'missed' ? 'missed' : 'ended', $call->duration_seconds ?: null);
+            } elseif ($call->status === 'answered' && $call->agent_user_id) {
+                ActiveCallService::answered($key, [
+                    'log_table' => 'inbound_calls',
+                    'call_log_id' => $call->id,
+                    'direction' => 'inbound',
+                    'channel' => 'inbound',
+                    'provider_call_id' => $call->call_id,
+                    'agent_user_id' => $call->agent_user_id,
+                    'agent_number' => $call->agent_number,
+                    'customer_number' => $call->customer_mobile_normalized ?: $call->customer_mobile,
+                    'lead_id' => $call->lead_id,
+                    'campaign_id' => $call->lead_id ? DB::table('leads')->where('id', $call->lead_id)->value('campaign_id') : null,
+                    'vmn' => $call->vmn,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('[InboundCalls] Active call not updated for ' . $call->call_id . ': ' . $e->getMessage());
+        }
+        InboundCallNotifier::notify($call);   // logs its own errors
     }
 
     /** One company in this installation (no tenants table), unless INBOUND_CALLS_SINGLE_COMPANY says otherwise. */

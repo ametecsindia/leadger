@@ -107,6 +107,15 @@ class InboundDiagnoseCommand extends Command
                 . json_encode(array_diff_key($run, ['at' => 1])));
         }
 
+        // RabbitMQ path (callrecording_pull.py -> incoming_vmn_logs -> event:fire-incoming-log -> inbound_calls)
+        if (Schema::hasTable('incoming_vmn_logs')) {
+            $lastVmnLog = DB::table('incoming_vmn_logs')->max('id');
+            $this->line('  Last incoming_vmn_logs row (RabbitMQ): ' . ($lastVmnLog
+                ? '#' . $lastVmnLog . ' ' . (DB::table('incoming_vmn_logs')->where('id', $lastVmnLog)->value('a_start_time') ?: '')
+                : 'none'));
+        }
+        $this->notifications();
+
         if ($this->option('probe')) {
             $hours = max(1, (int)$this->option('hours'));
             $this->line('  Provider answer for the last ' . $hours . ' h:');
@@ -131,6 +140,30 @@ class InboundDiagnoseCommand extends Command
             $this->line('  schedule:run process right now: ' . $cron . ' (it lives only a few seconds each minute; see "Scheduled pull" below)');
         }
         $this->line('  Cron line needed: * * * * * cd ' . base_path() . ' && php artisan schedule:run >> /dev/null 2>&1');
+    }
+
+    /** Inbound call notifications (bell / popup) and Dashboard active calls of this company. */
+    private function notifications(): void
+    {
+        $this->line('  Notifications: missed calls go to ' . config('services.telephony.inbound_notify_missed')
+            . '; calls older than ' . config('services.telephony.inbound_notify_max_age') . ' min notify nobody; delivered by polling'
+            . ' (/notifications/poll every 5 s while the tab is visible), no queue worker or websocket server needed');
+        if (!\App\Services\InboundCallNotifier::ready()) {
+            $this->check(false, 'Notification columns (notifications.call_id)', 'missing: run php artisan migrate --force');
+        } else {
+            $rows = DB::table('notifications')->whereNotNull('call_id')->orderByDesc('updated_at')->limit(5)
+                ->get(['user_id', 'type', 'call_id', 'open_status', 'updated_at']);
+            $this->line('  Call notifications: ' . DB::table('notifications')->whereNotNull('call_id')->count() . ($rows->isEmpty() ? ', none yet' : '; last ones:'));
+            foreach ($rows as $n) {
+                $this->line(sprintf('    %s  user %-5d %-17s %s %s', $n->updated_at, $n->user_id, $n->type, $n->call_id, $n->open_status ? 'read' : 'unread'));
+            }
+        }
+        if (!\App\Services\ActiveCallService::ready()) {
+            $this->check(false, 'Table active_calls (Dashboard On Call Now)', 'missing: run php artisan migrate --force');
+        } else {
+            $this->line('  Active calls open now: ' . \App\Services\ActiveCallService::liveCount()
+                . '; last answered: ' . (DB::table('active_calls')->max('answered_at') ?: 'never'));
+        }
     }
 
     private function section(string $title): void

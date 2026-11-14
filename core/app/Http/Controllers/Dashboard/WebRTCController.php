@@ -1168,8 +1168,10 @@ public function smart31GroupEdit($group)
 {
     $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
 
+    // the group's current assignment: its latest row (rows are per day; older days may have older teams)
     $groupData = DB::table('smart31_vmn_numbers')
         ->where('group_name', $group)
+        ->orderByDesc('usage_date')->orderByDesc('id')
         ->first();
 
     if (!$groupData) {
@@ -1206,35 +1208,22 @@ public function smart31GroupUpdate(Request $request)
         'assigned_groups' => 'nullable', // can be string or array
     ]);
 
-    // Fetch existing assigned_groups from DB
-    $existing = DB::table('smart31_vmn_numbers')
-        ->where('group_name', $request->group_name)
-        ->value('assigned_groups'); // e.g., "1,2,3"
+    // Exactly the teams selected on the page (it shows the current ones, so un-ticking a team removes it), as clean
+    // team ids "1,2,3" (the calling page matches them with FIND_IN_SET: no spaces, no empty entries)
+    $input = $request->input('assigned_groups', []);
+    $ids = is_array($input) ? $input : explode(',', (string)$input);
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
+    sort($ids);
+    $teams = DB::table('teams')->whereIn('id', $ids)->pluck('id')->map(fn ($v) => (int)$v)->all();   // existing teams only
 
-    // Convert existing string to array
-    $existingIds = $existing ? explode(',', $existing) : [];
-
-    // Convert new input to array if it's string, else use as-is
-    $newIds = [];
-    if ($request->has('assigned_groups')) {
-        if (is_array($request->assigned_groups)) {
-            $newIds = $request->assigned_groups;
-        } else {
-            $newIds = explode(',', $request->assigned_groups);
-        }
-    }
-
-    // Merge and remove duplicates
-    $mergedIds = array_unique(array_merge($existingIds, $newIds));
-    $mergedString = implode(',', $mergedIds);
-
-    // Update DB
+    // Every row of the group: today's numbers and the days already received
     DB::table('smart31_vmn_numbers')
         ->where('group_name', $request->group_name)
         ->update([
-            'assigned_groups' => $mergedString,
+            'assigned_groups' => $teams ? implode(',', $teams) : null,
             'updated_at' => now(),
         ]);
+    \App\Support\Smart31Schedule::forget();
 
     return redirect()->route('obdDid')->with('success', 'Smart31 group updated successfully.');
 }
@@ -1245,12 +1234,12 @@ public function smart31GroupUpdate(Request $request)
  */
 public function getVmn(Request $request)
 {
-    $res = \App\Support\Smart31Schedule::lines(Auth::user(), 'c2c');
+    $res = \App\Support\Smart31Schedule::cachedLines(Auth::user(), 'c2c');
     return response()->json(['vmn' => collect($res['lines'])->firstWhere('default', true)['vmn'] ?? null] + $res);
 }
 public function getwVmn(Request $request)
 {
-    $res = \App\Support\Smart31Schedule::lines(Auth::user(), 'webrtc');
+    $res = \App\Support\Smart31Schedule::cachedLines(Auth::user(), 'webrtc');
     return response()->json(['wvmn' => collect($res['lines'])->firstWhere('default', true)['vmn'] ?? null] + $res);
 }
 public function ssoLogout(Request $request)

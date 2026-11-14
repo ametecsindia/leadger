@@ -88,6 +88,12 @@ return [
         'inbound_single_company' => env('INBOUND_CALLS_SINGLE_COMPANY'),
         // the provider's times carry no timezone: they are in this one (the report's "Today" is also this timezone)
         'timezone' => env('TELEPHONY_TIMEZONE', 'Asia/Kolkata'),
+        // Dashboard "On Call Now": a call still open after this many minutes is closed by active-calls:cleanup
+        'active_call_max_minutes' => (int)env('ACTIVE_CALL_MAX_MINUTES', 180),
+        // Inbound call notifications: who gets a missed call (agent, lead_owner, team_leader, admins; comma separated),
+        // and calls older than this many minutes (pulled later, backfills) notify nobody
+        'inbound_notify_missed' => env('INBOUND_NOTIFY_MISSED', 'agent,lead_owner,team_leader,admins'),
+        'inbound_notify_max_age' => (int)env('INBOUND_NOTIFY_MAX_AGE', 30),
     ],
     // Call recordings in a private Google Cloud Storage bucket (App\Services\GcsBucket); off while either is empty.
     // key_file: path of the service account JSON key, outside the web folder (never commit it)

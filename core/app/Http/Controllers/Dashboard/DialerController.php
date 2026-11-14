@@ -858,7 +858,7 @@ class DialerController extends Controller
     public function getSmart31Vmns(Request $request)
     {
         $callingType = strtolower($request->get('type', 'webrtc')) === 'click2call' ? 'click2call' : 'webrtc';
-        $res = \App\Support\Smart31Schedule::lines(Auth::user(), \App\Support\Smart31Schedule::kindFor($callingType));
+        $res = \App\Support\Smart31Schedule::cachedLines(Auth::user(), \App\Support\Smart31Schedule::kindFor($callingType));
         $prefix = $callingType === 'click2call' ? 'Click2Call VMN: ' : 'WebRTC VMN: ';
         $vmns = collect($res['lines'])->map(fn ($l) => [
             'number' => $l['vmn'],
@@ -866,6 +866,13 @@ class DialerController extends Controller
             'available' => $l['enabled'],
             'expiry' => null,
         ] + $l)->values();
+
+        // v=2 = the calling page that asks once a day. A page opened before that update still asks every 30 seconds:
+        // its lines are shown disabled with a reload hint (calls are checked on the server either way); vmns unchanged.
+        if ((int)$request->get('v') < 2) {
+            $res['lines'] = array_map(fn ($l) => ['enabled' => false, 'default' => false] + $l, $res['lines']);
+            $res['message'] = 'Smart31 updated: press Ctrl+F5 to reload this page';
+        }
 
         return response()->json([
             'success' => true,
@@ -1204,6 +1211,8 @@ class DialerController extends Controller
         }
 
         if ($facts['customer_connected_at']) {
+            // both legs up: the call counts as active (Dashboard "On Call Now") until it ends
+            self::markActiveCall($log, 'connected', $facts['customer_connected_at']);
             return response()->json([
                 'status' => 'connected',
                 'message' => 'Call Successful / Connected',
@@ -1215,6 +1224,45 @@ class DialerController extends Controller
             return response()->json(['status' => 'ringing', 'message' => 'Ringing customer...', 'final' => false]);
         }
         return response()->json(['status' => 'calling', 'message' => 'Calling...', 'final' => false]);
+    }
+
+    /**
+     * A call both sides answered (WebRTC: the browser's true answer; Click2Call: the provider's customer leg connected)
+     * is an active call; its end is recorded when the log is saved as finished (model events). Never breaks the request.
+     */
+    private static function markActiveCall($log, ?string $state, $answeredAt = null): void
+    {
+        if (!in_array($state, ['connected', 'answered'], true)) {
+            return;
+        }
+        try {
+            $at = $answeredAt ?: ($log->answer_time ? Carbon::parse($log->answer_time) : null);
+            \App\Services\ActiveCallService::answeredFromLog($log, (string)$log->call_type, $at ? Carbon::parse($at) : null);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[ActiveCalls] Not recorded: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * WebRTC: "the call is still on", every 15 seconds while connected (id / uuid / is_campaign like updateCallState).
+     * Only the agent's own call; an ended call is not reopened.
+     */
+    public function activeCallHeartbeat(Request $request)
+    {
+        $isCampaign = $request->boolean('is_campaign');
+        $id = (int)$request->input('id');
+        $log = $id ? ($isCampaign ? \App\Models\CallLog::find($id) : DialerLog::find($id)) : null;
+        if (!$log || (int)$log->created_by !== (int)Auth::id()) {
+            return response()->json(['success' => false], 404);
+        }
+        $alive = \App\Services\ActiveCallService::heartbeat(\App\Services\ActiveCallService::keyFor($log), (int)Auth::id());
+        return response()->json(['success' => true, 'active' => $alive]);
+    }
+
+    /** The provider's record for a Click2Call call (also used by active-calls:cleanup). */
+    public static function gatewayCallRecord(string $refId, string $vmn): ?array
+    {
+        return (new self())->fetchGatewayCallRecord($refId, $vmn);
     }
 
     /**
@@ -1352,6 +1400,7 @@ class DialerController extends Controller
                     $callLog->click_recording_url = $recordingUrl;
                 }
                 $callLog->save();
+                self::markActiveCall($callLog, $normState);
 
                 if ($normState === 'completed') {
                     \App\Services\CallRecordingService::storeOrUpdateRecording('Campaign Calling', $callLog, [
@@ -1406,6 +1455,7 @@ class DialerController extends Controller
                 }
 
                 $dialerLog->save();
+                self::markActiveCall($dialerLog, $normState);
 
                 if ($normState === 'completed') {
                     \App\Services\CallRecordingService::storeOrUpdateRecording('Dialing', $dialerLog, [

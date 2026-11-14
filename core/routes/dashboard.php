@@ -52,6 +52,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth','web','license','permission'])->group(function () {   // permission: config/permissions.php
 Route::get('/', [DashboardController::class, 'index'])->name('adminHome');
 Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('adminDashboard');
+// Dashboard live numbers (On Call Now + its list, Calls Today, Connected, Online Agents): polled every 5 s, not cached
+Route::get('/dashboard/live-calls', [DashboardController::class, 'liveCalls'])->middleware('throttle:30,1')->name('dashboardLiveCalls');
 //Search
 Route::get('/search', [DashboardController::class, 'search'])->name('adminSearch');
 Route::post('/find', [DashboardController::class, 'find'])->name('adminFind');
@@ -515,6 +517,9 @@ Route::post('/shifts/{id}/update', [ShiftsController::class, 'update'])->name('s
 
 // Notifications
 Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications');
+// Inbound call notifications (bell + incoming-call popup): small poll, mark read
+Route::get('/notifications/poll', [NotificationsController::class, 'poll'])->middleware('throttle:30,1')->name('notificationsPoll');
+Route::post('/notifications/calls/read', [NotificationsController::class, 'readCalls'])->middleware('throttle:30,1')->name('notificationsReadCalls');
 Route::get('/notifications/{id}/view', [NotificationsController::class, 'view'])->name('notificationView');
 Route::get('/notifications/createAnnouncement', [NotificationsController::class, 'createAnnouncement'])->name('createAnnouncement');
 Route::post('/notifications/getTeamMembers', [NotificationsController::class, 'getTeamMembers'])->name('notificationsGetTeamMembers');
@@ -553,6 +558,8 @@ Route::post('/dialer/quick-followup', [DialerController::class, 'quickFollowup']
 Route::post('/dialer/quick-tag', [DialerController::class, 'quickTag'])->name('dialerQuickTag');
 Route::get('/dialer/phone-history', [DialerController::class, 'phoneHistory'])->name('dialerPhoneHistory');
 Route::post('/dialer/update-call-state', [DialerController::class, 'updateCallState'])->name('dialerUpdateCallState');
+// WebRTC call still on (Dashboard "On Call Now"), every 15 seconds while connected
+Route::post('/dialer/active-call/heartbeat', [DialerController::class, 'activeCallHeartbeat'])->middleware('throttle:30,1')->name('dialerActiveCallHeartbeat');
  
 
 Route::get('/agreements/create', [AgreementController::class, 'create'])->name('agreements.create'); 

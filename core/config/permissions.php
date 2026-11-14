@@ -39,7 +39,7 @@ return [
         'dashboard' => ['label' => 'Dashboard', 'icon' => 'home', 'items' => [
             'home' => ['label' => 'Dashboard', 'actions' => ['view', 'export'], 'action_labels' => ['export' => 'Export shift log'],
                 'sidebar' => ['adminHome'],
-                'routes' => ['Dashboard@index' => 'view', 'Dashboard@dashboard' => 'view', 'Reports@exportShiftLog' => 'export']],
+                'routes' => ['Dashboard@index' => 'view', 'Dashboard@dashboard' => 'view', 'Dashboard@liveCalls' => 'view', 'Reports@exportShiftLog' => 'export']],
         ]],
 
         'leads' => ['label' => 'Leads', 'icon' => 'leads', 'items' => [

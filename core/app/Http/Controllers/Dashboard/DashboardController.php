@@ -260,37 +260,23 @@ class DashboardController extends Controller
         // Conversions Won
         $conversionsWonCount = Lead::whereIn('status', [1, 2, 6, 15])->count();
 
-        // Calling stats for today & yesterday
+        // Calling stats for today & yesterday ("today" of the calling timezone, as a range of the stored times)
         $tz = CallingRestrictionService::getTimezone();
         $todayDate = Carbon::today($tz)->format('Y-m-d');
-        $yesterdayDate = Carbon::yesterday($tz)->format('Y-m-d');
-        
-        $dialerCallsToday = DialerLog::whereDate('created_at', $todayDate)->where('call_source', 'manual')->count();
-        $dialerConnectedToday = DialerLog::whereDate('created_at', $todayDate)
-            ->where('call_source', 'manual')
-            ->where(function($q) {
-                $q->whereIn('call_state', ['completed', 'answered'])
-                  ->orWhere('time_taken', '>', 0)
-                  ->orWhere(function($sq) {
-                      $sq->whereNotNull('duration')->whereNotIn('duration', ['00:00', '0', '']);
-                  });
-            })->count();
+        [$todayFrom, $todayTo] = self::dayRange(0);
+        [$yesterdayFrom, $yesterdayTo] = self::dayRange(-1);
 
-        $callLogsToday = CallLog::whereDate('created_at', $todayDate)->where('call_source', 'campaign')->count();
-        $callLogsConnToday = CallLog::whereDate('created_at', $todayDate)->where('call_source', 'campaign')->where('duration', '>', 0)->count();
+        ['calls' => $callsTodayCount, 'connected' => $callsConnectedTodayCount] = self::callCounts($todayFrom, $todayTo);
 
-        $callsTodayCount = $callLogsToday + $dialerCallsToday;
-        $callsConnectedTodayCount = $callLogsConnToday + $dialerConnectedToday;
-
-        $callsYesterdayCount = CallLog::whereDate('created_at', $yesterdayDate)->count()
-            + DialerLog::whereDate('created_at', $yesterdayDate)->count();
+        $callsYesterdayCount = CallLog::where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count()
+            + DialerLog::where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count();
 
         $followUpsNextHourCount = Lead::openFollowups()
             ->whereBetween('follow_up_on', [Carbon::now($tz), Carbon::now($tz)->addHour()])
             ->count();
 
-        $leadsWorkedTodayCount = CallLog::whereDate('created_at', $todayDate)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id')
-            + DialerLog::whereDate('created_at', $todayDate)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
+        $leadsWorkedTodayCount = CallLog::where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id')
+            + DialerLog::where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
 
         // Active Campaigns Table (100% real database query)
         $activeCampaigns = Campaign::where('status', '1')->orWhere('status', 1)->take(5)->get()->map(function($camp) {
@@ -358,30 +344,21 @@ class DashboardController extends Controller
         });
 
         // Live Telecaller Activity Floor: only real staff who are logged in / active today
-        $prefix = DB::getTablePrefix();
-        $activeRows = DB::select("
-            SELECT l1.user_id
-            FROM {$prefix}user_logs l1
-            INNER JOIN (
-                SELECT user_id, MAX(id) AS max_id
-                FROM {$prefix}user_logs
-                WHERE DATE(login_date) = '{$todayDate}'
-                GROUP BY user_id
-            ) l2 ON l1.id = l2.max_id
-            WHERE l1.login_date IS NOT NULL AND l1.logout_date IS NULL
-        ");
-        $activeUserIds = array_map(function($r) { return $r->user_id; }, $activeRows);
+        $activeUserIds = self::onlineUserIds($todayFrom, $todayTo);
 
         $activeStaff = !empty($activeUserIds) ? User::whereIn('id', $activeUserIds)->where('status', 1)->get() : collect([]);
+        // agent id => answered time (ms) of their call in progress (active_calls: both sides answered, not ended)
+        $onCallSince = self::onCallSince(Auth::user());
+        $inToday = fn ($q) => $q->where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo);
 
         $telecallerFloor = [];
         foreach ($activeStaff as $user) {
-            $userCampCalls = CallLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)->count();
-            $userManualCalls = DialerLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)->count();
+            $userCampCalls = CallLog::where('created_by', $user->id)->tap($inToday)->count();
+            $userManualCalls = DialerLog::where('created_by', $user->id)->tap($inToday)->count();
             $userCallsCount = $userCampCalls + $userManualCalls;
 
-            $userCampConn = CallLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)->where('duration', '>', 0)->count();
-            $userManualConn = DialerLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)
+            $userCampConn = CallLog::where('created_by', $user->id)->tap($inToday)->where('duration', '>', 0)->count();
+            $userManualConn = DialerLog::where('created_by', $user->id)->tap($inToday)
                 ->where(function($q) {
                     $q->whereIn('call_state', ['completed', 'answered'])
                       ->orWhere('time_taken', '>', 0)
@@ -391,8 +368,8 @@ class DashboardController extends Controller
                 })->count();
             $userConnCount = $userCampConn + $userManualConn;
 
-            $campTalk = (int) CallLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)->sum('duration');
-            $manualTalk = (int) DialerLog::where('created_by', $user->id)->whereDate('created_at', $todayDate)->sum('time_taken');
+            $campTalk = (int) CallLog::where('created_by', $user->id)->tap($inToday)->sum('duration');
+            $manualTalk = (int) DialerLog::where('created_by', $user->id)->tap($inToday)->sum('time_taken');
             $userTalkTime = $campTalk + $manualTalk;
 
             $userFollowUps = Lead::where('assigned_to', $user->id)->openFollowups()->count();
@@ -400,15 +377,9 @@ class DashboardController extends Controller
             $assignedLead = Lead::where('assigned_to', $user->id)->orderBy('id', 'desc')->first();
             $assignedLeadStr = $assignedLead ? ($assignedLead->name . ($assignedLead->company ? ' · ' . $assignedLead->company : '')) : '—';
 
-            // Active call detection
-            $recentActiveCall = DialerLog::where('created_by', $user->id)
-                ->where('created_at', '>=', Carbon::now($tz)->subMinutes(3))
-                ->whereIn('call_state', ['calling', 'in_progress', 'active'])
-                ->orderBy('id', 'desc')
-                ->first();
-
-            $status = $recentActiveCall ? 'call' : 'ready';
-            $since = $recentActiveCall ? (strtotime($recentActiveCall->created_at) * 1000) : null;
+            // On call: a call of this agent answered by both sides and not ended (active_calls)
+            $since = $onCallSince[$user->id] ?? null;
+            $status = $since ? 'call' : 'ready';
 
             $telecallerFloor[] = [
                 $user->name,
@@ -421,11 +392,12 @@ class DashboardController extends Controller
                 $userWon,
                 0, // idle_time
                 $since,
+                (int)$user->id,   // for the 5-second live refresh (On call / Ready)
             ];
         }
 
         $onlineAgentsCount = count($telecallerFloor);
-        $onCallNowCount = count(array_filter($telecallerFloor, function($a) { return $a[1] === 'call'; }));
+        $onCallNowCount = \App\Services\ActiveCallService::liveCount(Auth::user());
 
         return view('dashboard.home',
             compact("GeneralWebmasterSections", "Webmails", "Events", "Contacts", "TodayVisitors", "TodayPages",
@@ -435,6 +407,87 @@ class DashboardController extends Controller
                 "callsTodayCount", "callsConnectedTodayCount", "callsYesterdayCount", "followUpsNextHourCount",
                 "leadsWorkedTodayCount", "activeCampaigns", "telecallerFloor", "onlineAgentsCount",
                 "onCallNowCount", "recentCallLogs"));
+    }
+
+    /**
+     * Dashboard live numbers, polled every 5 seconds while the tab is visible: On Call Now (never cached), its call
+     * list and the agents on call (same role scope), and Calls Today / Connected / Online Agents (kept 15 seconds).
+     */
+    public function liveCalls()
+    {
+        $user = Auth::user();
+        $calls = \App\Services\ActiveCallService::liveList($user);
+        $counts = \Illuminate\Support\Facades\Cache::remember('lg_dashboard_counts:' . \App\Support\Tenancy::storageKey(), 15, function () {
+            [$from, $to] = self::dayRange(0);
+            return self::callCounts($from, $to) + ['online' => count(self::onlineUserIds($from, $to))];
+        });
+        return response()->json([
+            'on_call' => count($calls),
+            'calls' => $calls,
+            'agents' => self::onCallSince($user),
+            'calls_today' => $counts['calls'],
+            'connected_today' => $counts['connected'],
+            'online_agents' => $counts['online'],
+            'server_ms' => (int)floor(microtime(true) * 1000),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * [from, to) of a day of the calling timezone (0 = today, -1 = yesterday) in the timezone the times are stored in,
+     * so "today" is right even when the two differ.
+     */
+    private static function dayRange(int $offset): array
+    {
+        $from = Carbon::now(CallingRestrictionService::getTimezone())->startOfDay()->addDays($offset);
+        $stored = config('app.timezone');
+        return [$from->copy()->setTimezone($stored)->format('Y-m-d H:i:s'), $from->copy()->addDay()->setTimezone($stored)->format('Y-m-d H:i:s')];
+    }
+
+    /** Calls and connected calls in [from, to): campaign calls (call_logs) + Manual Dial calls (dialer_logs). */
+    private static function callCounts(string $from, string $to): array
+    {
+        $dialer = fn () => DialerLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'manual');
+        $campaign = fn () => CallLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'campaign');
+        $dialerConnected = $dialer()->where(function ($q) {
+            $q->whereIn('call_state', ['completed', 'answered'])
+                ->orWhere('time_taken', '>', 0)
+                ->orWhere(function ($sq) {
+                    $sq->whereNotNull('duration')->whereNotIn('duration', ['00:00', '0', '']);
+                });
+        })->count();
+        return [
+            'calls' => $campaign()->count() + $dialer()->count(),
+            'connected' => $campaign()->where('duration', '>', 0)->count() + $dialerConnected,
+        ];
+    }
+
+    /** Users logged in today and not logged out (their latest user log of today is open). */
+    private static function onlineUserIds(string $from, string $to): array
+    {
+        $prefix = DB::getTablePrefix();
+        $rows = DB::select("
+            SELECT l1.user_id
+            FROM {$prefix}user_logs l1
+            INNER JOIN (
+                SELECT user_id, MAX(id) AS max_id
+                FROM {$prefix}user_logs
+                WHERE login_date >= ? AND login_date < ?
+                GROUP BY user_id
+            ) l2 ON l1.id = l2.max_id
+            WHERE l1.login_date IS NOT NULL AND l1.logout_date IS NULL
+        ", [$from, $to]);
+        return array_map(fn ($r) => (int)$r->user_id, $rows);
+    }
+
+    /** Agent id => answered time (ms) of their call in progress, within the viewer's scope. */
+    private static function onCallSince($user): array
+    {
+        if (!\App\Services\ActiveCallService::ready()) {
+            return [];
+        }
+        return \App\Services\ActiveCallService::liveQuery($user)->whereNotNull('agent_user_id')
+            ->orderBy('answered_at')->get(['agent_user_id', 'answered_at'])
+            ->mapWithKeys(fn ($r) => [(int)$r->agent_user_id => Carbon::parse($r->answered_at)->getTimestamp() * 1000])->all();
     }
 
     /**

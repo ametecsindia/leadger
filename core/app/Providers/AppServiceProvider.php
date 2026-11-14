@@ -40,6 +40,17 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Blade::if('canpermany', fn (string $prefix) => \App\Support\RoleAccess::allowsAnyIn(auth()->user(), $prefix));
         \Illuminate\Support\Facades\Gate::define('perm', fn ($user, string $key) => \App\Support\RoleAccess::allows($user, $key));
 
+        // A call log saved as finished (end time / final state, by any path) ends its Dashboard active call
+        $endActive = function ($log) {
+            try {
+                \App\Services\ActiveCallService::endFromLog($log);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[ActiveCalls] End not recorded: ' . $e->getMessage());
+            }
+        };
+        \App\Models\CallLog::saved($endActive);
+        \App\Models\DialerLog::saved($endActive);
+
         // Every queued job runs for the company that queued it: the payload carries the company (a host or database
         // name, never credentials); the worker switches to it before the job and back to the previous company after
         // (with the sync driver the job runs inside a request, which must keep its own company).

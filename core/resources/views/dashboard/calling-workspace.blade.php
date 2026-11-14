@@ -4453,10 +4453,12 @@ function toggleCampSmart31(enabled) {
     if (enabled) {
         $('#camp_vmn1600_toggle').prop('checked', false);
         $('#camp-vmn1600-vmn-box').hide();
-        loadCampSmart31Vmns();
+        loadCampSmart31Vmns(false, LG_S31.untickedCamp);   // ticked again after un-ticking: ask the server at once
+        LG_S31.untickedCamp = false;
         $('#cw-camp-vmn-columns').hide();
         $b.slideDown(180);
     } else {
+        LG_S31.untickedCamp = true;
         $b.slideUp(180, function () { $('#cw-camp-vmn-columns').show(); });
         if ($('#camp_vmn1600_toggle').is(':checked')) {
             $('#camp-vmn1600-vmn-box').show();
@@ -4483,35 +4485,9 @@ function toggleCamp1600(enabled) {
 }
 
 // Both campaign Smart31 dropdowns (Click2Call: #camp_smart31_vmn_select, WebRTC: #camp_smart31_webrtc_vmn_select), each only when rendered
-function loadCampSmart31Vmns(refresh) {
+function loadCampSmart31Vmns(refresh, force) {
     if (!$('#camp_smart31_toggle').is(':checked')) return;
-    [['#camp_smart31_vmn_select', 'click2call'], ['#camp_smart31_webrtc_vmn_select', 'webrtc']].forEach(function (c) {
-        var $select = $(c[0]);
-        if (!$select.length) return;
-        if (!refresh) {
-            $select.html('<option value="">Loading...</option>').prop('disabled', true).data('lgLoading', true);
-            lgPaintCampSmart31();
-        }
-        $.ajax({
-            url: "{{ route('dialerSmart31Vmns') }}",
-            type: 'GET',
-            data: { type: c[1] },
-            dataType: 'json',
-            complete: function() { $select.data('lgLoading', false); },
-            success: function(res) {
-                $select.data('lgLoading', false);
-                var any = lgSmart31Fill($select, res, 'No Smart31 number configured');
-                $select.prop('disabled', !any).trigger('change.select2');
-                lgPaintCampSmart31();
-            },
-            error: function() {
-                if (refresh) return;   // keep the current list; the next refresh tries again
-                $select.data('lgLoading', false);
-                $select.html('<option value="">No Smart31 number configured</option>').prop('disabled', true).trigger('change.select2');
-                lgPaintCampSmart31();
-            }
-        });
-    });
+    lgSmart31LoadSelects([['#camp_smart31_vmn_select', 'click2call'], ['#camp_smart31_webrtc_vmn_select', 'webrtc']], refresh, force, lgPaintCampSmart31);
 }
 
 /** Status line under each campaign Smart31 dropdown ("Smart31 Active" / "WebRTC Active" / why none can be used). */
@@ -4697,10 +4673,12 @@ function updateCallingButtonsVisibility() {
 function toggleSmart31(enabled) {
     var $b = $('#cw-smart31-block').stop(true, true);
     if (enabled) {
-        loadSmart31Vmns();
+        loadSmart31Vmns(false, LG_S31.untickedQuick);   // ticked again after un-ticking: ask the server at once
+        LG_S31.untickedQuick = false;
         $('#cw-mc-vmn-columns').hide();   // the Smart31 panel shows the numbers instead
         $b.slideDown(180);
     } else {
+        LG_S31.untickedQuick = true;
         $b.slideUp(180, function () { $('#cw-mc-vmn-columns').show(); });
     }
     lgCallBtnsState();   // Click2Call / WebRTC now use (or stop using) the Smart31 numbers
@@ -4737,32 +4715,107 @@ function lgPoolOptions(res) {
 }
 
 // Both Smart31 panel dropdowns (Click2Call: #smart31_vmn_select, WebRTC: #smart31_webrtc_vmn_select), each only when rendered
-function loadSmart31Vmns(refresh) {
-    [['#smart31_vmn_select', 'click2call'], ['#smart31_webrtc_vmn_select', 'webrtc']].forEach(function (c) {
+function loadSmart31Vmns(refresh, force) {
+    lgSmart31LoadSelects([['#smart31_vmn_select', 'click2call'], ['#smart31_webrtc_vmn_select', 'webrtc']], refresh, force, lgPaintSmart31);
+}
+
+/*
+ * Smart31 numbers change once a day, and which one is enabled changes only at the time slots (IST). So each calling
+ * way is asked from the server at most every 30 minutes and kept in this browser (localStorage, per agent); enabled /
+ * default are worked out here from the clock every minute, without a request. No numbers yet -> asked again after 10
+ * minutes (an admin may assign them later in the day); un-ticking and ticking Smart31 again asks at once. The server checks
+ * the slot again when a call is placed, so a wrong PC clock cannot call with a number that is not enabled yet.
+ */
+var LG_S31 = {
+    url: "{{ route('dialerSmart31Vmns') }}",
+    user: {{ (int)Auth::id() }},
+    tz: @json(\App\Support\Smart31Schedule::TIMEZONE),
+    slots: @json(\App\Support\Smart31Schedule::SLOTS),
+    hoursMsg: @json(\App\Support\Smart31Schedule::hoursMessage()),
+    emptyRetryMs: 10 * 60 * 1000,   // no numbers yet: ask again after 10 minutes
+    maxAgeMs: 30 * 60 * 1000,       // numbers: ask again after 30 minutes (a team assigned later in the day shows up)
+    waiting: {}
+};
+
+/** [date 'YYYY-MM-DD', minute of the day] in IST, whatever time zone the PC uses. */
+function lgS31Now() {
+    var p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: LG_S31.tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+    return [p.year + '-' + p.month + '-' + p.day, (parseInt(p.hour, 10) % 24) * 60 + parseInt(p.minute, 10)];
+}
+
+function lgS31Slot() {
+    var minute = lgS31Now()[1], toMin = function (hm) { var a = hm.split(':'); return a[0] * 60 + +a[1]; };
+    for (var s in LG_S31.slots) {
+        if (minute >= toMin(LG_S31.slots[s][0]) && minute <= toMin(LG_S31.slots[s][1])) return +s;
+    }
+    return 0;
+}
+
+function lgS31Read(type) {
+    try { return JSON.parse(localStorage.getItem('lg_smart31_day_' + LG_S31.user + '_' + type) || 'null'); } catch (e) { return null; }
+}
+
+/** The day's answer for one calling way: from this browser, or asked from the server (once at a time). */
+function lgS31Get(type, force, done) {
+    var today = lgS31Now()[0], kept = lgS31Read(type);
+    var fresh = kept && kept.date === today && kept.answer
+        && Date.now() - kept.at < ((kept.answer.lines || []).length ? LG_S31.maxAgeMs : LG_S31.emptyRetryMs);
+    if (!force && fresh) return done(kept.answer);
+    if (LG_S31.waiting[type]) { LG_S31.waiting[type].push(done); return; }
+    LG_S31.waiting[type] = [done];
+    $.ajax({ url: LG_S31.url, type: 'GET', data: { type: type, v: 2 }, dataType: 'json' })
+        .done(function (res) {
+            if (res && res.success) {
+                try { localStorage.setItem('lg_smart31_day_' + LG_S31.user + '_' + type, JSON.stringify({ date: today, at: Date.now(), answer: res })); } catch (e) {}
+            }
+        })
+        .always(function (res, status) {
+            var list = LG_S31.waiting[type] || [];
+            delete LG_S31.waiting[type];
+            // request failed: today's copy if there is one (never an older day's numbers)
+            var answer = status === 'success' ? res : (kept && kept.date === today ? kept.answer : null);
+            list.forEach(function (cb) { cb(answer); });
+        });
+}
+
+/** The day's answer with enabled / default / message for the current slot (same rules as Smart31Schedule::lines). */
+function lgS31Apply(res) {
+    if (!res || !res.success) return res;
+    var slot = lgS31Slot();
+    var lines = (res.lines || []).map(function (l) { return $.extend({}, l, { enabled: slot >= l.position, 'default': false }); });
+    var on = lines.filter(function (l) { return l.enabled; }).sort(function (a, b) { return b.position - a.position; });
+    var off = lines.filter(function (l) { return !l.enabled; }).sort(function (a, b) { return a.position - b.position; });
+    if (on.length) on[0]['default'] = true;
+    var message = lines.length ? (slot === 0 ? LG_S31.hoursMsg : null) : res.message;
+    return $.extend({}, res, { slot: slot, message: message, lines: on.concat(off) });
+}
+
+/** Fill Smart31 dropdowns [[select, type], ...]; refresh = keep the list while loading, repaint only on a change. */
+function lgSmart31LoadSelects(pairs, refresh, force, paint) {
+    pairs.forEach(function (c) {
         var $select = $(c[0]);
         if (!$select.length) return;
         if (!refresh) {
-            $select.html('<option value="">Loading...</option>').prop('disabled', true).data('lgLoading', true);
-            lgPaintSmart31();
+            $select.html('<option value="">Loading...</option>').prop('disabled', true).data('lgLoading', true).removeData('lgSig');
+            paint();
         }
-        $.ajax({
-            url: "{{ route('dialerSmart31Vmns') }}",
-            type: 'GET',
-            data: { type: c[1] },
-            dataType: 'json',
-            complete: function() { $select.data('lgLoading', false); },
-            success: function(res) {
-                $select.data('lgLoading', false);
-                var any = lgSmart31Fill($select, res, 'No Smart31 number configured');
-                $select.prop('disabled', !any).trigger('change.select2');
-                lgPaintSmart31();
-            },
-            error: function() {
-                if (refresh) return;   // keep the current list; the next refresh tries again
-                $select.data('lgLoading', false);
+        lgS31Get(c[1], force, function (answer) {
+            $select.data('lgLoading', false);
+            var res = lgS31Apply(answer);
+            if (!res || !res.success) {
+                if (refresh) return;   // keep the current list; the next minute tries again
                 $select.html('<option value="">No Smart31 number configured</option>').prop('disabled', true).trigger('change.select2');
-                lgPaintSmart31();
+                paint();
+                return;
             }
+            var sig = JSON.stringify([res.slot, res.message, res.lines]);
+            if (refresh && $select.data('lgSig') === sig) return;   // nothing changed: leave the agent's pick alone
+            $select.data('lgSig', sig);
+            var any = lgSmart31Fill($select, res, 'No Smart31 number configured');
+            $select.prop('disabled', !any).trigger('change.select2');
+            paint();
         });
     });
 }
@@ -4799,14 +4852,21 @@ function lgSmart31NoneText($select) {
     return $next.length ? 'No Smart31 number is enabled yet. Next: ' + $next.text() : 'Smart31 not configured';
 }
 
-// Numbers follow the time slots without a page reload: refresh every 30 seconds and when the window gets focus again
+// Numbers follow the time slots without a page reload: every minute from this browser's copy (a request only on a new
+// day, or every 10 minutes while no number is assigned yet)
 function lgSmart31Refresh() {
     if ($('#smart31_toggle').is(':checked')) loadSmart31Vmns(true);
     if ($('#camp_smart31_toggle').is(':checked')) loadCampSmart31Vmns(true);
 }
+// A Smart31 box the browser restored as ticked (reload / back) gets its panel and numbers like a click
+function lgSmart31Restore() {
+    if ($('#smart31_toggle').is(':checked') && !$('#cw-smart31-block').is(':visible')) toggleSmart31(true);
+    if ($('#camp_smart31_toggle').is(':checked') && !$('#camp-smart31-vmn-box').is(':visible')) toggleCampSmart31(true);
+}
 $(function () {
-    setInterval(lgSmart31Refresh, 30000);
-    $(window).on('focus', lgSmart31Refresh);
+    setInterval(lgSmart31Refresh, 60000);
+    lgSmart31Restore();
+    $(window).on('load pageshow', lgSmart31Restore);
 });
 
 function lgPaintSmart31(loading) {
@@ -5111,6 +5171,36 @@ function sendCallStateUpdate(id, uuid, state, duration, sip) {
         }
     });
 }
+
+/*
+ * Dashboard "On Call Now" for WebRTC: while a call is connected the server hears "still on" every 15 seconds; when the
+ * page is closed during the call the call is reported ended (sendBeacon). Click2Call needs neither (the provider knows).
+ */
+var _lgActiveHb = null;
+function lgActiveCallStart(id, uuid) {
+    lgActiveCallStop();
+    if (!id && !uuid) return;
+    window._lgActiveCall = { id: id || '', uuid: uuid || '', is_campaign: window._activeCallIsCampaign ? 1 : 0 };
+    _lgActiveHb = setInterval(function () {
+        if (!window._lgActiveCall) return;
+        $.post("{{ route('dialerActiveCallHeartbeat') }}", $.extend({ _token: "{{ csrf_token() }}" }, window._lgActiveCall));
+    }, 15000);
+}
+function lgActiveCallStop() {
+    clearInterval(_lgActiveHb);
+    _lgActiveHb = null;
+    window._lgActiveCall = null;
+}
+window.addEventListener('pagehide', function () {
+    var c = window._lgActiveCall;
+    if (!c || !navigator.sendBeacon) return;
+    var fd = new FormData();
+    fd.append('_token', "{{ csrf_token() }}");
+    fd.append('id', c.id); fd.append('uuid', c.uuid); fd.append('is_campaign', c.is_campaign);
+    fd.append('state', 'ended'); fd.append('duration', _liveTimerSeconds || 0); fd.append('sip_reason', 'page closed');
+    navigator.sendBeacon("{{ route('dialerUpdateCallState') }}", fd);
+    lgActiveCallStop();
+});
 
 function lgFmtCallSecs(sec) {
     sec = Math.max(0, parseInt(sec, 10) || 0);
@@ -5702,10 +5792,12 @@ $(function() {
         const btn = document.getElementById('btn-call-webrtc');
         if (btn) btn.disabled = false;
         sendCallStateUpdate(...callIds(), 'answered');
+        lgActiveCallStart(...callIds());   // "still on" every 15 s for the Dashboard
     });
 
     sp.onCallEnded((info) => {
         window._sipCallInProgress = false;
+        lgActiveCallStop();
         const outcome = info?.outcome || 'completed';
         const duration = info?.duration || 0;
         sendCallStateUpdate(...callIds(), outcome, duration, { sip_code: info?.sipCode, sip_reason: info?.reason || info?.sipReason });
