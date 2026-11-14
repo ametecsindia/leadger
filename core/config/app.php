@@ -71,6 +71,9 @@ return [
 
     'timezone' => env('TIMEZONE', 'UTC'),
 
+    // Print Screen on the dashboard pages shows "Could not take Screenshot" and empties the clipboard (as in SmartDCM)
+    'screenshot_guard' => (bool)env('SCREENSHOT_GUARD', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

@@ -41,7 +41,8 @@ class InboundCallService
         $unmapped = null;
         if (!$this->isCompanyVmn($e['vmn']) && !InboundCall::where('call_id', $e['call_id'])->exists()) {
             $unmapped = $e['vmn'] !== '' ? $e['vmn'] : '(none)';
-            if ($source !== 'pull' && !self::singleCompany()) {
+            // pull and RabbitMQ already belong to this company (its CRM id / its own queue): kept like a known VMN
+            if (!in_array($source, ['pull', 'rabbitmq'], true) && !self::singleCompany()) {
                 Log::warning('[InboundCalls] Inbound call for an unmapped VMN: ' . $unmapped, ['call_id' => $e['call_id'], 'source' => $source]);
                 return ['result' => 'ignored', 'call' => null, 'message' => 'Unmapped VMN: ' . $unmapped];
             }

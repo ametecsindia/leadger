@@ -135,7 +135,7 @@ def process_call_recording(call_msg, db_connection, env_path):
             # "_d_" = Manual Dial / WebRTC call: manual ones are in dialer_logs, WebRTC campaign calls in call_logs
             if not process_dialer_call(call_msg, db_connection):
                 process_other_call(call_msg, db_connection)
-        elif call_msg.get('incoming') == 1:
+        elif is_incoming(call_msg):
             process_incoming_call(call_msg, db_connection, env_path)
         else:
             process_other_call(call_msg, db_connection)
@@ -146,6 +146,14 @@ def process_call_recording(call_msg, db_connection, env_path):
     except Exception as e:
         logging.error(f"Message could not be saved (dropped): {e} | message: {call_msg}")
         return True
+
+
+def is_incoming(call_msg):
+    """An inbound call (customer called a VMN): incoming = 1 / "1" / true, or an incoming / inbound service type."""
+    if str(call_msg.get('incoming', '')).strip().lower() in ('1', 'true', 'yes'):
+        return True
+    kind = str(call_msg.get('service_type') or call_msg.get('call_type') or '').upper()
+    return 'INCOMING' in kind or 'INBOUND' in kind
 
 
 def mm_ss(seconds):

@@ -139,6 +139,38 @@ class InboundNotificationsTest extends TestCase
         $this->assertTrue(DB::table('inbound_calls')->where('call_id', $id)->exists());
     }
 
+    public function test_a_rabbitmq_inbound_call_is_saved_even_when_its_vmn_is_not_in_add_voucher()
+    {
+        config(['services.telephony.inbound_single_company' => false]);   // several companies on this installation
+        $ours = 'TESTIN_' . uniqid();
+        $this->assertSame('created', (new InboundCallService())->record(['call_id' => $ours, 'cli' => self::CUSTOMER, 'dni' => self::VMN,
+            'event_type' => 'Call End', 'duration' => 0, 'start_time' => now()->format('Y-m-d H:i:s')], 'rabbitmq')['result'],
+            'RabbitMQ queue = this company (its CRM id)');
+        $this->assertSame('missed', DB::table('inbound_calls')->where('call_id', $ours)->value('status'));
+
+        $unknown = 'TESTIN_' . uniqid();
+        $this->assertSame('ignored', (new InboundCallService())->record(['call_id' => $unknown, 'cli' => self::CUSTOMER, 'dni' => self::VMN,
+            'event' => 'ringing'], 'webhook')['result'], 'a webhook for an unknown VMN still waits for the mapping');
+    }
+
+    public function test_older_rabbitmq_inbound_calls_are_imported_into_the_report_once()
+    {
+        $callId = 'TESTIN_' . uniqid();
+        DB::table('incoming_vmn_logs')->insert(['call_id' => $callId, 'dni' => self::VMN, 'a_party_no' => self::AGENT_NO,
+            'a_start_time' => now()->subHours(2), 'a_dial_status' => '', 'cli' => self::CUSTOMER, 'recording_url' => '',
+            'duration' => 47, 'response' => '{}', 'file_path' => '', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->artisan('inbound:import-vmn-logs', ['--days' => 1])->assertSuccessful();
+        $this->artisan('inbound:import-vmn-logs', ['--days' => 1])->assertSuccessful();
+
+        $rows = DB::table('inbound_calls')->where('call_id', $callId)->get();
+        $this->assertCount(1, $rows, 'no duplicate');
+        $this->assertSame('answered', $rows[0]->status);
+        $this->assertSame(47, (int)$rows[0]->duration_seconds);
+        $this->assertSame($this->agent->id, (int)$rows[0]->agent_user_id);
+        $this->assertCount(0, $this->rows($callId), 'an old call notifies nobody');
+    }
+
     public function test_the_poll_returns_the_agents_notifications_and_mark_all_read_clears_the_count()
     {
         $id = 'TESTIN_' . uniqid();

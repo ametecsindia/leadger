@@ -23,6 +23,7 @@
     @include('dashboard.layouts.settings')
 </div>
 @include('dashboard.layouts.foot')
+@include('dashboard.layouts.screenshot-guard')
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-messaging-compat.js"></script>
 <script>
