@@ -87,6 +87,9 @@ class AutoDialerController extends Controller
             $alreadyDialed = AutoDialSession::where('user_id', $user->id)->where('campaign_id', $campaignId)
                 ->where('started_at', '>=', now()->startOfDay())->get()
                 ->flatMap(fn ($s) => array_map('intval', $s->dialed_lead_ids ?? []))->unique()->values()->all();
+            if (!array_diff($this->queueLeadIds($campaignId), $alreadyDialed)) {
+                $alreadyDialed = [];   // every lead was dialed today: a new start goes round the queue again
+            }
 
             $session = AutoDialSession::create([
                 'user_id' => $user->id,
