@@ -1316,8 +1316,13 @@ body > .modal.lg-modal.in {
                         </div>
 
                         <div class="lg-form-group">
-                            <label class="lg-form-label">Assign Groups / Teams (Optional)</label>
-                            <select name="team_id[]" class="lg-form-select" multiple size="4">
+                            <div class="lg-form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Assign Groups / Teams (Optional)</span>
+                                <label for="bulkTeamsSelectAll" style="font-weight: 500; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; margin: 0;">
+                                    <input type="checkbox" id="bulkTeamsSelectAll" style="margin: 0; cursor: pointer;"> Select all
+                                </label>
+                            </div>
+                            <select name="team_id[]" id="bulkTeamsSelect" class="lg-form-select" multiple size="4">
                                 @foreach($teams as $t)
                                     <option value="{{ $t->id }}">{{ $t->name }}</option>
                                 @endforeach
@@ -1662,6 +1667,16 @@ function lgDidTeams(select) {
 }
 $(document).on('shown.bs.modal', '.modal', function () {
     $(this).find('select.lg-did-teams-select').each(function () { lgDidTeams(this); });
+});
+
+/* Bulk Edit > Assign Groups / Teams: "Select all" ticks every team (unticking clears them); the box follows the list */
+$(document).on('change', '#bulkTeamsSelectAll', function () {
+    $('#bulkTeamsSelect option').prop('selected', this.checked);
+    $('#bulkTeamsSelect').trigger('change');
+});
+$(document).on('change', '#bulkTeamsSelect', function () {
+    var $o = $(this).find('option');
+    $('#bulkTeamsSelectAll').prop('checked', $o.length > 0 && $o.filter(':selected').length === $o.length);
 });
 $(document).on('hide.bs.modal', '.modal', function () {
     $(this).find('select.lg-did-teams-select').each(function () { if ($(this).data('select2')) $(this).select2('close'); });

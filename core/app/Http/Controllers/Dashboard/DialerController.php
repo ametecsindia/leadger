@@ -1177,10 +1177,12 @@ class DialerController extends Controller
         }
 
         if (!$facts) {
+            self::markClick2CallOnCall($log);
             return response()->json(['status' => 'calling', 'message' => 'Calling...', 'final' => false]);
         }
 
         if ($facts['ended']) {
+            self::endActiveCall($log);
             // Persist the real outcome, talk time, end time and recording (idempotent)
             app(\App\Services\CallRecordingService::class)->processWebhook($payload);
             $outcome = $facts['outcome'] ?? 'completed';
@@ -1212,9 +1214,44 @@ class DialerController extends Controller
             ]);
         }
         if ($facts['agent_answered']) {
+            self::markClick2CallOnCall($log, true);
             return response()->json(['status' => 'ringing', 'message' => 'Ringing customer...', 'final' => false]);
         }
+        self::markClick2CallOnCall($log);
         return response()->json(['status' => 'calling', 'message' => 'Calling...', 'final' => false]);
+    }
+
+    /** Seconds after a Click2Call call is placed from which it counts as "On Call Now" (the agent has lifted the phone). */
+    private const C2C_ON_CALL_AFTER_SECONDS = 5;
+
+    /**
+     * Click2Call on the Dashboard "On Call Now": the provider tells us the customer connected only when the call is over,
+     * so a Click2Call call counts as on call once the agent's phone was answered (when the provider says so), or else
+     * 5 seconds after it was placed, until it ends (provider end, outcome saved, or active-calls:cleanup).
+     */
+    private static function markClick2CallOnCall($log, bool $agentAnswered = false): void
+    {
+        $type = strtolower((string)$log->call_type);
+        if (!str_contains($type, 'click') && !str_contains($type, 'flexi')) {
+            return;   // WebRTC: its own answer + heartbeat
+        }
+        $started = $log->start_time ?: $log->created_at;
+        if (!$agentAnswered && (!$started || Carbon::parse($started)->diffInSeconds(Carbon::now(), true) < self::C2C_ON_CALL_AFTER_SECONDS)) {
+            return;
+        }
+        self::markActiveCall($log, 'connected', Carbon::now());
+    }
+
+    /** The call is over: off "On Call Now" at once (not only at the next cleanup). Never breaks the request. */
+    private static function endActiveCall($log): void
+    {
+        try {
+            if ($key = \App\Services\ActiveCallService::keyFor($log)) {
+                \App\Services\ActiveCallService::ended($key, 'ended');
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[ActiveCalls] Not closed: ' . $e->getMessage());
+        }
     }
 
     /**
