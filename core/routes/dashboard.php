@@ -682,6 +682,7 @@ Route::get('/reports/visitHistory', [ReportsController::class, 'visitHistory'])-
 Route::post('/reports/visitHistoryData', [ReportsController::class, 'visitHistoryData'])->name('visitHistoryData');
 Route::get('/reports/campaignStatus', [ReportsController::class, 'campaignStatus'])->name('campaignStatus');
 Route::post('/reports/campaignStatusData', [ReportsController::class, 'campaignStatusData'])->name('campaignStatusData');
+Route::get('/reports/campaignStatus/export/{format}', [ReportsController::class, 'campaignStatusExport'])->name('campaignStatusExport')->whereIn('format', ['xlsx', 'csv']);
 Route::get('/reports/userStatus', [ReportsController::class, 'userStatus'])->name('userStatus');
 Route::post('/reports/userStatusData', [ReportsController::class, 'userStatusData'])->name('userStatusData');
 Route::get('/reports/agentPerformance', [ReportsController::class, 'agentPerformance'])->name('agentPerformance');

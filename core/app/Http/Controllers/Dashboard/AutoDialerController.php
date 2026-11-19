@@ -82,6 +82,12 @@ class AutoDialerController extends Controller
                 return $this->fail('No leads in the queue');
             }
 
+            // Resume, not restart: leads this agent already dialed today in this campaign in an earlier auto dialer
+            // session (stopped, or ended when switching Click2Call / WebRTC) are not dialed again from the top
+            $alreadyDialed = AutoDialSession::where('user_id', $user->id)->where('campaign_id', $campaignId)
+                ->where('started_at', '>=', now()->startOfDay())->get()
+                ->flatMap(fn ($s) => array_map('intval', $s->dialed_lead_ids ?? []))->unique()->values()->all();
+
             $session = AutoDialSession::create([
                 'user_id' => $user->id,
                 'campaign_id' => $campaignId,
@@ -89,7 +95,7 @@ class AutoDialerController extends Controller
                 'status' => 'running',
                 'calls_made' => 0,
                 'failures_in_row' => 0,
-                'dialed_lead_ids' => [],
+                'dialed_lead_ids' => $alreadyDialed,
                 'skipped' => [],
                 'started_at' => now(),
                 'last_heartbeat_at' => now(),

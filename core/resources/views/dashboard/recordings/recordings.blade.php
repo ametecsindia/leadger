@@ -2693,7 +2693,8 @@
                             source_code: $(this).data('source'),
                             duration: lgToSeconds($(this).data('duration')),
                             status: $(this).data('status'),
-                            caller: $(this).data('caller')
+                            caller: $(this).data('caller'),
+                            can_transcribe: String($(this).data('canTranscribe')) === '1'
                         };
                         $(this).prop('checked', true);
                     } else {
@@ -2714,7 +2715,8 @@
                         source_code: $(this).data('source'),
                         duration: lgToSeconds($(this).data('duration')),
                         status: $(this).data('status'),
-                        caller: $(this).data('caller')
+                        caller: $(this).data('caller'),
+                        can_transcribe: String($(this).data('canTranscribe')) === '1'
                     };
                 } else {
                     delete selectedRecordings[key];
@@ -2818,6 +2820,12 @@
             var keys = Object.keys(selectedRecordings);
             if (keys.length === 0) {
                 alert('Please select at least one recording to transcribe.');
+                return;
+            }
+            // rows are selectable for download too: transcribe only the ones this role may transcribe (with audio and a duration)
+            keys = keys.filter(function (k) { return selectedRecordings[k].can_transcribe; });
+            if (keys.length === 0) {
+                alert('None of the selected recordings can be transcribed.');
                 return;
             }
             currentEstimateBatch = keys.map(function(k) {

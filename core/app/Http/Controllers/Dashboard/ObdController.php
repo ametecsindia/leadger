@@ -812,10 +812,12 @@ where obd_campaign_id = $id
                     $ObdDid->save();
                 }
                 $today = date('Y-m-d');
-                $smartGroups = $result->data->smart_groups;
+                $smartGroups = $result->data->smart_groups ?? [];
                 foreach($smartGroups as $group) {
-                    // Only process VMNs with usage_date = today
-                    if ($group->usage_date !== $today) {
+                    // VMNs for today and later days ("2026-11-19" or "2026-11-19 00:00:00"): an exact text match with
+                    // today dropped every number sent with a time, so the Smart31 card stayed empty after a voucher
+                    $group->usage_date = substr((string)($group->usage_date ?? ''), 0, 10);
+                    if ($group->usage_date < $today) {
                         continue;
                     }
                     DB::statement("

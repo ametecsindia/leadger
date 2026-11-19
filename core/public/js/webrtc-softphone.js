@@ -414,7 +414,7 @@ async function _handleHangup() {
 
 /* --- SIP CALLBACKS -------------------------------------------------------- */
 function _onCallRinging() {
-    _setStatus('Ringing');
+    _setStatus('Calling');   // 180/183 also comes for switched-off / busy phones: not shown as "Ringing"
 }
 
 function _onCallWarning() {

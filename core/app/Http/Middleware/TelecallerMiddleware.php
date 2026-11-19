@@ -36,8 +36,8 @@ class TelecallerMiddleware
 
             // Fetch login/logout times from settings
             $settings = DB::table('settings')->first();
-            $loginTime = $settings->caller_login ?? '10:30:00';
-            $logoutTime = $settings->caller_logout ?? '17:30:00';
+            $loginTime = $settings->calling_hours_from ?? null ?: ($settings->caller_login ?? '10:30:00');   // Call Setup hours first
+            $logoutTime = $settings->calling_hours_to ?? null ?: ($settings->caller_logout ?? '17:30:00');
 
             $currentTime = Carbon::now()->format('H:i:s');
 

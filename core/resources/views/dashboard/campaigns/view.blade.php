@@ -977,7 +977,7 @@ $(document).ready(function () {
                 }
             }
         ],
-        "order": [[0, "asc"]],
+        "order": [],   // by Lead ID (server default), not by name
         "fnDrawCallback": function (settings) {
             if (settings.json) {
                 var pageInfo = this.api().page.info();

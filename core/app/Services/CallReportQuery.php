@@ -228,7 +228,7 @@ class CallReportQuery
             {$tp}call_logs.created_by AS agent_id, {$tp}users.name AS agent_name,
             {$tp}campaigns.id AS campaign_id, {$tp}campaigns.name AS campaign_name, {$tp}campaigns.number_masking AS number_masking,
             {$tp}leads.name AS customer_name, {$tp}call_logs.next_status AS status_id, {$tp}statuses.name AS status_name,
-            {$tp}substatuses.name AS substatus_name, {$tp}call_logs.remarks AS feedback, NULL AS comments,
+            {$tp}substatuses.name AS substatus_name, CASE WHEN {$tp}call_logs.remarks REGEXP '^[0-9]+( - [0-9]+)?$' THEN NULL ELSE {$tp}call_logs.remarks END AS feedback, NULL AS comments,
             {$tp}recordings.download_status AS rec_status, {$tp}recordings.file_path AS rec_file,
             {$tp}call_logs.reference_id AS reference_id, {$tp}call_logs.provider_call_id AS provider_call_id,
             $seconds AS seconds, (CASE WHEN $connected THEN 1 ELSE 0 END) AS connected");

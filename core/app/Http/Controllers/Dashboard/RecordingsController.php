@@ -438,11 +438,13 @@ class RecordingsController extends Controller
                 $isPreparingAudio = $hasAudio && $isDownloading;
                 $canTranscribeRow = $canTranscribe && $hasAudio && !$isPreparingAudio && $durationSec > 0;
 
-                // 0. Row Checkbox (bulk "Transcribe selected")
+                // 0. Row Checkbox (bulk "Download selected" and "Transcribe selected"): every row with audio can be
+                // selected (before, only rows the role could transcribe, so users without the transcript permission
+                // could not select anything to download); transcription skips the rows marked data-can-transcribe=0
                 $nestedData['log_id'] = $row->log_id;
                 $nestedData['source_code'] = $row->source_code;
                 $nestedData['checkbox'] = "<div class='text-center' style='padding-top:2px;'>
-                    <input type='checkbox' class='lg-recording-row-cb' value='{$cbKey}' data-key='{$cbKey}' data-id='{$row->log_id}' data-source='{$row->source_code}' data-duration='{$durationSec}' data-status='{$st}' data-caller='" . e($row->called_by) . "' " . (!$canTranscribeRow ? 'disabled title="' . ($isPreparingAudio ? 'Audio is being saved to the server; try again in a few seconds' : ($hasAudio ? 'Transcript not available for your role' : 'No recording audio yet')) . '"' : '') . " onchange='lgOnRowSelectChange()'>
+                    <input type='checkbox' class='lg-recording-row-cb' value='{$cbKey}' data-key='{$cbKey}' data-id='{$row->log_id}' data-source='{$row->source_code}' data-duration='{$durationSec}' data-status='{$st}' data-caller='" . e($row->called_by) . "' data-can-transcribe='" . ($canTranscribeRow ? 1 : 0) . "' " . (!$hasAudio ? 'disabled title="No recording audio yet"' : '') . " onchange='lgOnRowSelectChange()'>
                 </div>";
 
                 // 1. Lead ID (the call's lead; calls without a lead show a dash, never the recording's own id)

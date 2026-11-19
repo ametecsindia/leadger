@@ -2591,35 +2591,13 @@ html body #content .cw-s31-col select.cw-select { padding-left: 10px !important;
 
                     <!-- 6. Recent Numbers Chips Row -->
                     @php
-                        $recentList = $recentNumbers ?? [];
-                        if (empty($recentList)) {
-                            $recentList = \Illuminate\Support\Facades\DB::table('dialer_logs')
-                                ->whereNotNull('phone_number')
-                                ->where('phone_number', '!=', '')
-                                ->where('created_by', Auth::id())
-                                ->orderBy('id', 'desc')
-                                ->pluck('phone_number')
-                                ->unique()
-                                ->take(3)
-                                ->values();
-                            if (count($recentList) === 0) {
-                                $recentList = \Illuminate\Support\Facades\DB::table('dialer_logs')
-                                    ->whereNotNull('phone_number')
-                                    ->where('phone_number', '!=', '')
-                                    ->orderBy('id', 'desc')
-                                    ->pluck('phone_number')
-                                    ->unique()
-                                    ->take(3)
-                                    ->values();
-                            }
-                        }
+                        $recentList = $recentNumbers ?? [];   // this user's own numbers only
                     @endphp
-                    @if(isset($recentList) && count($recentList) > 0)
-                    <div class="cw-recent-numbers-section">
+                    <div class="cw-recent-numbers-section" id="cw-recent-numbers-section" style="{{ count($recentList) ? '' : 'display: none;' }}">
                         <label class="cw-label" style="font-size: 12px; font-weight: 700; margin-bottom: 0; color: var(--cw-text-sub); display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-history" style="font-size: 11px;"></i> Recent Numbers
                         </label>
-                        <div class="cw-recent-chips-wrap">
+                        <div class="cw-recent-chips-wrap" id="cw-recent-chips">
                             @foreach(collect($recentList)->take(3) as $rNum)
                                 <button type="button" class="cw-recent-chip" onclick="fillRecentNumber('{{ $rNum }}')" title="Dial {{ $rNum }}">
                                     <i class="fa fa-phone"></i>
@@ -2628,7 +2606,6 @@ html body #content .cw-s31-col select.cw-select { padding-left: 10px !important;
                             @endforeach
                         </div>
                     </div>
-                    @endif
                     </div>
                 </div>
             </div>
@@ -2695,16 +2672,10 @@ html body #content .cw-s31-col select.cw-select { padding-left: 10px !important;
 
                 <!-- Action Button pinned to bottom -->
                 <div class="cw-outcome-btns-row" style="margin-top: auto; padding-top: 14px; display: flex; justify-content: flex-end; gap: 8px;">
-                    <button type="button" id="btn-save-manual-outcome" class="cw-btn-save-next" onclick="saveManualOutcome()">
+                    <button type="button" id="btn-save-manual-outcome" class="cw-btn-save-next cw-btn-disabled" onclick="saveManualOutcome()" disabled title="Place a call first">
                         <span id="save-btn-text">Save</span>
                         <i id="save-btn-icon" class="fa fa-check"></i>
                     </button>
-                    {{-- the next lead of the leads list, once this call is saved --}}
-                    <span class="cw-btn-tip" id="btn-manual-next-tip" title="Save the outcome first">
-                        <button type="button" class="cw-btn-next" id="btn-manual-next-lead" onclick="manualNextLead()" disabled>
-                            <span>Next lead</span>
-                        </button>
-                    </span>
                 </div>
             </div>
         </div>
@@ -3113,6 +3084,14 @@ function manualNextLead() {
     var idx = $rows.index($rows.filter('[data-id="' + ($('#manual_lead_id').val() || '') + '"]'));
     selectManualLeadRow($rows.get((idx + 1) % $rows.length));
 }
+
+/** Manual Dial Save: only after a call was placed from this tab (its call id is set) and until that outcome is saved. */
+function lgManualSaveState() {
+    var ready = !!$('#id').val() && !isSavingOutcome;
+    $('#btn-save-manual-outcome').prop('disabled', !ready).toggleClass('cw-btn-disabled', !ready)
+        .attr('title', ready ? 'Save the call outcome' : 'Place a call first');
+}
+$(function () { lgManualSaveState(); });
 
 function lgManualNextState(enabled) {
     $('#btn-manual-next-lead').prop('disabled', !enabled);
@@ -3826,9 +3805,10 @@ function lgUpdateOutcomeButtons() {
     if (!$save.length) return;
     var complete = lgCampOutcomeComplete();
     if (!$save.hasClass('is-saved')) {
-        $save.prop('disabled', lgCampSaving || !complete || !currentLeadId);
+        $save.prop('disabled', lgCampSaving || !complete || !currentLeadId || !window.lgOutcomePending);
     }
-    $('#btn-save-outcome-tip').attr('title', lgCampSaving ? 'Saving...' : (complete ? 'Save the call outcome (Ctrl+Enter)'
+    $('#btn-save-outcome-tip').attr('title', lgCampSaving ? 'Saving...' : !window.lgOutcomePending ? 'Call the lead first'
+        : (complete ? 'Save the call outcome (Ctrl+Enter)'
         : ($('#camp_status_id').val() ? 'Choose the Substatus first' : 'Choose the Status first')));
 
     var reason = null;
@@ -3909,8 +3889,8 @@ function saveCampaignOutcome() {
                 lgCampNextQueueIdx = savedIdx;
             }
 
-            // Empty form for the next outcome; brief "Saved" tick on the button
-            lgResetOutcomeFields();
+            // Empty form for the next outcome (the saved feedback stays visible); brief "Saved" tick on the button
+            lgResetOutcomeFields(true);
             $btn.addClass('is-saved').prop('disabled', true).html('<i class="fa fa-check" aria-hidden="true"></i><span>Saved</span>');
             setTimeout(function () {
                 $btn.removeClass('is-saved').html(originalBtnHtml);
@@ -4046,13 +4026,15 @@ $(function () {
 });
 
 /** The Call Outcome fields back to empty: no Call Status highlighted, "Select Status", Substatus disabled. */
-function lgResetOutcomeFields() {
+function lgResetOutcomeFields(keepComments) {
     $('#camp_status_id').val('');
     if ($.fn.select2 && $('#camp_status_id').hasClass('select2-hidden-accessible')) $('#camp_status_id').trigger('change.select2');
     lgSyncChips($('#camp_status_id'));
     updateCampSubstatusOptions('', null);
-    $('#camp_comments').val('');
-    $('#camp-comment-counter').text('0/500');
+    if (!keepComments) {   // after a save the feedback stays on screen until another lead or call
+        $('#camp_comments').val('');
+        $('#camp-comment-counter').text('0/500');
+    }
     $('#camp_followup_date').val('');
     // validation marks, if any
     $('#camp_status_id, #camp_substatus_id, #camp_comments, #camp_followup_date').removeClass('is-invalid has-error').removeAttr('aria-invalid');
@@ -4119,6 +4101,11 @@ function saveManualOutcome() {
         return;
     }
 
+    if (!$('#id').val()) {
+        toastr.warning('Place a call first, then save its outcome.');
+        return;
+    }
+
     if (!statusId) {
         toastr.error('Please select Status *');
         $('#manual_status_id').focus();
@@ -4150,10 +4137,10 @@ function saveManualOutcome() {
     $btnIcon.removeClass('fa-check').addClass('fa-spinner fa-spin');
 
     var restoreButton = function() {
-        $btn.prop('disabled', false).removeClass('cw-btn-disabled');
         $btnText.text('Save');
         $btnIcon.removeClass('fa-spinner fa-spin').addClass('fa-check');
         isSavingOutcome = false;
+        lgManualSaveState();   // stays disabled after a save until the next call
     };
 
     $.ajax({
@@ -4178,13 +4165,10 @@ function saveManualOutcome() {
             if (res && res.warning) { toastr.warning(res.warning); } else { toastr.success((res && res.message) || 'Call outcome saved successfully.'); }
             // The call is closed: stop following it, empty the form for the next call (a new save is a new call)
             if (window._c2cFinish) window._c2cFinish();
-            $('#manual_status_id').val('').trigger('change');
-            $('#manual_comments').val('');
-            $('#manual-comment-counter').text('0/500');
-            $('#manual_followup_date').val('');
+            // the feedback just saved stays on screen; it is cleared when the next call starts
             $('#id, #uuid').val('');
             $('#is_campaign').val('0');
-            lgManualNextState(true);
+            lgManualSaveState();
             refreshTodayPerformance();
             refreshRecentActivity();
             setTimeout(function() {
@@ -5475,6 +5459,7 @@ function startClick2Call() {
     }
 
     window._currentCallChannel = 'click2call';
+    window._activeCallIsCampaign = false;   // as for WebRTC: a manual call's state updates go to the manual log
     syncVmnDetailsBox('click2call');
 
     var $s31 = lgSmart31Select('click2call');
@@ -5516,6 +5501,12 @@ function startClick2Call() {
                 $('#id').val(response.id || '');
                 $('#is_campaign').val(response && response.is_campaign ? '1' : '0');
                 $('#call_type').val('click2call');
+                // a new call: a new outcome (the last call's status and feedback are cleared) and Save is enabled
+                $('#manual_status_id').val('').trigger('change');
+                $('#manual_comments').val('');
+                $('#manual-comment-counter').text('0/500');
+                $('#manual_followup_date').val('');
+                lgManualSaveState();
 
                 sendCallStateUpdate(response.id, response.uuid, 'initiated');
                 pollCallStatus(response.id, response.uuid, $btn);
@@ -5600,6 +5591,12 @@ function startWebRTCCall() {
                 $('#id').val(response.id || '');
                 $('#is_campaign').val(response && response.is_campaign ? '1' : '0');
                 $('#call_type').val('webrtc');
+                // a new call: a new outcome (the last call's status and feedback are cleared) and Save is enabled
+                $('#manual_status_id').val('').trigger('change');
+                $('#manual_comments').val('');
+                $('#manual-comment-counter').text('0/500');
+                $('#manual_followup_date').val('');
+                lgManualSaveState();
 
                 sendCallStateUpdate(response.id, response.uuid, 'initiated');
 
@@ -5689,6 +5686,19 @@ function refreshRecentActivity() {
         type: 'GET',
         dataType: 'json',
         success: function(res) {
+            // Recent Numbers chips: the last 3 different numbers this user dialled (refreshed after each call / save)
+            var nums = [];
+            $.each((res && res.data) || [], function (i, item) {
+                var n = String(item.phone_number || '').replace(/[^0-9]/g, '');
+                if (n && nums.indexOf(n) === -1 && nums.length < 3) nums.push(n);
+            });
+            if (nums.length) {
+                $('#cw-recent-chips').html(nums.map(function (n) {
+                    return '<button type="button" class="cw-recent-chip" onclick="fillRecentNumber(\'' + n + '\')" title="Dial ' + n + '">'
+                        + '<i class="fa fa-phone"></i><span>' + n + '</span></button>';
+                }).join(''));
+                $('#cw-recent-numbers-section').show();
+            }
             var $list = $('#cw-recent-activity-list').empty();
             if (res && res.status === 'success' && res.data && res.data.length > 0) {
                 $.each(res.data, function(i, item) {
@@ -5775,15 +5785,16 @@ $(function() {
 
     // Real SIP events only: 180/183 -> Ringing; Connected only after 200 OK + ICE + inbound audio
     // (public/js/call-state.js); hangup -> the true result
+    // A 180/183 from the gateway does not prove the customer's phone rings (it comes for switched-off and busy phones
+    // too), so WebRTC shows "Calling..." until the call is answered; and only the softphone panel shows it (no second
+    // popup under the call type)
     sp.onCallRinging(() => {
-        showLiveCallStatus('ringing', 'Ringing...', '', 'webrtc');
-        showCallToast('ringing', 'Ringing...', 'Customer phone is ringing');
+        showLiveCallStatus('ringing', 'Calling...', '', 'webrtc');
         sendCallStateUpdate(...callIds(), 'ringing');
     });
 
     sp.onCallWarning((info) => {
         showLiveCallStatus('ringing', 'Waiting for the customer...', '', 'webrtc');
-        showCallToast('ringing', 'No audio yet', (info && info.message) || 'Connected to the gateway, but no audio from the customer yet');
     });
 
     sp.onCallEstablished(() => {

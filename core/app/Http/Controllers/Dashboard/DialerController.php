@@ -193,16 +193,7 @@ class DialerController extends Controller
             ->take(5)
             ->values();
 
-        if ($recentNumbers->isEmpty()) {
-            $recentNumbers = DB::table('dialer_logs')
-                ->whereNotNull('phone_number')
-                ->where('phone_number', '!=', '')
-                ->orderBy('id', 'desc')
-                ->pluck('phone_number')
-                ->unique()
-                ->take(5)
-                ->values();
-        }
+        // (no fallback to other users' numbers: a user who has not dialled yet sees no Recent Numbers)
 
         // The user's own saved channels only (Staff / Click2Call / WebRTC pages). A user with a channel
         // disabled must not get it from a global fallback.
@@ -1637,11 +1628,13 @@ class DialerController extends Controller
         $leads = [];
         if (!empty($phoneNumbers)) {
             $leads = DB::table('leads')
+                ->leftJoin('campaigns', 'campaigns.id', '=', 'leads.campaign_id')
                 ->where(function($q) use ($phoneNumbers) {
-                    $q->whereIn('phonenumber', $phoneNumbers)
-                      ->orWhereIn('phonenumber_2', $phoneNumbers);
+                    $q->whereIn('leads.phonenumber', $phoneNumbers)
+                      ->orWhereIn('leads.phonenumber_2', $phoneNumbers);
                 })
-                ->pluck('name', 'phonenumber')
+                ->where(fn ($q) => $q->whereNull('leads.campaign_id')->orWhere('campaigns.name', 'Manual Dial'))
+                ->pluck('leads.name', 'leads.phonenumber')
                 ->toArray();
         }
 

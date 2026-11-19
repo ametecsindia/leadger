@@ -816,7 +816,7 @@ $(document).ready(function () {
                 }
             }
         ],
-        "order": [[0, "asc"]]
+        "order": []   // newest portfolio first (server default: id DESC)
     });
 
     $.fn.dataTable.ext.errMode = 'none';

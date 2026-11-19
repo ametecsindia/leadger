@@ -407,7 +407,7 @@
             </div>
             <div class="ul-header-titles">
                 <h1 class="ul-page-title">Upload leads</h1>
-                <div class="ul-page-subtitle">File &rarr; map columns &rarr; validate &rarr; import</div>
+                <div class="ul-page-subtitle">Choose a file and a campaign, then import</div>
             </div>
         </div>
         <div class="ul-header-right">
@@ -417,25 +417,7 @@
         </div>
     </div>
 
-    <!-- 4-Step Progress Section -->
-    <div class="ul-steps-card">
-        <div class="ul-step-item active">
-            <div class="ul-step-circle">1</div>
-            <div class="ul-step-text">Select file</div>
-        </div>
-        <div class="ul-step-item">
-            <div class="ul-step-circle">2</div>
-            <div class="ul-step-text">Map columns</div>
-        </div>
-        <div class="ul-step-item">
-            <div class="ul-step-circle">3</div>
-            <div class="ul-step-text">Validate</div>
-        </div>
-        <div class="ul-step-item">
-            <div class="ul-step-circle">4</div>
-            <div class="ul-step-text">Import</div>
-        </div>
-    </div>
+    {{-- (the 4-step bar was removed: the file is imported in one step) --}}
 
     @if(session('doneMessage'))
         <div class="ul-alert ul-alert-success"><i class="fa fa-check-circle mt-1"></i><span>{{ session('doneMessage') }}</span></div>
@@ -453,7 +435,6 @@
                     <span class="title-icon"><i class="fa fa-upload"></i></span>
                     <span>Upload Lead File</span>
                 </h2>
-                <span class="ul-step-badge">Step 1 of 4</span>
             </div>
 
             <!-- Hidden Native File Input (Directly bound to label) -->
@@ -505,7 +486,7 @@
             <div class="ul-footer-actions">
                 <a href="{{ route('leads') }}" class="ul-btn ul-btn-secondary">Cancel</a>
                 <button type="button" class="ul-btn ul-btn-primary" onclick="proceedToMapping()">
-                    Continue <i class="fa fa-arrow-right"></i>
+                    Import <i class="fa fa-upload"></i>
                 </button>
             </div>
         </div>

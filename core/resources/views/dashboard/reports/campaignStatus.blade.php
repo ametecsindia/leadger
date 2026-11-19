@@ -37,7 +37,8 @@
             </button>
             <div class="cr-export-menu" id="csExportMenu" role="menu" hidden>
                 <button type="button" class="cr-export-item" role="menuitem" data-stat="print"><i class="fa fa-print"></i> Print</button>
-                <button type="button" class="cr-export-item" role="menuitem" data-stat="excel"><i class="fa fa-file-pdf"></i> PDF</button>
+                <button type="button" class="cr-export-item" role="menuitem" data-stat="xlsx"><i class="fa fa-file-excel"></i> Excel</button>
+                <button type="button" class="cr-export-item" role="menuitem" data-stat="csv"><i class="fa fa-file-csv"></i> CSV</button>
             </div>
         </div>
     </div>
@@ -327,6 +328,11 @@ $(document).ready(function () {
 });
 
 function print_as(stat){
+    if (stat === 'xlsx' || stat === 'csv') {   // a file download with the table's campaign and search
+        window.location.href = "{{ route('campaignStatusExport', ['format' => 'csv']) }}".replace(/csv$/, stat)
+            + '?' + $.param({ find_campaign: csState.campaign || '', find_q: csState.search || '' });
+        return;
+    }
     $("#find_campaign").val(csState.campaign);
     $("#find_q").val(csState.search);
     $("#search_submit_stat").val(stat);

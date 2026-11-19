@@ -184,7 +184,7 @@ return [
                     'Reports@userLogs' => 'view', 'Reports@userLogsData' => 'view', 'Reports@agentPerformanceExport' => 'export']],
             'campaigns' => ['label' => 'Campaigns', 'actions' => ['view', 'export'],
                 'sidebar' => ['campaignStatus'],
-                'routes' => ['Reports@campaignStatus' => 'view', 'Reports@campaignStatusData' => 'view']],
+                'routes' => ['Reports@campaignStatus' => 'view', 'Reports@campaignStatusData' => 'view', 'Reports@campaignStatusExport' => 'export']],
             'inbound_calls' => ['label' => 'Inbound Calls', 'actions' => ['view', 'export'],
                 'sidebar' => ['inboundCalls'],
                 'routes' => ['InboundCalls@index' => 'view', 'InboundCalls@data' => 'view', 'InboundCalls@open' => 'view',

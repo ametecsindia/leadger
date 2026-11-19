@@ -135,9 +135,15 @@ class Click2CallController extends Controller
 
         $dailyLimit = (int)$request->daily_call_limit;
 
+        $hms = fn ($t) => strlen($t) === 5 ? $t . ':00' : $t;   // "16:30" -> "16:30:00"
         $updateData = [
             'calling_hours_from' => $from,
             'calling_hours_to' => $to,
+            // the Telecaller login window (LoginController / TelecallerMiddleware) reads caller_login / caller_logout:
+            // keep them equal to these calling hours, so a change here also changes when Telecallers can log in
+            // (before, they stayed at the 10:30 - 17:30 default whatever was set here)
+            'caller_login' => $hms($from),
+            'caller_logout' => $hms($to),
             'daily_call_limit' => $dailyLimit,
             'updated_at' => now(),
         ];

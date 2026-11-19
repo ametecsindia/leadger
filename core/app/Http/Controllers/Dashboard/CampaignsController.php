@@ -151,7 +151,8 @@ class CampaignsController extends Controller
         $limit = $request->input('length');
         $start = $request->input('start');
         $columns = $request->input('columns');
-        $dir = strtolower($request->input('order.0.dir', 'asc')) === 'desc' ? 'DESC' : 'ASC';
+        // no column clicked: newest portfolio first
+        $dir = strtolower($request->input('order.0.dir', 'desc')) === 'desc' ? 'DESC' : 'ASC';
         $q = trim($request->input('find_q') ?? ($request->input('search')['value'] ?? ''));
         $orderKey = $columns[$request->input('order.0.column')]['data'] ?? 'id';
         
@@ -260,6 +261,24 @@ WHERE 1=1 ";
                     ".$sql." ORDER BY {$order} {$dir}, campaign.id ASC LIMIT {$start},{$limit}
                     ");
         }
+        // Real status counts for the campaigns on this page, counted the same way as the campaign's own page (view()),
+        // so the numbers before and after opening a portfolio match (they were made-up percentages of "called")
+        $pageIds = array_map(fn ($c) => (int)$c->id, $Campaigns);
+        $realCounts = [];
+        if ($pageIds) {
+            $statusIds = fn ($like) => DB::table('statuses')->where('name', 'like', $like)->pluck('id')->map(fn ($v) => (int)$v)->all() ?: [0];
+            [$fu, $in, $de] = [$statusIds('%follow%'), $statusIds('%interest%'), $statusIds('%deal%')];
+            foreach (DB::table('leads')->whereIn('campaign_id', $pageIds)
+                ->selectRaw('campaign_id, SUM(status IN (' . implode(',', $fu) . ')) AS f, SUM(status IN (' . implode(',', $in) . ')) AS i, SUM(status IN (' . implode(',', $de) . ')) AS d')
+                ->groupBy('campaign_id')->get() as $r) {
+                $realCounts[(int)$r->campaign_id] = ['f' => (int)$r->f, 'i' => (int)$r->i, 'd' => (int)$r->d, 'c' => 0];
+            }
+            foreach (DB::table('call_logs')->join('leads', 'leads.id', '=', 'call_logs.lead_id')->whereIn('leads.campaign_id', $pageIds)
+                ->where(fn ($q) => $q->where('call_logs.duration', '>', 0)->orWhere('call_logs.call_type', '!=', ''))
+                ->selectRaw(DB::getTablePrefix() . 'leads.campaign_id AS campaign_id, COUNT(*) AS c')->groupBy('leads.campaign_id')->get() as $r) {
+                $realCounts[(int)$r->campaign_id]['c'] = (int)$r->c;
+            }
+        }
         $data = array();
         if ($totalFiltered > 0) {
             foreach ($Campaigns as $Campaign) {
@@ -323,10 +342,11 @@ WHERE 1=1 ";
                 $calledCount = intval($Campaign->actioned_count ?? 0);
                 $nestedData['lead_count'] = $leadCount;
                 $nestedData['called_count'] = $calledCount;
-                $nestedData['connected_count'] = round($calledCount * 0.75);
-                $nestedData['followup_count'] = round($calledCount * 0.20);
-                $nestedData['interested_count'] = round($calledCount * 0.15);
-                $nestedData['converted_count'] = round($calledCount * 0.08);
+                $rc = $realCounts[(int)$Campaign->id] ?? [];
+                $nestedData['connected_count'] = $rc['c'] ?? 0;
+                $nestedData['followup_count'] = $rc['f'] ?? 0;
+                $nestedData['interested_count'] = $rc['i'] ?? 0;
+                $nestedData['converted_count'] = $rc['d'] ?? 0;
                 $nestedData['progress_pct'] = $leadCount > 0 ? min(100, round(($calledCount / $leadCount) * 100)) : 0;
                 $nestedData['status_code'] = $Campaign->status;
                 $nestedData['status_label'] = ($Campaign->status == 1) ? 'Active' : (($Campaign->status == 2) ? 'Paused' : 'Completed');
@@ -735,9 +755,7 @@ WHERE 1=1 ";
             $q->where('duration', '>', 0)->orWhere('call_type', '!=', '');
         })->count();
 
-        if ($connectedCount == 0 && $calledCount > 0) {
-            $connectedCount = round($calledCount * 0.75);
-        }
+        // (no made-up "75% of called" when there are no connected calls: the real count is shown, as in the list)
 
         // Status IDs
         $followupStatusIds = DB::table('statuses')->where('name', 'like', '%follow%')->pluck('id');
@@ -1195,9 +1213,9 @@ public function transferList(Request $request, $CampaignId = '')
             $baseConditions .= " AND l.status IN (SELECT id FROM {$tablePrefix}statuses WHERE name = 'Deal')";
         } elseif (!empty($CampaignId)) {
             $baseConditions .= " AND l.campaign_id = " . intval($CampaignId);
-        } elseif (!$hasCustomStatus) {
-            $baseConditions .= " AND l.status IN (SELECT id FROM {$tablePrefix}statuses WHERE lead_pool = 1)";
         }
+        // (the Lead List from the main menu used to keep only follow-up statuses (lead_pool = 1), so new and assigned
+        //  leads were missing there while the dashboard links (with ?filter=) showed them; now both show every lead)
 
         if (in_array($role, ['Manager', 'Team Leader'])) {
             $baseConditions .= " AND c.team_id IN ({$sanitizedTeamIds})";
@@ -1515,7 +1533,7 @@ public function randomAllocation($id)
     $campaign = \App\Models\Campaign::find($id);
 
     if(!$campaign){
-        return response()->json(['message' => 'Campaign not found']);
+        return response()->json(['message' => 'Campaign not found'], 404);
     }
 
     $campaignTeamId = $campaign->team_id;
@@ -1529,32 +1547,33 @@ public function randomAllocation($id)
         ->leftJoin('permissions', 'users.permissions_id', '=', 'permissions.id')
         ->whereRaw("FIND_IN_SET(?, team_id)", [$campaignTeamId])
         ->whereIn('permissions.name', ['Telecaller', 'Sales Person'])
+        ->where('users.status', 1)   // active users only (as the comment above says)
         ->pluck('users.id')
         ->toArray();
 
     if(empty($users)){
         return response()->json([
             'message' => 'No matching Telecaller or Sales Person found for this team'
-        ]);
+        ], 422);
     }
 
     // 3️⃣ Get unassigned leads
     $leads = \App\Models\Lead::where('campaign_id', $id)
-                ->whereNull('assigned_to')
+                ->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', 0))   // same as Auto distribute
                 ->pluck('id')
                 ->toArray();
 
     if(empty($leads)){
         return response()->json([
-            'message' => 'No unassigned leads found'
-        ]);
+            'message' => 'No unassigned leads in this portfolio: nothing was distributed'
+        ], 422);
     }
 
     // 4️⃣ If leads less than users → error
     if(count($leads) < count($users)){
         return response()->json([
-            'message' => 'Leads are less than number of eligible users'
-        ]);
+            'message' => 'Only ' . count($leads) . ' unassigned lead(s) for ' . count($users) . ' users: nothing was distributed'
+        ], 422);
     }
 
     // 5️⃣ Equal Distribution
@@ -2476,7 +2495,7 @@ WHERE campaign_id = '".$orgCampaign->id."'
                 if (!empty($subDisposition) && is_numeric($subDisposition)) {
                     $callLog->substatus_id = (int)$subDisposition;
                 }
-                $callLog->remarks = $remarks ?: ($mainDisposition . ($subDisposition ? ' - ' . $subDisposition : ''));
+                $callLog->remarks = $remarks ?: null;   // only the typed feedback (status/substatus ids made it show "2 - 1")
                 if ($duration > 0) {
                     $callLog->duration = $duration;
                 }
@@ -2504,7 +2523,7 @@ WHERE campaign_id = '".$orgCampaign->id."'
                 if (!empty($subDisposition) && is_numeric($subDisposition)) {
                     $callLog->substatus_id = (int)$subDisposition;
                 }
-                $callLog->remarks = $remarks ?: ($mainDisposition . ($subDisposition ? ' - ' . $subDisposition : ''));
+                $callLog->remarks = $remarks ?: null;   // only the typed feedback (status/substatus ids made it show "2 - 1")
                 // Disposition saved without a dialled call record: log it, but do not invent call times
                 $callLog->duration = $duration;
                 $callLog->start_time = \Carbon\Carbon::now();
@@ -3100,10 +3119,6 @@ WHERE campaign_id = '".$orgCampaign->id."'
             return response()->json(['status' => 'error', 'message' => 'Selected campaign not found.'], 404);
         }
 
-        // Persist the auto distribution policy for this portfolio/campaign
-        $campaign->auto_distribute_agents = implode(',', $cleanAgentIds);
-        $campaign->save();
-
         // Check unassigned leads for this campaign
         $leadsQuery = DB::table('leads')
             ->where('campaign_id', $campaignId)
@@ -3113,6 +3128,22 @@ WHERE campaign_id = '".$orgCampaign->id."'
             ->orderBy('id', 'asc');
 
         $availableCount = $leadsQuery->count();
+
+        // fewer leads than executives (e.g. 8 leads, 15 executives): an error, nothing is saved or assigned
+        $selectedAgents = count($cleanAgentIds);
+        $wanted = $requestedQuantity > 0 ? min($requestedQuantity, $availableCount) : $availableCount;
+        if ($availableCount === 0) {
+            return response()->json(['status' => 'error',
+                'message' => "No unassigned leads in '{$campaign->name}': nothing to distribute."], 422);
+        }
+        if ($wanted < $selectedAgents) {
+            return response()->json(['status' => 'error',
+                'message' => "Only {$wanted} lead(s) for {$selectedAgents} executive(s): select {$wanted} executive(s) or fewer."], 422);
+        }
+
+        // Persist the auto distribution policy for this portfolio/campaign
+        $campaign->auto_distribute_agents = implode(',', $cleanAgentIds);
+        $campaign->save();
 
         // If quantity is not explicitly set, distribute all available unassigned leads
         if ($requestedQuantity <= 0) {
