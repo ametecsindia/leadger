@@ -3293,6 +3293,10 @@ function renderCampaignCallingButtons(callingType) {
 
 // Auto Dialer (partials/auto-dialer): told what happened to a campaign call; does nothing when no session runs
 function lgAdNotify(evt, data) {
+    if ((evt === 'call_started' || evt === 'call_ended') && typeof lgRefreshLeadDetails === 'function' && currentLeadId) {
+        var hc = currentCampaignId, hl = currentLeadId;
+        setTimeout(function () { lgRefreshLeadDetails(hc, hl); }, evt === 'call_ended' ? 2500 : 800);   // Campaign Call History
+    }
     if (evt === 'call_started') {
         window.lgOutcomePending = true;   // this call's outcome is now expected
         if (typeof lgCampOutcomeSaved !== 'undefined') lgCampOutcomeSaved = false;   // a new call: its outcome first
@@ -3711,7 +3715,7 @@ function renderCallHistoryTable(callLogs) {
 
     callLogs.forEach(function(log) {
         var isConnected = (log.duration && log.duration !== '00:00' && log.duration !== '0') || (log.status_name && log.status_name.toLowerCase().includes('connect'));
-        var hasRec = log.recording_url || log.recording || log.file_path;
+        var hasRec = log.recording_url || log.file_path;
         var recHtml = '';
         if (hasRec) {
             var url = log.recording_url || ('/reports/download-recordings/' + log.id + '/0');
@@ -3729,10 +3733,10 @@ function renderCallHistoryTable(callLogs) {
             <tr>
                 <td>${log.created_at}</td>
                 <td>${log.called_by_name || 'Agent'}</td>
-                <td><span class="cw-status-badge-chip green">${log.status_name || 'Connected'}</span></td>
+                <td><span class="cw-status-badge-chip ${/busy|no answer|failed|cancel/i.test(log.status_name || '') ? 'red' : (/calling|on call/i.test(log.status_name || '') ? 'blue' : 'green')}">${$('<div>').text(log.status_name || '—').html()}</span></td>
                 <td>${log.duration || '00:00'}</td>
-                <td>${log.disposition || 'Interested'}</td>
-                <td>${log.comments || ''}</td>
+                <td>${$('<div>').text(log.disposition || '—').html()}</td>
+                <td>${$('<div>').text(log.comments || '').html()}</td>
                 <td>${recHtml}</td>
             </tr>
         `;
@@ -4165,7 +4169,14 @@ function saveManualOutcome() {
             if (res && res.warning) { toastr.warning(res.warning); } else { toastr.success((res && res.message) || 'Call outcome saved successfully.'); }
             // The call is closed: stop following it, empty the form for the next call (a new save is a new call)
             if (window._c2cFinish) window._c2cFinish();
-            // the feedback just saved stays on screen; it is cleared when the next call starts
+            // the outcome form is emptied for the next call (Save stays disabled until that call is placed)
+            $('#manual_status_id').val('').trigger('change');
+            $('#manual_comments').val('');
+            $('#manual-comment-counter').text('0/500');
+            $('#manual_followup_date').val('');
+            // a fresh Manual Dial: the number and its lead are cleared too (the call is in Recent Activity / Recent Numbers)
+            $('#manual_lead_id, #manual_lead_name').val('');
+            $('#mobile').val('').trigger('input');
             $('#id, #uuid').val('');
             $('#is_campaign').val('0');
             lgManualSaveState();

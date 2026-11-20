@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Call Recordings feedback (Oct 2026): unanswered calls (customer or agent, Click2Call and WebRTC) are listed without
- * audio, and the Lead ID is shown for campaign calls only (manual dial calls show "—").
+ * Call Recordings (Telecaller feedback, Nov 2026): only connected calls with a recording are listed; calls nobody
+ * answered / disconnected (busy, no answer, failed, cancelled) and calls still in progress are not, even with a
+ * ringing recording. A Telecaller sees only the recordings of their own calls.
  */
 class RecordingsListFeedbackTest extends TestCase
 {
@@ -38,43 +39,55 @@ class RecordingsListFeedbackTest extends TestCase
         return collect(json_decode(app(RecordingsController::class)->recordingData($req)->getContent(), true)['data']);
     }
 
-    public function test_unanswered_calls_are_listed_without_audio_and_lead_id_only_for_campaign_calls()
+    private function row($rows, int $source, int $id)
     {
-        $lead = DB::table('leads')->insertGetId(['name' => 'Rec Lead', 'phonenumber' => '9000000501', 'campaign_id' => DB::table('campaigns')->value('id'),
+        return $rows->first(fn ($r) => (int)$r['source_code'] === $source && (int)$r['log_id'] === $id);
+    }
+
+    public function test_only_connected_calls_with_a_recording_are_listed()
+    {
+        $campaign = DB::table('campaigns')->value('id');
+        $lead = DB::table('leads')->insertGetId(['name' => 'Rec Lead', 'phonenumber' => '9000000501', 'campaign_id' => $campaign,
             'created_at' => now(), 'updated_at' => now()]);
-        $manual = DialerLog::forceCreate(['phone_number' => '9000000501', 'lead_id' => $lead, 'created_by' => $this->admin->id, 'call_source' => 'manual',
+        $connected = CallLog::forceCreate(['phonenumber' => '9000000501', 'lead_id' => $lead, 'campaign_id' => $campaign,
+            'created_by' => $this->admin->id, 'call_source' => 'campaign', 'call_type' => 'click2call', 'call_state' => 'completed', 'duration' => 42,
+            'end_time' => now(), 'click_recording_url' => 'https://voip.example.test/recordings/c2c/connected-501.wav']);
+        $noAnswer = DialerLog::forceCreate(['phone_number' => '9000000501', 'lead_id' => $lead, 'created_by' => $this->admin->id, 'call_source' => 'manual',
             'call_type' => 'click2call', 'call_state' => 'no-answer', 'time_taken' => 0, 'duration' => '00:00', 'end_time' => now()]);
-        $webrtc = CallLog::forceCreate(['phonenumber' => '9000000501', 'lead_id' => $lead, 'campaign_id' => DB::table('campaigns')->value('id'),
+        $ringing = DialerLog::forceCreate(['phone_number' => '9000000601', 'created_by' => $this->admin->id, 'call_source' => 'manual',
+            'call_type' => 'click2call', 'call_state' => 'busy', 'time_taken' => 0, 'duration' => '00:00', 'end_time' => now(),
+            'click_recording_url' => 'https://voip.example.test/recordings/c2c/ringing-601.wav']);
+        $failed = CallLog::forceCreate(['phonenumber' => '9000000501', 'lead_id' => $lead, 'campaign_id' => $campaign,
             'created_by' => $this->admin->id, 'call_source' => 'campaign', 'call_type' => 'webrtc', 'call_state' => 'failed', 'end_time' => now()]);
         $open = DialerLog::forceCreate(['phone_number' => '9000000502', 'created_by' => $this->admin->id, 'call_source' => 'manual',
             'call_type' => 'click2call', 'call_state' => 'initiated', 'time_taken' => 0, 'duration' => '00:00']);
 
         $rows = $this->rows();
-        $m = $rows->first(fn ($r) => (int)$r['source_code'] === 2 && (int)$r['log_id'] === $manual->id);
-        $w = $rows->first(fn ($r) => (int)$r['source_code'] === 0 && (int)$r['log_id'] === $webrtc->id);
-
-        $this->assertNotNull($m, 'unanswered Click2Call listed');
-        $this->assertStringContainsString('No answer', $m['recording']);
-        $this->assertStringContainsString('—', $m['id'], 'manual dial: no Lead ID');
-        $this->assertStringContainsString('disabled', $m['play'], 'nothing to play');
-        $this->assertStringNotContainsString('deleteRecording', $m['play']);
-
-        $this->assertNotNull($w, 'unanswered WebRTC campaign call listed');
-        $this->assertStringContainsString('Not answered', $w['recording']);
-        $this->assertStringContainsString((string)$lead, $w['id'], 'campaign call: Lead ID shown');
-
-        $this->assertNull($rows->first(fn ($r) => (int)$r['source_code'] === 2 && (int)$r['log_id'] === $open->id), 'a call still in progress is not listed');
+        $c = $this->row($rows, 0, $connected->id);
+        $this->assertNotNull($c, 'connected call with a recording listed');
+        $this->assertStringContainsString((string)$lead, $c['id'], 'campaign call: Lead ID shown');
+        $this->assertNull($this->row($rows, 2, $noAnswer->id), 'no answer: not listed');
+        $this->assertNull($this->row($rows, 2, $ringing->id), 'busy, even with a ringing recording: not listed');
+        $this->assertNull($this->row($rows, 0, $failed->id), 'failed: not listed');
+        $this->assertNull($this->row($rows, 2, $open->id), 'a call still in progress: not listed');
     }
 
-    public function test_an_unanswered_call_with_a_ringing_recording_can_be_played()
+    public function test_a_telecaller_sees_only_their_own_calls_recordings()
     {
-        $log = DialerLog::forceCreate(['phone_number' => '9000000601', 'created_by' => $this->admin->id, 'call_source' => 'manual',
-            'call_type' => 'click2call', 'call_state' => 'no-answer', 'time_taken' => 0, 'duration' => '00:00', 'end_time' => now(),
-            'click_recording_url' => 'https://voip.example.test/recordings/c2c/ringing-601.wav']);
-        $row = $this->rows()->first(fn ($r) => (int)$r['source_code'] === 2 && (int)$r['log_id'] === $log->id);
+        $tc = User::whereHas('permissionsGroup', fn ($q) => $q->where('name', 'Telecaller'))->firstOrFail();
+        $campaign = DB::table('campaigns')->value('id');
+        $lead = DB::table('leads')->insertGetId(['name' => 'Rec TC Lead', 'phonenumber' => '9000000701', 'campaign_id' => $campaign,
+            'assigned_to' => $tc->id, 'is_public' => '1', 'created_at' => now(), 'updated_at' => now()]);
+        $mk = fn ($by) => CallLog::forceCreate(['phonenumber' => '9000000701', 'lead_id' => $lead, 'campaign_id' => $campaign, 'created_by' => $by,
+            'call_source' => 'campaign', 'call_type' => 'click2call', 'call_state' => 'completed', 'duration' => 30, 'end_time' => now(),
+            'click_recording_url' => 'https://voip.example.test/recordings/c2c/tc-' . $by . '.wav']);
+        $own = $mk($tc->id);
+        $other = $mk($this->admin->id);   // another user's call on the Telecaller's own (public) lead
 
-        $this->assertStringContainsString('No answer', $row['recording']);
-        $this->assertStringContainsString('Ringing recording', $row['recording']);
-        $this->assertStringNotContainsString('disabled', $row['play'], 'play and download work');
+        DB::table('campaigns')->where('id', $campaign)->update(['team_id' => (string)(explode(',', (string)$tc->team_id)[0] ?: '0')]);   // the Telecaller's team
+        Auth::login($tc);
+        $rows = $this->rows();
+        $this->assertNotNull($this->row($rows, 0, $own->id), 'own call listed');
+        $this->assertNull($this->row($rows, 0, $other->id), "another agent's call is not listed");
     }
 }

@@ -11,6 +11,17 @@
     $adC2cVmn = collect($vmnList ?? [])->where('available', true)->count() > 0;
     $adWebOn = (int)$adUser->webrtc_channel === 1;
     $adWebVmn = collect($wvmnList ?? [])->where('available', true)->count() > 0;
+    // Smart31 numbers count too (the calls then use the Smart31 number: "Smart31 Only" is ticked when auto dialing starts)
+    $adS31 = function ($kind) use ($adUser) {
+        try {
+            return \App\Support\Smart31Schedule::licenceError($kind) === null && \App\Support\Smart31Schedule::numbers($adUser, $kind)->isNotEmpty();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    };
+    $adS31Only = ['click2call' => !$adC2cVmn && $adS31('c2c'), 'webrtc' => !$adWebVmn && $adS31('webrtc')];
+    $adC2cVmn = $adC2cVmn || $adS31Only['click2call'];
+    $adWebVmn = $adWebVmn || $adS31Only['webrtc'];
     $adNotes = [
         'click2call' => !$adC2cOn ? 'Click2Call is not enabled for your account'
             : (!$adAgentNumber ? 'Your agent mobile number is not configured' : (!$adC2cVmn ? 'No Click2Call VMN is assigned to you' : null)),
@@ -154,6 +165,7 @@ body.lg-ad-visible #tab-campaign-queue { padding-bottom: 96px; }
     };
     var TOKEN = "{{ csrf_token() }}";
     var NOTES = @json($adNotes);
+    var S31_ONLY = @json($adS31Only);   // this way has only Smart31 numbers: the campaign calls use the Smart31 number
     var TYPE_LABEL = { click2call: 'Click2Call', webrtc: 'WebRTC' };
     var STORE_KEY = 'lg_autodial_type_{{ $adUser->id }}';
 
@@ -309,6 +321,10 @@ body.lg-ad-visible #tab-campaign-queue { padding-bottom: 96px; }
         if (NOTES[type]) return toast('error', NOTES[type]);
         if (callBusy()) return toast('error', 'Finish the current call before starting the auto dialer.');
 
+        if (S31_ONLY[type] && !$('#camp_smart31_toggle').is(':checked') && typeof toggleCampSmart31 === 'function') {
+            $('#camp_smart31_toggle').prop('checked', true);
+            toggleCampSmart31(true);   // no voucher VMN for this way: dial with the Smart31 number
+        }
         el.start.disabled = true;
         api(URLS.start, { campaign_id: campaignId, dialer_type: type }).done(function (r) {
             try { localStorage.setItem(STORE_KEY, type); } catch (e) {}

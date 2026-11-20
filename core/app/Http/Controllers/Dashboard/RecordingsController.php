@@ -35,8 +35,12 @@ class RecordingsController extends Controller
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         // General END
 
-        $Campaigns = \App\Models\Campaign::orderBy('name', 'asc')->get();
-        $Users = User::orderBy('name', 'asc')->get();
+        // the Campaign filter in the same order as the Campaign List: newest first
+        $Campaigns = \App\Models\Campaign::orderByDesc('created_at')->orderByDesc('id')->get();
+        // a Telecaller sees only their own recordings: the Employee filter lists only them
+        $Users = optional(Auth::user()->permissionsGroup)->name === 'Telecaller'
+            ? User::where('id', Auth::id())->get()
+            : User::orderBy('name', 'asc')->get();
         $telecallerPermission = Permissions::where('name', 'Telecaller')->first();
 
         $Telecallers = collect();
@@ -109,13 +113,15 @@ class RecordingsController extends Controller
                     $sq->whereNotNull('call_logs.recording')->where('call_logs.recording', '!=', '');
                 })->orWhere(function($sq) {
                     $sq->whereNotNull('call_logs.click_recording_url')->where('call_logs.click_recording_url', '!=', '');
-                })->orWhereNotNull('call_logs.recording_id')
-                  // calls nobody answered (customer or agent, Click2Call and WebRTC) are listed too, without audio
-                  ->orWhereIn('call_logs.call_state', self::NOT_ANSWERED_STATES);
+                })->orWhereNotNull('call_logs.recording_id');
+            })
+            // only connected calls: calls nobody answered / disconnected (busy, no answer, failed, cancelled) are not listed
+            ->where(function($q) {
+                $q->whereNull('call_logs.call_state')->orWhereNotIn('call_logs.call_state', self::NOT_ANSWERED_STATES);
             })
             // Recordings deleted by an Admin are hidden (the call itself stays in its logs)
             ->where(function($q) {
-                $q->whereNull('recordings.id')->orWhere('recordings.download_status', '!=', 'deleted');
+                $q->whereNull('recordings.id')->orWhereNotIn('recordings.download_status', ['deleted', 'unavailable']);
             });
 
         if (!empty($userTeamIds) && !in_array($userRole, ['Super Admin', 'Admin', 'Webmaster'])) {
@@ -125,11 +131,8 @@ class RecordingsController extends Controller
         }
 
         if ($userRole == 'Telecaller') {
-            $callLogs->where(function ($query) use ($userId) {
-                $query->where('leads.assigned_to', '=', $userId)
-                    ->orWhere('leads.is_public', '=', '1')
-                    ->orWhere('call_logs.created_by', '=', $userId);
-            });
+            // only the Telecaller's own calls (not other agents' calls on their leads or on public leads)
+            $callLogs->where('call_logs.created_by', $userId);
         } elseif ($userRole == 'Sales Person') {
             $callLogs->where(function ($query) use ($userId) {
                 $query->where('leads.sales_person_id', '=', $userId)
@@ -213,13 +216,15 @@ class RecordingsController extends Controller
                     $sq->whereNotNull('dialer_logs.file_path')->where('dialer_logs.file_path', '!=', '');
                 })->orWhere(function($sq) {
                     $sq->whereNotNull('dialer_logs.click_recording_url')->where('dialer_logs.click_recording_url', '!=', '');
-                })->orWhereNotNull('dialer_logs.recording_id')
-                  // calls nobody answered (customer or agent, Click2Call and WebRTC) are listed too, without audio
-                  ->orWhereIn('dialer_logs.call_state', self::NOT_ANSWERED_STATES);
+                })->orWhereNotNull('dialer_logs.recording_id');
+            })
+            // only connected calls: calls nobody answered / disconnected (busy, no answer, failed, cancelled) are not listed
+            ->where(function($q) {
+                $q->whereNull('dialer_logs.call_state')->orWhereNotIn('dialer_logs.call_state', self::NOT_ANSWERED_STATES);
             })
             // Recordings deleted by an Admin are hidden (the call itself stays in its logs)
             ->where(function($q) {
-                $q->whereNull('recordings.id')->orWhere('recordings.download_status', '!=', 'deleted');
+                $q->whereNull('recordings.id')->orWhereNotIn('recordings.download_status', ['deleted', 'unavailable']);
             });
 
         if (!empty($userTeamIds) && !in_array($userRole, ['Super Admin', 'Admin', 'Webmaster'])) {

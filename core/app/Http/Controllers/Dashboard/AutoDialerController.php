@@ -78,7 +78,8 @@ class AutoDialerController extends Controller
             if ($error = $this->dialerTypeError($user, $type)) {
                 return $this->fail($error);
             }
-            if (!$this->queueLeadIds($campaignId)) {
+            $queue = $this->queueLeadIds($campaignId);   // built once for the whole start
+            if (!$queue) {
                 return $this->fail('No leads in the queue');
             }
 
@@ -87,7 +88,7 @@ class AutoDialerController extends Controller
             $alreadyDialed = AutoDialSession::where('user_id', $user->id)->where('campaign_id', $campaignId)
                 ->where('started_at', '>=', now()->startOfDay())->get()
                 ->flatMap(fn ($s) => array_map('intval', $s->dialed_lead_ids ?? []))->unique()->values()->all();
-            if (!array_diff($this->queueLeadIds($campaignId), $alreadyDialed)) {
+            if (!array_diff($queue, $alreadyDialed)) {
                 $alreadyDialed = [];   // every lead was dialed today: a new start goes round the queue again
             }
 
@@ -104,7 +105,7 @@ class AutoDialerController extends Controller
                 'last_heartbeat_at' => now(),
             ]);
             Log::info('[AutoDialer] session started', ['session' => $session->id, 'user' => $user->id, 'campaign' => $campaignId, 'type' => $type]);
-            return response()->json(['success' => true, 'session' => $this->payload($session, true)]);
+            return response()->json(['success' => true, 'session' => $this->payload($session) + ['remaining' => count(array_diff($queue, $alreadyDialed))]]);
         } finally {
             $lock->release();
         }
@@ -337,12 +338,18 @@ class AutoDialerController extends Controller
         if ($type === 'click2call') {
             if ((int)$user->c2c_channel !== 1) return 'Click2Call is not enabled for your account.';
             if ($user->click2CallAgentNumber() === null) return 'Your agent mobile number is not configured. Add it in your profile to use Click2Call.';
-            if (!collect(VmnService::listFor($user, 'click2call'))->where('available', true)->count()) return 'No Click2Call VMN is assigned to you.';
+            if (!collect(VmnService::listFor($user, 'click2call'))->where('available', true)->count() && !$this->hasSmart31($user, 'c2c')) return 'No Click2Call VMN is assigned to you.';
             return null;
         }
         if ((int)$user->webrtc_channel !== 1) return 'WebRTC is not enabled for your account.';
-        if (!collect(VmnService::listFor($user, 'webrtc'))->where('available', true)->count()) return 'No WebRTC VMN is assigned to you.';
+        if (!collect(VmnService::listFor($user, 'webrtc'))->where('available', true)->count() && !$this->hasSmart31($user, 'webrtc')) return 'No WebRTC VMN is assigned to you.';
         return null;
+    }
+
+    /** Today's Smart31 numbers for this agent and way (c2c / webrtc), when the licence includes that way. */
+    private function hasSmart31($user, string $kind): bool
+    {
+        return \App\Support\Smart31Schedule::licenceError($kind) === null && \App\Support\Smart31Schedule::numbers($user, $kind)->isNotEmpty();
     }
 
     /** Lead ids of the campaign queue, exactly as the "Next leads" list builds it (order, role filters). */

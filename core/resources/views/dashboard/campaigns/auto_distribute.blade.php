@@ -836,6 +836,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (data.status === 'success') {
                 showAlert('success', data.message || 'Auto distribute policy saved successfully.');
+                // the list shows only portfolios with leads left to distribute: reload it (a distributed one leaves)
+                if (data.data && data.data.total_distributed > 0) {
+                    setTimeout(function () { window.location.href = window.location.pathname; }, 1800);
+                }
             } else {
                 showAlert('error', data.message || 'Failed to save auto distribute policy.');
             }

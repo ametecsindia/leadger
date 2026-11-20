@@ -238,27 +238,32 @@ class DashboardController extends Controller
             $TodayVisitorsRate = $TodayVisitorsRate . $fsla . "[$ii,$TotalV]";
         }
 
+        // A Telecaller (and every role below Team Leader) sees only their own numbers: their leads and their calls
+        $ownId = self::ownScopeUserId();
+        $myLeads = fn () => Lead::query()->when($ownId, fn ($q) => $q->where('assigned_to', $ownId));
+        $myCalls = fn ($q) => $q->when($ownId, fn ($w) => $w->where('created_by', $ownId));
+
         // Tele Sales Stats & Funnel Data (Pure real queries, 0 when empty)
-        $totalLeadsCount = Lead::count();
-        $newLeadsCount = Lead::where('status', 1)->count();
-        $assignedLeadsCount = Lead::whereNotNull('assigned_to')->where('assigned_to', '>', 0)->count();
+        $totalLeadsCount = $myLeads()->count();
+        $newLeadsCount = $myLeads()->where('status', 1)->count();
+        $assignedLeadsCount = $myLeads()->whereNotNull('assigned_to')->where('assigned_to', '>', 0)->count();
 
         // Contacted (picked up / call logged)
-        $contactedLeadsCount = CallLog::whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
+        $contactedLeadsCount = $myCalls(CallLog::query())->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
         if ($contactedLeadsCount == 0) {
-            $contactedLeadsCount = Lead::whereIn('status', [2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
-                ->orWhereNotNull('last_actioned_date')
+            $contactedLeadsCount = $myLeads()->where(fn ($q) => $q->whereIn('status', [2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+                ->orWhereNotNull('last_actioned_date'))
                 ->count();
         }
 
         // Interested Leads (Status 21 or interested)
-        $interestedLeadsCount = Lead::whereIn('status', [3, 21])->count();
+        $interestedLeadsCount = $myLeads()->whereIn('status', [3, 21])->count();
 
         // Follow ups due
-        $followUpsDueCount = Lead::openFollowups()->count();
+        $followUpsDueCount = $myLeads()->openFollowups()->count();
 
         // Conversions Won
-        $conversionsWonCount = Lead::whereIn('status', [1, 2, 6, 15])->count();
+        $conversionsWonCount = $myLeads()->whereIn('status', [1, 2, 6, 15])->count();
 
         // Calling stats for today & yesterday ("today" of the calling timezone, as a range of the stored times)
         $tz = CallingRestrictionService::getTimezone();
@@ -266,17 +271,17 @@ class DashboardController extends Controller
         [$todayFrom, $todayTo] = self::dayRange(0);
         [$yesterdayFrom, $yesterdayTo] = self::dayRange(-1);
 
-        ['calls' => $callsTodayCount, 'connected' => $callsConnectedTodayCount] = self::callCounts($todayFrom, $todayTo);
+        ['calls' => $callsTodayCount, 'connected' => $callsConnectedTodayCount] = self::callCounts($todayFrom, $todayTo, $ownId);
 
-        $callsYesterdayCount = CallLog::where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count()
-            + DialerLog::where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count();
+        $callsYesterdayCount = $myCalls(CallLog::query())->where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count()
+            + $myCalls(DialerLog::query())->where('created_at', '>=', $yesterdayFrom)->where('created_at', '<', $yesterdayTo)->count();
 
-        $followUpsNextHourCount = Lead::openFollowups()
+        $followUpsNextHourCount = $myLeads()->openFollowups()
             ->whereBetween('follow_up_on', [Carbon::now($tz), Carbon::now($tz)->addHour()])
             ->count();
 
-        $leadsWorkedTodayCount = CallLog::where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id')
-            + DialerLog::where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
+        $leadsWorkedTodayCount = $myCalls(CallLog::query())->where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id')
+            + $myCalls(DialerLog::query())->where('created_at', '>=', $todayFrom)->where('created_at', '<', $todayTo)->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
 
         // Active Campaigns Table (100% real database query)
         $activeCampaigns = Campaign::where('status', '1')->orWhere('status', 1)->take(5)->get()->map(function($camp) {
@@ -397,6 +402,10 @@ class DashboardController extends Controller
         }
 
         $onlineAgentsCount = count($telecallerFloor);
+        if ($ownId) {   // a Telecaller: only whether they are online themselves
+            [$oFrom, $oTo] = self::dayRange(0);
+            $onlineAgentsCount = (int)in_array($ownId, self::onlineUserIds($oFrom, $oTo), true);
+        }
         $onCallNowCount = \App\Services\ActiveCallService::liveCount(Auth::user());
 
         return view('dashboard.home',
@@ -417,9 +426,11 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $calls = \App\Services\ActiveCallService::liveList($user);
-        $counts = \Illuminate\Support\Facades\Cache::remember('lg_dashboard_counts:' . \App\Support\Tenancy::storageKey(), 15, function () {
+        $ownId = self::ownScopeUserId();   // a Telecaller: their own calls, and "online" is only them
+        $counts = \Illuminate\Support\Facades\Cache::remember('lg_dashboard_counts:' . \App\Support\Tenancy::storageKey() . ':' . ($ownId ?: 'all'), 15, function () use ($ownId) {
             [$from, $to] = self::dayRange(0);
-            return self::callCounts($from, $to) + ['online' => count(self::onlineUserIds($from, $to))];
+            $online = self::onlineUserIds($from, $to);
+            return self::callCounts($from, $to, $ownId) + ['online' => $ownId ? (int)in_array($ownId, $online, true) : count($online)];
         });
         return response()->json([
             'on_call' => count($calls),
@@ -443,11 +454,21 @@ class DashboardController extends Controller
         return [$from->copy()->setTimezone($stored)->format('Y-m-d H:i:s'), $from->copy()->addDay()->setTimezone($stored)->format('Y-m-d H:i:s')];
     }
 
-    /** Calls and connected calls in [from, to): campaign calls (call_logs) + Manual Dial calls (dialer_logs). */
-    private static function callCounts(string $from, string $to): array
+    /** The signed-in user's id when the dashboard shows only their own numbers (roles below Team Leader), else null. */
+    private static function ownScopeUserId(): ?int
     {
-        $dialer = fn () => DialerLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'manual');
-        $campaign = fn () => CallLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'campaign');
+        $user = Auth::user();
+        $role = optional($user ? $user->permissionsGroup : null)->name;
+        return $user && !in_array($role, ['Super Admin', 'Admin', 'Webmaster', 'Manager', 'Team Leader'], true) ? (int)$user->id : null;
+    }
+
+    /** Calls and connected calls in [from, to): campaign calls (call_logs) + Manual Dial calls (dialer_logs). */
+    private static function callCounts(string $from, string $to, ?int $uid = null): array
+    {
+        $dialer = fn () => DialerLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'manual')
+            ->when($uid, fn ($q) => $q->where('created_by', $uid));
+        $campaign = fn () => CallLog::where('created_at', '>=', $from)->where('created_at', '<', $to)->where('call_source', 'campaign')
+            ->when($uid, fn ($q) => $q->where('created_by', $uid));
         $dialerConnected = $dialer()->where(function ($q) {
             $q->whereIn('call_state', ['completed', 'answered'])
                 ->orWhere('time_taken', '>', 0)
@@ -464,6 +485,7 @@ class DashboardController extends Controller
     /** Users logged in today and not logged out (their latest user log of today is open). */
     private static function onlineUserIds(string $from, string $to): array
     {
+        \App\Services\UserPresence::closeStale();   // a closed browser is not "online"
         $prefix = DB::getTablePrefix();
         $rows = DB::select("
             SELECT l1.user_id

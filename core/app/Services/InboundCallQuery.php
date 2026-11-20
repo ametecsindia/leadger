@@ -205,12 +205,30 @@ class InboundCallQuery
             ->selectRaw("RIGHT(REGEXP_REPLACE({$tp}call_logs.phonenumber, '[^0-9]', ''), 10) AS n")
             ->union(DB::table('dialer_logs')->where('created_by', $uid)->where('created_at', '>=', $since)
                 ->selectRaw("RIGHT(REGEXP_REPLACE({$tp}dialer_logs.phone_number, '[^0-9]', ''), 10) AS n"));
-        $q->where(function ($w) use ($uid, $dialed) {
-            $w->where(fn ($a) => $a->where('inbound_calls.agent_user_id', $uid)->where('inbound_calls.status', 'answered'))
+        // + every call (answered or missed) to the VMNs this agent calls with: voucher VMNs of their teams or not given
+        //   to any team, and Smart31 numbers of their teams - so the company's incoming calls reach the agents' report
+        $myVmns = self::agentVmns($user);
+        $q->where(function ($w) use ($uid, $dialed, $myVmns) {
+            $w->where('inbound_calls.agent_user_id', $uid)
                 ->orWhereIn('inbound_calls.customer_mobile_normalized', DB::query()->fromSub($dialed, 'dialed')->select('n'))
                 ->orWhereIn('inbound_calls.lead_id', DB::table('leads')
                     ->where(fn ($l) => $l->where('assigned_to', $uid)->orWhere('sales_person_id', $uid))->select('id'));
+            if ($myVmns) $w->orWhereIn('inbound_calls.vmn', $myVmns);
         });
+    }
+
+    /** The VMNs (10 digits) an agent uses: voucher numbers of their teams or of no team, Smart31 numbers of their teams. */
+    private static function agentVmns($user): array
+    {
+        $teams = VmnService::teamIds($user);
+        $did = DB::table('obd_did')->where(function ($w) use ($teams) {
+            $w->whereNull('team_id')->orWhere('team_id', '');
+            foreach ($teams as $t) $w->orWhereRaw('FIND_IN_SET(?, team_id)', [$t]);
+        })->pluck('virtual_number');
+        $s31 = $teams ? DB::table('smart31_vmn_numbers')->where(function ($w) use ($teams) {
+            foreach ($teams as $t) $w->orWhereRaw('FIND_IN_SET(?, assigned_groups)', [$t]);
+        })->distinct()->pluck('vmn') : collect();
+        return $did->merge($s31)->map(fn ($n) => InboundCallService::normalizeMobile($n))->filter()->unique()->values()->all();
     }
 
     /** How far back a number a telecaller called still makes its inbound call theirs (a callback). */

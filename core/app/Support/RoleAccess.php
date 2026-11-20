@@ -103,6 +103,13 @@ class RoleAccess
         if (self::isFullAccess($user)) {
             return true;
         }
+        if (str_starts_with($key, 'people.') && optional($user->permissionsGroup)->name === 'Telecaller') {
+            return false;   // the People section is not for Telecallers (whatever the role's saved keys say)
+        }
+        if (optional($user->permissionsGroup)->name === 'Telecaller' && str_ends_with($key, '.export')
+            && (str_starts_with($key, 'reports.') || in_array($key, ['dashboard.home.export', 'recordings.rmi_analysis.export'], true))) {
+            return false;   // no report downloads for Telecallers
+        }
         return !self::isAdminOnly($key) && in_array($key, self::roleKeys($user->permissionsGroup), true);
     }
 

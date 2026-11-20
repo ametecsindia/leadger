@@ -23,6 +23,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('tenants:each "recordings:fetch-pending --sweep --sweep-minutes=1440"')->dailyAt('23:30')->withoutOverlapping(120);
         // Dashboard "On Call Now": close active calls without heartbeat / provider event (no ghost calls)
         $schedule->command('tenants:each "active-calls:cleanup"')->everyMinute()->withoutOverlapping(5);
+        // login sessions left open (browser closed / session expired): logged out at their last activity
+        $schedule->command('tenants:each "user-logs:close-stale"')->everyMinute()->withoutOverlapping(5);
         // Copy new call recordings into the Google Cloud Storage bucket (nothing happens until GCS_* is set in .env)
         $schedule->command('tenants:each "recordings:to-bucket"')->everyFiveMinutes()->withoutOverlapping(60);
         // Inbound Calls report: pull the provider's inbound call logs, and nightly link calls to leads / agents added later

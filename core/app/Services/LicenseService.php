@@ -81,43 +81,7 @@ class LicenseService
         }
 
         // 2. Smart31 VMNs
-        try {
-            $http = Http::timeout(30)->connectTimeout(15)->acceptJson();
-            if (is_file(public_path('ssl/cacert.pem'))) {
-                $http = $http->withOptions(['verify' => public_path('ssl/cacert.pem')]);   // the bundled CA list (PHP has none here)
-            }
-            $res = $http->get(self::LICENSE_SERVER . '/api/smart31-details/' . rawurlencode($crmId));
-            if (!$res->successful()) {
-                $steps['smart31'] = ['ok' => false, 'text' => 'Smart31 VMNs: the license server answered HTTP ' . $res->status()];
-            } else {
-                $added = 0;
-                foreach ((array)($res->object()->vmn_details ?? []) as $group) {
-                    if (empty($group->vmn)) continue;
-                    $exists = DB::table('smart31_vmn_numbers')->where('vmn', $group->vmn)->whereDate('usage_date', $group->usage_date ?? null)->exists();
-                    if ($exists) continue;
-                    DB::table('smart31_vmn_numbers')->insert([
-                        'vmn' => $group->vmn,
-                        'usage_date' => $group->usage_date ?? null,
-                        'webrtc' => $group->webrtc ?? 0,
-                        'c2c' => $group->c2c ?? 0,
-                        'obd' => $group->obd ?? 0,
-                        'verified' => $group->verified ?? 0,
-                        'group_id' => $group->group_id ?? null,
-                        'type' => $group->type ?? null,
-                        'created_at' => $group->created_at ?? now(),
-                        'updated_at' => $group->updated_at ?? now(),
-                        'group_name' => $group->group_name ?? null,
-                        'assigned_groups' => $group->assigned_groups ?? null,
-                    ]);
-                    $added++;
-                }
-                \App\Support\Smart31Schedule::inheritAssignments();   // new days keep the teams the group was assigned to
-                $steps['smart31'] = ['ok' => true, 'text' => $added > 0 ? "Smart31 VMNs: {$added} added" : 'Smart31 VMNs: up to date'];
-            }
-        } catch (\Throwable $e) {
-            Log::warning('[SyncDid] Smart31 fetch failed: ' . $e->getMessage());
-            $steps['smart31'] = ['ok' => false, 'text' => 'Smart31 VMNs: could not reach the license server'];
-        }
+        $steps['smart31'] = self::syncSmart31((string)$crmId);
 
         DB::table('settings')->update(['daily_check' => date('Y-m-d')]);
 
@@ -175,5 +139,55 @@ class LicenseService
             return file_put_contents($path, $new, LOCK_EX) !== false;
         }
         return true;
+    }
+
+    /**
+     * Today's (and later days') Smart31 VMNs from the license server into smart31_vmn_numbers (rows already there are kept),
+     * then the groups' team assignments. Used by Sync DID, and by Add Voucher when no number of today is stored yet.
+     *
+     * @return array ['ok' => bool, 'text' => string]
+     */
+    public static function syncSmart31(string $crmId): array
+    {
+        $result = ['ok' => false, 'text' => 'Smart31 VMNs: not checked'];
+        try {
+            $http = Http::timeout(30)->connectTimeout(15)->acceptJson();
+            if (is_file(public_path('ssl/cacert.pem'))) {
+                $http = $http->withOptions(['verify' => public_path('ssl/cacert.pem')]);   // the bundled CA list (PHP has none here)
+            }
+            $res = $http->get(self::LICENSE_SERVER . '/api/smart31-details/' . rawurlencode($crmId));
+            if (!$res->successful()) {
+                $result = ['ok' => false, 'text' => 'Smart31 VMNs: the license server answered HTTP ' . $res->status()];
+            } else {
+                $added = 0;
+                foreach ((array)($res->object()->vmn_details ?? []) as $group) {
+                    if (empty($group->vmn)) continue;
+                    $exists = DB::table('smart31_vmn_numbers')->where('vmn', $group->vmn)->whereDate('usage_date', $group->usage_date ?? null)->exists();
+                    if ($exists) continue;
+                    DB::table('smart31_vmn_numbers')->insert([
+                        'vmn' => $group->vmn,
+                        'usage_date' => $group->usage_date ?? null,
+                        'webrtc' => $group->webrtc ?? 0,
+                        'c2c' => $group->c2c ?? 0,
+                        'obd' => $group->obd ?? 0,
+                        'verified' => $group->verified ?? 0,
+                        'group_id' => $group->group_id ?? null,
+                        'type' => $group->type ?? null,
+                        'created_at' => $group->created_at ?? now(),
+                        'updated_at' => $group->updated_at ?? now(),
+                        'group_name' => $group->group_name ?? null,
+                        'assigned_groups' => $group->assigned_groups ?? null,
+                    ]);
+                    $added++;
+                }
+                \App\Support\Smart31Schedule::inheritAssignments();   // new days keep the teams the group was assigned to
+                $result = ['ok' => true, 'text' => $added > 0 ? "Smart31 VMNs: {$added} added" : 'Smart31 VMNs: up to date'];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[SyncDid] Smart31 fetch failed: ' . $e->getMessage());
+            $result = ['ok' => false, 'text' => 'Smart31 VMNs: could not reach the license server'];
+        }
+
+        return $result;
     }
 }

@@ -73,6 +73,17 @@ public function did()
         ORDER BY leadger_obd_did.id ASC
     ");
 
+    // No Smart31 number stored for today yet (a new day before anyone triggered the daily fetch, or the daily fetch
+    // skipped because there is no voucher DID): fetch them from the license server now, at most every 10 minutes
+    $todayS31 = \App\Support\Smart31Schedule::now()->toDateString();
+    if (!DB::table('smart31_vmn_numbers')->whereDate('usage_date', $todayS31)->exists()
+        && \Illuminate\Support\Facades\Cache::add('lg_smart31_autosync:' . request()->getHost() . ':' . $todayS31, 1, 600)) {
+        $crmId = (string)(\App\Services\LicenseService::licenseData()['crm_id'] ?? '');
+        if ($crmId !== '') {
+            \App\Services\LicenseService::syncSmart31($crmId);
+        }
+    }
+
     // Smart31 group data
     $smartGroups = DB::table('smart31_vmn_numbers')
         ->select(

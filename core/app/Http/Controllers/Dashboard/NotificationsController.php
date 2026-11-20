@@ -56,6 +56,7 @@ order by n.created_at desc limit ".env('BACKEND_PAGINATION'));
     public function poll(Request $request)
     {
         $userId = (int)Auth::id();
+        \App\Services\UserPresence::touch($userId);   // every page polls: the user is on LeadGER now (Agent Performance "Online")
         if (!\App\Services\InboundCallNotifier::ready()) {
             return response()->json(['unread' => 0, 'items' => [], 'now' => time()]);
         }

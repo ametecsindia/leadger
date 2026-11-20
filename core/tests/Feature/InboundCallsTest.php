@@ -218,18 +218,21 @@ class InboundCallsTest extends TestCase
         $this->assertSame($ownLead, InboundCall::where('call_id', 'OWN-LEAD')->value('lead_id'));
 
         $one = array_column($this->report(User::find($this->agentId))['data'], 'call_id');
-        $this->assertSame(['CB-C2C'], $one, 'agent one sees only the call they answered');
+        $this->assertEqualsCanonicalizing(['CB-WEBRTC', 'CB-C2C', 'CB-OLD', 'OWN-LEAD'], $one, 'agent one: every call to their team\'s VMN');
     }
 
-    public function test_telecaller_sees_only_the_calls_they_answered()
+    public function test_telecaller_sees_the_calls_to_their_teams_vmn_and_the_calls_they_answered()
     {
         $this->inbound('V-1', '09:00:00', '9123456780');   // answered by agent one
         $this->inbound('V-2', '09:05:00', '9123456781');   // answered by agent two
         $this->inbound('V-3', '09:10:00', null);           // missed
 
+        // agent one's team (901) has the VMN: every call to it, missed ones included
         $own = $this->report(User::find($this->agentId));
-        $this->assertSame(['V-1'], array_column($own['data'], 'call_id'));
-        $this->assertSame(1, $own['kpis']['total']);
+        $this->assertSame(['V-3', 'V-2', 'V-1'], array_column($own['data'], 'call_id'));
+        $this->assertSame(3, $own['kpis']['total']);
+        // agent two's team (902) does not: only the call they answered
+        $this->assertSame(['V-2'], array_column($this->report(User::find($this->otherAgentId))['data'], 'call_id'));
 
         $all = $this->report($this->admin);
         $this->assertSame(['V-3', 'V-2', 'V-1'], array_column($all['data'], 'call_id'));

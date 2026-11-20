@@ -610,7 +610,7 @@ try {
                         </div>
                     </a>
                     @endif
-                    @if($lgCan('recordings.rmi_analysis.view'))
+                    @if($lgCan('recordings.rmi_analysis.view') && (bool)(optional(\App\Models\Setting::first())->rmi_report_enabled ?? 1))
                     <a href="{{ route('rmiAnalysis') }}" class="lg-sub-link {{ strpos($urlAfterRoot, 'rmi-analysis') !== false ? 'active' : '' }}">
                         <div class="lg-sub-left">
                             <span class="lg-sub-text">RMI Analysis</span>

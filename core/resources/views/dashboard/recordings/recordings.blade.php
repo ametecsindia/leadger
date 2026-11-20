@@ -1183,7 +1183,9 @@
                 <thead>
                     <tr>
                         <th style="width: 38px; text-align: center;">
+                            @if(optional(Auth::user()->permissionsGroup)->name !== 'Telecaller')
                             <input type="checkbox" id="lg_select_all" class="lg-table-header-cb" title="Select All" onchange="lgToggleSelectAll(this.checked)">
+                            @endif
                         </th>
                         <th>Lead ID</th>
                         <th>Employee Name</th>

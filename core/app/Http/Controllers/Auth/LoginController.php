@@ -224,13 +224,11 @@ class LoginController extends Controller
         if(!empty($userLogs))
         {
             $start  = new Carbon($userLogs->login_date ?? Carbon::now()->toDateTimeString() );
-            if(date('Y-m-d',strtotime($userLogs->login_date)) == date('Y-m-d')) {
-                $end = Carbon::now()->toDateTimeString();
-            } else {
-                $end = new Carbon(date('Y-m-d 22:00:00',strtotime($userLogs->login_date)));
-            }
-            $userLogs->logout_date = $end;
-            $userLogs->logged_in_duration = $start->diff($end)->format('%H:%I:%S');
+            // the previous session nobody logged out of ended when it was last seen (pages report activity every
+            // 5-30 s), not now / 10 PM
+            $end = \App\Services\UserPresence::lastSeen((object)['login_date' => $start->toDateTimeString(), 'updated_at' => $userLogs->updated_at]);
+            $userLogs->logout_date = $end->toDateTimeString();
+            $userLogs->logged_in_duration = \App\Services\UserPresence::duration($start, $end);
             $userLogs->scenario = 'logout';
             $userLogs->info = 'Application Total Duration';
             $userLogs->save();
@@ -268,9 +266,9 @@ class LoginController extends Controller
                 ->first();
             if (!empty($userLogs)) {
                 $start = new Carbon($userLogs->login_date ?? Carbon::now()->toDateTimeString());
-                $end = Carbon::now()->toDateTimeString();
-                $userLogs->logout_date = $end;
-                $userLogs->logged_in_duration = $start->diff($end)->format('%H:%I:%S');
+                $end = Carbon::now();
+                $userLogs->logout_date = $end->toDateTimeString();
+                $userLogs->logged_in_duration = \App\Services\UserPresence::duration($start, $end);
                 $userLogs->scenario = 'logout';
                 $userLogs->info = 'User Logout';
                 $userLogs->save();

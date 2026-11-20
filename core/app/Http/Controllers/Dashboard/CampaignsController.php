@@ -2303,13 +2303,27 @@ WHERE campaign_id = '".$orgCampaign->id."'
         $allLeads = $query->orderBy('id', 'asc')->get();
         $statuses = \App\Models\Status::all()->keyBy('id');
 
+        // Loaded once for the whole list (before: a locking retry check, a product lookup and a call count per lead,
+        // which made the queue and the auto dialer start slow)
+        $crs = \App\Services\CallingRestrictionService::class;
+        $dailyLimit = (int)(DB::table('settings')->where('id', 1)->value('daily_call_limit') ?: 100);
+        $today = \Carbon\Carbon::now($crs::getTimezone())->format('Y-m-d');
+        $norm = fn ($l) => $crs::normalizePhoneNumber($l->phonenumber ?: $l->phonenumber_2);
+        $attempts = DB::table('daily_phone_call_attempts')->where('call_date', $today)
+            ->whereIn('phone_normalized', $allLeads->map($norm)->filter()->unique()->values()->all())
+            ->pluck('attempt_count', 'phone_normalized');
+        $products = \App\Models\ProductService::whereIn('id', $allLeads->pluck('product_service')->filter()->unique()->values()->all())
+            ->pluck('name', 'id');
+        $callCounts = DB::table('call_logs')->whereIn('lead_id', $allLeads->pluck('id')->all())->whereNotNull('next_status')
+            ->selectRaw('lead_id, COUNT(*) AS c')->groupBy('lead_id')->pluck('c', 'lead_id');
+
         $validLeads = [];
         foreach ($allLeads as $lead) {
             $mobile = $lead->phonenumber ?: $lead->phonenumber_2;
             if (empty($mobile)) continue;
 
-            $check = \App\Services\CallingRestrictionService::canPlaceOutboundCall($mobile, $user, 'click2call', false);
-            if (!$check['allowed'] && ($check['reason'] ?? '') === 'retry_limit_reached') {
+            // numbers that reached today's call limit are left out (the check when a call is placed stays as it is)
+            if ((int)($attempts[$norm($lead)] ?? 0) >= $dailyLimit) {
                 continue;
             }
 
@@ -2336,13 +2350,12 @@ WHERE campaign_id = '".$orgCampaign->id."'
 
             $productName = 'Home Loan';
             if (!empty($lead->product_service)) {
-                $ps = \App\Models\ProductService::find($lead->product_service);
-                if ($ps && !empty($ps->name)) $productName = $ps->name;
+                if (!empty($products[$lead->product_service])) $productName = $products[$lead->product_service];
             } elseif (!empty($campaign->name)) {
                 $productName = $campaign->name;
             }
 
-            $callsCount = DB::table('call_logs')->where('lead_id', $lead->id)->whereNotNull('next_status')->count();   // calls with feedback saved
+            $callsCount = (int)($callCounts[$lead->id] ?? 0);   // calls with feedback saved
 
             $validLeads[] = [
                 'id' => $lead->id,
@@ -2581,25 +2594,34 @@ WHERE campaign_id = '".$orgCampaign->id."'
             return response()->json(['success' => false, 'message' => 'You are not allowed to open this lead.'], 403);
         }
 
+        // Every call of this lead (also the one in progress): its saved status / substatus / feedback, else the call's
+        // own result; the recording through the normal play / download route
+        $callResult = ['initiated' => 'Calling...', 'calling' => 'Calling...', 'ringing' => 'Calling...', 'answered' => 'On call',
+            'connected' => 'On call', 'completed' => 'Connected', 'busy' => 'Busy', 'no-answer' => 'No answer', 'failed' => 'Failed', 'cancelled' => 'Cancelled'];
         $callLogs = DB::table('call_logs')
             ->leftJoin('users', 'users.id', '=', 'call_logs.created_by')
             ->leftJoin('statuses', 'statuses.id', '=', 'call_logs.next_status')
-            ->select('call_logs.*', 'users.name as called_by_name', 'statuses.name as status_name')
+            ->leftJoin('substatuses', 'substatuses.id', '=', 'call_logs.substatus_id')
+            ->select('call_logs.*', 'users.name as called_by_name', 'statuses.name as status_name', 'substatuses.name as substatus_name')
             ->where('call_logs.lead_id', $Lead->id)
             ->orderBy('call_logs.id', 'desc')
             ->get()
-            ->map(function($log) {
+            ->map(function($log) use ($callResult) {
                 $dur = is_numeric($log->duration) ? (int)$log->duration : 0;
                 $formattedDur = \App\Helpers\Helper::formatDuration($dur);
+                $remarks = (string)($log->remarks ?? '');
+                $feedback = preg_match('/^\d+( - \d+)?$/', $remarks) ? '' : $remarks;   // old rows saved the status ids as text
+                $hasRecording = !empty($log->click_recording_url) || !empty($log->recording_id) || !empty($log->recording);
                 return [
                     'id' => $log->id,
                     'created_at' => date('d-M-Y H:i', strtotime($log->created_at)),
                     'called_by_name' => $log->called_by_name ?? 'Agent',
-                    'status_name' => $log->status_name ?? 'Connected',
+                    'status_name' => $log->status_name ?: ($callResult[strtolower((string)$log->call_state)] ?? ($dur > 0 ? 'Connected' : 'Calling...')),
                     'duration' => $formattedDur,
-                    'disposition' => $log->remarks ?? ($log->disposition ?? 'Interested'),
-                    'comments' => $log->remarks ?? ($log->comments ?? ''),
-                    'recording_url' => $log->recording_url ?? '',
+                    'disposition' => $log->substatus_name ?: '—',
+                    'comments' => $feedback,
+                    'recording' => $hasRecording,
+                    'recording_url' => $hasRecording ? route('downloadRecordings', [$log->id, 0]) : '',
                     'next_status' => $log->next_status,   // feedback saved (Calls count)
                 ];
             });
@@ -2975,6 +2997,13 @@ WHERE campaign_id = '".$orgCampaign->id."'
         $Statuses = DB::table('statuses')->orderby('name', 'asc')->get();
 
         $selectedCampaignId = $request->input('campaign_id', null);
+
+        // Only portfolios that still have leads to distribute (unassigned): a fully distributed one leaves the list
+        // (the one opened by its link stays, to show its saved policy)
+        $withUnassigned = DB::table('leads')->whereNotNull('campaign_id')
+            ->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', 0))
+            ->distinct()->pluck('campaign_id')->map(fn ($id) => (int)$id)->all();
+        $Campaigns = $Campaigns->filter(fn ($c) => in_array((int)$c->id, $withUnassigned, true) || (string)$c->id === (string)$selectedCampaignId)->values();
         $selectedCampaign = null;
         $campaignUsers = collect([]);
         $savedAgentIds = [];

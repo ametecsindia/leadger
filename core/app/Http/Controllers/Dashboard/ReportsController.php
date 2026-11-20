@@ -442,7 +442,7 @@ ON t.id = allocation.to_user
 where 1=1 ";
         if(in_array(Auth::user()->permissionsGroup->name,['Manager','Team Leader']))
         {
-            $sql .= " and coalesce(frm.team_id,t.team_id) in (".Auth::user()->team_id.") ";
+            $sql .= " and coalesce(frm.team_id,t.team_id) in (".self::teamIdsSql().") ";
         }
         else if(Auth::user()->permissionsGroup->name == 'Telecaller')
         {
@@ -557,7 +557,7 @@ ON th.user_id = u.id
 where 1=1 ";
         if(in_array(Auth::user()->permissionsGroup->name,['Manager','Team Leader']))
         {
-            $sql .= " and u.team_id in (".Auth::user()->team_id.") ";
+            $sql .= " and u.team_id in (".self::teamIdsSql().") ";
         }
         else if(in_array(Auth::user()->permissionsGroup->name,['Telecaller','Sales Person']))
         {
@@ -851,15 +851,15 @@ where 1=1 ";
 
         if(in_array(Auth::user()->permissionsGroup->name,['Manager','Team Leader']))
         {
-            $sql .= " and c.team_id in (".Auth::user()->team_id.") ";
+            $sql .= " and c.team_id in (".self::teamIdsSql().") ";
         }
         else if(Auth::user()->permissionsGroup->name == 'Telecaller')
         {
-            $sql .= " and c.team_id in (".Auth::user()->team_id.") and (l.assigned_to = ".Auth::user()->id." or is_public = 1) ";
+            $sql .= " and c.team_id in (".self::teamIdsSql().") and (l.assigned_to = ".Auth::user()->id." or is_public = 1) ";
         }
         else if(Auth::user()->permissionsGroup->name == 'Sales Person')
         {
-            $sql .= " and c.team_id in (".Auth::user()->team_id.") and (l.sales_person_id = ".Auth::user()->id." or is_public = 1) ";
+            $sql .= " and c.team_id in (".self::teamIdsSql().") and (l.sales_person_id = ".Auth::user()->id." or is_public = 1) ";
         }
 
         if ($find_campaign != "") {
@@ -902,7 +902,9 @@ where 1=1 ";
         if ($totalFiltered > 0) {
             foreach ($res as $row) {
                 $nestedData = [];
-                $nestedData['campaign_name'] = "<a href=\"".route('campaignsView',$row->campaign_id)."\" class='text-primary'>".$row->campaign_name."</a>";
+                $nestedData['campaign_name'] = \App\Support\RoleAccess::allows(Auth::user(), 'campaigns.campaign_list.view') && \App\Support\RoleAccess::allows(Auth::user(), 'leads.lead_list.view')
+                    ? "<a href=\"".route('campaignsView',$row->campaign_id)."\" class='text-primary'>".e($row->campaign_name)."</a>"
+                    : e($row->campaign_name);
                 $nestedData['total'] = $row->total;
                 $nestedData['call_count'] = $row->call_count;
                 $nestedData['visit_count'] = $row->visit_count;
@@ -1039,7 +1041,7 @@ where 1=1 ";
 
         if(in_array(Auth::user()->permissionsGroup->name,['Manager','Team Leader']))
         {
-            $sql .= " and c.team_id in (".Auth::user()->team_id.") ";
+            $sql .= " and c.team_id in (".self::teamIdsSql().") ";
         }
         else if(Auth::user()->permissionsGroup->name == 'Telecaller')
         {
@@ -1048,7 +1050,7 @@ where 1=1 ";
         
         else if(Auth::user()->permissionsGroup->name == 'Sales Person')
         {
-            $sql .= " and c.team_id in (".Auth::user()->team_id.") and (l.sales_person_id = ".Auth::user()->id." or is_public = 1) ";
+            $sql .= " and c.team_id in (".self::teamIdsSql().") and (l.sales_person_id = ".Auth::user()->id." or is_public = 1) ";
         }
 
         if ($find_campaign != "") {
@@ -1219,13 +1221,21 @@ where 1=1 ";
     
     
     
+    /** The signed-in user's team ids for an SQL "IN (...)": numbers only, "0" when the user has no team. */
+    private static function teamIdsSql(): string
+    {
+        $ids = array_filter(array_map('intval', explode(',', (string)(Auth::user()->team_id ?? ''))));
+        return $ids ? implode(',', $ids) : '0';
+    }
+
     public function agentPerformance()
     {
         // General for all pages
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         // General END
 
-        $Telecallers = \App\Models\User::orderBy('name', 'asc')->get();
+        $ownOnly = !in_array(optional(Auth::user()->permissionsGroup)->name, ['Admin', 'Webmaster', 'Super Admin', 'Manager', 'Team Leader'], true);
+        $Telecallers = $ownOnly ? \App\Models\User::where('id', Auth::id())->get() : \App\Models\User::orderBy('name', 'asc')->get();
         $Campaigns = \App\Models\Campaign::orderBy('name', 'asc')->get();
 
         return view("dashboard.reports.agentPerformance", compact("GeneralWebmasterSections", "Telecallers", "Campaigns"));
@@ -1233,6 +1243,7 @@ where 1=1 ";
     
 public function agentPerformanceData(Request $request)
 {
+    \App\Services\UserPresence::closeStale();   // sessions left open (browser closed): logged out at their last activity
     $limit = $request->has('length') ? intval($request->input('length')) : 10;
     $start = $request->has('start') ? intval($request->input('start')) : 0;
     $columns = $request->input('columns');
@@ -1286,7 +1297,10 @@ public function agentPerformanceData(Request $request)
             INNER JOIN (
                 SELECT user_id, MAX(id) AS max_id, MIN(login_date) AS first_login,
                     SUM(CASE WHEN logout_date IS NOT NULL AND logout_date > login_date
-                             THEN TIMESTAMPDIFF(SECOND, login_date, logout_date) ELSE 0 END) AS total_seconds
+                             THEN TIMESTAMPDIFF(SECOND, login_date, logout_date)
+                             -- still online: up to the last activity
+                             WHEN logout_date IS NULL AND updated_at > login_date THEN TIMESTAMPDIFF(SECOND, login_date, updated_at)
+                             ELSE 0 END) AS total_seconds
                 FROM leadger_user_logs
                 WHERE DATE(login_date) BETWEEN '$from_date' AND '$to_date'
                 GROUP BY user_id
@@ -1346,7 +1360,7 @@ public function agentPerformanceData(Request $request)
 
     // Apply user permission filters
     if (in_array(Auth::user()->permissionsGroup->name, ['Manager', 'Team Leader'])) {
-        $sql .= " AND u.team_id IN (" . Auth::user()->team_id . ")";
+        $sql .= " AND u.team_id IN (" . self::teamIdsSql() . ")";
     } else if (!in_array(optional(Auth::user()->permissionsGroup)->name, ['Admin', 'Webmaster'])) {
         $sql .= " AND u.id = " . Auth::user()->id;
     }
@@ -1787,7 +1801,7 @@ private function calculateTrendMetric($curr, $prev)
             WHERE 1=1";
 
         if (in_array(optional(Auth::user()->permissionsGroup)->name, ['Manager', 'Team Leader'])) {
-            $sql .= " AND u.team_id IN (" . Auth::user()->team_id . ")";
+            $sql .= " AND u.team_id IN (" . self::teamIdsSql() . ")";
         } else if (!in_array(optional(Auth::user()->permissionsGroup)->name, ['Admin', 'Webmaster'])) {
             $sql .= " AND u.id = " . Auth::user()->id;
         }
@@ -1904,7 +1918,7 @@ WHERE DATE(login_date) between '".$from_date."' and '".$to_date."'
         }
         if(Auth::user()->permissionsGroup->name != 'Admin')
         {
-            $sql .= " and u.team_id in (".Auth::user()->team_id.") ";
+            $sql .= " and u.team_id in (".self::teamIdsSql().") ";
         }
 
         $totalData = DB::select("select count(*) as cnt ".$sql)[0]->cnt;
@@ -2628,6 +2642,9 @@ public function incomingVmnData(Request $request)
 
     public function rmiAnalysisData(Request $request)
     {
+        if (!$this->rmiEnabled()) {
+            return response()->json(['error' => 'RMI Analysis is disabled in Company Settings.'], 403);
+        }
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $groupId = $request->input('group_id');
@@ -2706,6 +2723,9 @@ public function incomingVmnData(Request $request)
      */
     public function rmiAnalysisDetail(Request $request, $agentId)
     {
+        if (!$this->rmiEnabled()) {
+            return response()->json(['error' => 'RMI Analysis is disabled in Company Settings.'], 403);
+        }
         $agent = User::with('permissionsGroup')->find($agentId);
         if (!$agent) {
             return response()->json(['error' => 'Agent not found'], 404);
@@ -2748,6 +2768,9 @@ public function incomingVmnData(Request $request)
      */
     public function rmiAnalysisExport(Request $request, $type = 'csv')
     {
+        if (!$this->rmiEnabled()) {
+            abort(403, 'RMI Analysis is disabled in Company Settings.');
+        }
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $groupId = $request->input('group_id');

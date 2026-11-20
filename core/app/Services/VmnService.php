@@ -88,10 +88,9 @@ class VmnService
 
         if (!self::isAdmin($user)) {
             $teams = self::teamIds($user);
-            if (empty($teams)) {
-                return collect();
-            }
+            // a number not given to any team yet (a new voucher's numbers) is for everyone; one given to teams only for them
             $q->where(function ($w) use ($teams) {
+                $w->whereNull('team_id')->orWhere('team_id', '');
                 foreach ($teams as $t) {
                     $w->orWhereRaw('FIND_IN_SET(?, team_id)', [$t]);
                 }
