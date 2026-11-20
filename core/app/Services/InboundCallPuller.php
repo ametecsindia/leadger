@@ -91,7 +91,10 @@ class InboundCallPuller
 
     private function requestBody(): array
     {
-        $vmns = DB::table('obd_did')->pluck('virtual_number')->filter()->unique()->values()->all();
+        // Add Voucher VMNs and the Smart31 numbers (calls to a Smart31 VMN are inbound calls of this company too)
+        $vmns = DB::table('obd_did')->pluck('virtual_number')
+            ->merge(\Illuminate\Support\Facades\Schema::hasTable('smart31_vmn_numbers') ? DB::table('smart31_vmn_numbers')->distinct()->pluck('vmn') : [])
+            ->map(fn ($n) => trim((string)$n))->filter()->unique()->values()->all();
         $settings = DB::table('settings')->select(DB::raw("FROM_BASE64(AES_DECRYPT(full_response, 'MyNicotex@1')) as full_response"))->first();
         $crm = json_decode((string)($settings->full_response ?? ''), true)['data']['crm_id'] ?? null;
         if (!$vmns || !$crm) {
@@ -114,6 +117,8 @@ class InboundCallPuller
             $response = Http::withHeaders(['Secret-Key' => (string)config('services.telephony.secret')])
                 ->acceptJson()
                 ->timeout(30)
+                // the bundled CA list when present (as the license check), for servers whose PHP has none
+                ->when(is_file(public_path('ssl/cacert.pem')), fn ($h) => $h->withOptions(['verify' => public_path('ssl/cacert.pem')]))
                 // network errors, 429 (after Retry-After) and 5xx are retried 3 times
                 ->retry(3, function (int $attempt, \Throwable $e) {
                     $wait = $e instanceof \Illuminate\Http\Client\RequestException ? (int)$e->response->header('Retry-After') : 0;

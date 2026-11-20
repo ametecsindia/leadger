@@ -27,9 +27,38 @@ class InboundCallsController extends Controller
 
     public function index()
     {
+        self::pullIfStale();
         $GeneralWebmasterSections = WebmasterSection::where('status', '=', '1')->orderby('row_no', 'asc')->get();
         $pipeline = $this->pipelineStatus();
         return view('dashboard.reports.inboundCalls', compact('GeneralWebmasterSections', 'pipeline'));
+    }
+
+    /**
+     * The provider's inbound calls are normally pulled every minute by the scheduler. When that pull has not run for
+     * 3 minutes (cron missing or stopped), opening the report pulls the last 24 hours itself - after the page is sent,
+     * so the page is not slower - at most every 2 minutes per company. Calls are matched by call id: never duplicated.
+     */
+    private static function pullIfStale(): void
+    {
+        try {
+            $run = \App\Services\InboundCallPuller::lastRun();
+            $fresh = $run && !empty($run['at']) && Carbon::parse($run['at'])->gt(Carbon::now()->subMinutes(3));
+            if ($fresh || !\Illuminate\Support\Facades\Cache::add('lg_inbound_report_pull:' . \App\Support\Tenancy::key(), 1, 120)) {
+                return;
+            }
+            $company = \App\Support\Tenancy::context();
+            app()->terminating(function () use ($company) {
+                try {
+                    \App\Support\Tenancy::apply($company);
+                    $result = (new \App\Services\InboundCallPuller())->pull(Carbon::now()->subHours(24), Carbon::now());
+                    Log::info('[InboundCalls] Pull when the report was opened', $result);
+                } catch (\Throwable $e) {
+                    Log::warning('[InboundCalls] Pull when the report was opened failed: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('[InboundCalls] Report pull not started: ' . $e->getMessage());
+        }
     }
 
     /** Admins only: is anything arriving? Last webhook request, last provider pull, and the webhook URL to give the provider. */

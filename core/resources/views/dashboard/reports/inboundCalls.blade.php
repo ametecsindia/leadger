@@ -82,10 +82,11 @@
             <div class="cr-filter-group">
                 <span class="cr-filter-label">Date Range</span>
                 <div class="cr-date-pills">
-                    <button type="button" class="cr-pill active" data-range="today">Today</button>
+                    <button type="button" class="cr-pill" data-range="today">Today</button>
                     <button type="button" class="cr-pill" data-range="yesterday">Yesterday</button>
                     <button type="button" class="cr-pill" data-range="last7">Last 7 days</button>
                     <button type="button" class="cr-pill" data-range="thismonth">This month</button>
+                    <button type="button" class="cr-pill active" data-range="last30">Last 30 days</button>
                 </div>
             </div>
 
@@ -200,7 +201,7 @@
     'use strict';
 
     var MAX_DAYS = {{ \App\Http\Controllers\Dashboard\InboundCallsController::MAX_DAYS }};
-    var state = { range: 'today', from_date: '', to_date: '', search: '' };
+    var state = { range: 'last30', from_date: '', to_date: '', search: '' };
     var table = null, total = null, exportBusy = false, lastError = false;
     var DASH = '<span class="ic-dash">-</span>';
     var PHONE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
@@ -212,6 +213,7 @@
         if (range === 'yesterday') { var y = new Date(today); y.setDate(y.getDate() - 1); return { from: fmt(y), to: fmt(y) }; }
         if (range === 'last7')     { var s = new Date(today); s.setDate(s.getDate() - 6); return { from: fmt(s), to: fmt(today) }; }
         if (range === 'thismonth') { return { from: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), to: fmt(today) }; }
+        if (range === 'last30')    { var s30 = new Date(today); s30.setDate(s30.getDate() - 29); return { from: fmt(s30), to: fmt(today) }; }
         return { from: fmt(today), to: fmt(today) };
     }
     function parseDate(s) {
@@ -223,7 +225,7 @@
         var d = parseDate(s);
         return d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : s;
     }
-    var RANGE_NAME = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', thismonth: 'This month' };
+    var RANGE_NAME = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', thismonth: 'This month', last30: 'Last 30 days' };
     function periodLabel() {
         var dates = state.from_date === state.to_date ? displayDate(state.from_date) : displayDate(state.from_date) + ' to ' + displayDate(state.to_date);
         return RANGE_NAME[state.range] ? RANGE_NAME[state.range] + ' — ' + dates : dates;
@@ -377,7 +379,7 @@
         var from = document.getElementById('icFromDate').value.trim(), to = document.getElementById('icToDate').value.trim();
         if (!validDates(from, to)) return;
         state.from_date = from; state.to_date = to; state.range = 'custom';
-        ['today', 'yesterday', 'last7', 'thismonth'].forEach(function (r) { var d = getDates(r); if (d.from === from && d.to === to) state.range = r; });
+        ['today', 'yesterday', 'last7', 'thismonth', 'last30'].forEach(function (r) { var d = getDates(r); if (d.from === from && d.to === to) state.range = r; });
         pillsFor(state.range);
         load();
     }
@@ -494,7 +496,7 @@
         history.replaceState(history.state, '', cu.pathname + cu.search + cu.hash);
     }
     if (chooseId) resolveAndGo("{{ route('inboundCallOpen', ['inboundCall' => 0]) }}".replace(/\/0\/call$/, '/' + chooseId + '/call'));
-    var init = getDates('today');
+    var init = getDates('last30');
     state.from_date = init.from; state.to_date = init.to;
     fromPicker.setDate(init.from, false);
     toPicker.setDate(init.to, false);
