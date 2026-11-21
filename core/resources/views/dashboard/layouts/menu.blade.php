@@ -131,7 +131,22 @@ try { if (localStorage.getItem('lg_sidebar_collapsed') === '1') document.documen
     font: 600 13px/1 inherit; cursor: pointer; transition: background .15s, color .15s; }
 .lg-sb-toggle:hover { background: rgba(255,255,255,0.08); color: #FFFFFF; }
 .lg-sb-toggle svg { flex-shrink: 0; transition: transform .2s; }
-@media (max-width: 991.98px) { .lg-sb-toggle { display: none; } }
+.lg-sb-mobile-btn, .lg-sb-backdrop { display: none; }
+/* Phones / tablets: the menu slides in over the page from the ☰ button, and closes from "Close menu" or a tap outside */
+@media (max-width: 991.98px) {
+    #aside.app-aside { transform: translateX(-100%) !important; transition: transform .2s ease !important; box-shadow: none !important; }
+    html.lg-sb-mobile-open #aside.app-aside { transform: none !important; box-shadow: 4px 0 24px rgba(0,0,0,.35) !important; }
+    html.lg-sb-mobile-open .lg-sb-backdrop { display: block; position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 1049; }
+    .lg-sb-mobile-btn { display: flex; align-items: center; justify-content: center; position: fixed; top: 14px; left: 12px; z-index: 1045;
+        width: 44px; height: 44px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: #14428B; color: #FFFFFF; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+    .app-header, .top-header { padding-left: 68px !important; padding-right: 12px !important; }
+    /* phone top bar: room for the ☰ button (call workspace button shows only its icon) */
+    .header-actions { gap: 8px !important; min-width: 0; }
+    .header-active-call-btn > span { display: none !important; }
+    .header-active-call-btn { padding: 0 11px !important; }
+    #headerUserProfile > div { display: none !important; }   /* name shows in the profile menu; the initials stay */
+}
 @media (min-width: 992px) {
     #aside.app-aside, #aside .lg-sidebar-inner, .app-header, .top-header, #content.app-content { transition: width .2s, min-width .2s, max-width .2s, left .2s, margin-left .2s; }
     html.lg-sb-collapsed #aside.app-aside, html.lg-sb-collapsed #aside .left.navside, html.lg-sb-collapsed #aside .lg-sidebar-inner {
@@ -150,7 +165,9 @@ try { if (localStorage.getItem('lg_sidebar_collapsed') === '1') document.documen
     html.lg-sb-collapsed #aside .lg-sb-toggle svg { transform: scaleX(-1); }
 }
 </style>
-<div id="aside" class="app-aside nav-expand sidebar"style="position: fixed; top: 0; left: 0; bottom: 0; width: 240px; height: 100vh; z-index: 1050; background: #071426 !important; overflow: hidden; display: flex; flex-direction: column;">
+<button type="button" class="lg-sb-mobile-btn" onclick="lgToggleSidebar()" title="Menu" aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
+<div class="lg-sb-backdrop" onclick="lgToggleSidebar()"></div>
+<div id="aside" class="app-aside nav-expand sidebar" style="position: fixed; top: 0; left: 0; bottom: 0; width: 240px; height: 100vh; z-index: 1050; background: #071426 !important; overflow: hidden; display: flex; flex-direction: column;">
     <div class="left navside lg-sidebar-inner" layout="column" style="height: 100%; flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: #071426 !important; box-sizing: border-box; width: 100%;">
         
         <!-- FIXED TOP: LeadGER Logo (Above Dashboard) -->
@@ -679,9 +696,20 @@ function lgSetSidebarCollapsed(collapsed, initial) {
     try { localStorage.setItem('lg_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
     setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 250);   // tables / charts re-fit after the animation
 }
+var lgSbMobile = window.matchMedia('(max-width: 991.98px)');
+function lgSbLabel() {
+    var txt = document.querySelector('#lgSidebarToggle .lg-sb-toggle-text');
+    if (txt) txt.textContent = lgSbMobile.matches ? 'Close menu' : 'Collapse';
+}
 function lgToggleSidebar() {
+    if (lgSbMobile.matches) {   // phone: slide the menu in / out (always starts closed)
+        document.documentElement.classList.toggle('lg-sb-mobile-open');
+        return;
+    }
     lgSetSidebarCollapsed(!document.documentElement.classList.contains('lg-sb-collapsed'));
 }
+(lgSbMobile.addEventListener ? lgSbMobile.addEventListener('change', lgSbLabel) : lgSbMobile.addListener(lgSbLabel));
+document.addEventListener('DOMContentLoaded', lgSbLabel);
 (function () {
     var aside = document.getElementById('aside');
     if (!aside) return;
