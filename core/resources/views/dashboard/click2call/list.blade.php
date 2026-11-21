@@ -664,19 +664,7 @@
         </div>
     </div>
 
-    <!-- FLASH MESSAGES -->
-    @if(session('doneMessage'))
-        <div class="lg-alert lg-alert-success">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            {{ session('doneMessage') }}
-        </div>
-    @endif
-    @if(session('errorMessage'))
-        <div class="lg-alert lg-alert-danger">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            {{ session('errorMessage') }}
-        </div>
-    @endif
+    <!-- flash messages (doneMessage / errorMessage) are shown once by the layout -->
 
     <!-- CHANNEL SUMMARY CARDS (REUSABLE PARTIAL) -->
     @include('dashboard.layouts.channel_stats_cards', [
