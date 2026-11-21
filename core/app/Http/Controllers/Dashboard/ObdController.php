@@ -96,13 +96,14 @@ public function did()
         ->orderBy('group_name', 'asc')
         ->get();
 
-    // Fetch all Smart31 details grouped by group_name (for modal display)
+    // Smart31 numbers grouped by group_name, newest 100 per group (shown in the group's popup)
     $smartDetails = DB::table('smart31_vmn_numbers')
         ->select('group_name', 'vmn', 'usage_date', 'obd', 'c2c', 'webrtc', 'verified')
         ->orderBy('group_name', 'asc')
         ->orderByDesc('usage_date')
         ->get()
-        ->groupBy('group_name');
+        ->groupBy('group_name')
+        ->map(fn ($rows) => $rows->take(100)->values());
 
     // Team names (for mapping assigned_groups IDs)
     $teams = \App\Models\Team::orderBy('name', 'asc')->get()->keyBy('id');

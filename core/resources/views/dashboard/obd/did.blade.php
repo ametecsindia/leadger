@@ -1113,7 +1113,7 @@ body > .modal.lg-modal.in {
                             <td style="text-align: right; padding-right: 20px;">
                                 <div class="lg-actions-cell" style="justify-content: flex-end;">
                                     <!-- View Details Modal Trigger -->
-                                    <button type="button" class="lg-action-btn" onclick="openSmart31Details('{{ $group->group_name }}')" title="View Smart31 Numbers">
+                                    <button type="button" class="lg-action-btn" onclick="openSmart31Details({{ json_encode((string)$group->group_name) }})" title="View Smart31 Numbers">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                     </button>
                                     <!-- Edit Link -->
@@ -1598,14 +1598,10 @@ function openSmart31Details(groupName) {
     const bodyEl = document.getElementById('smart31ModalBody');
 
     titleEl.innerText = 'Smart31 Pool: ' + groupName;
-    bodyEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #64748B;">Loading virtual numbers...</div>';
     modal.modal('show');
 
-    $.ajax({
-        url: "{{ url('/smart31-group/details') }}/" + encodeURIComponent(groupName),
-        type: 'GET',
-        dataType: 'json',
-        success: function(data) {
+    // numbers come with the page (last 30 days and upcoming, newest first)
+    (function(data) {
             if (!Array.isArray(data) || data.length === 0) {
                 bodyEl.innerHTML = '<div style="text-align: center; color: #64748B; padding: 20px;">No virtual numbers currently found in this Smart31 group.</div>';
                 return;
@@ -1629,12 +1625,9 @@ function openSmart31Details(groupName) {
 
             html += '</tbody></table></div>';
             bodyEl.innerHTML = html;
-        },
-        error: function() {
-            bodyEl.innerHTML = '<div style="text-align: center; color: #EF4444; padding: 20px;">Failed to load Smart31 group details. Please try again.</div>';
-        }
-    });
+    })(SMART31_DETAILS[groupName] || []);
 }
+const SMART31_DETAILS = @json($smartDetails);
 
 // Initial render & modal stacking setup
 document.addEventListener('DOMContentLoaded', function() {
