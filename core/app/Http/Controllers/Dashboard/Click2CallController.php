@@ -366,6 +366,10 @@ where c2c_channel = 1 ";
             return redirect()->route('NoPermission');
         }
         $User = User::find($id);
+        if (!$User) {   // user removed meanwhile (or an old link): nothing to switch off
+            return redirect()->action('Dashboard\Click2CallController@index')
+                ->with('errorMessage', 'This user no longer exists; the list has been refreshed.');
+        }
         $User->c2c_channel = 0;
         $User->click_agent_number = '';
         $User->save();
