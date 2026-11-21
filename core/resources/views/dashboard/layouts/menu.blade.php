@@ -121,7 +121,36 @@ try {
 }
 ?>
 
-<div id="aside" class="app-aside nav-expand sidebar" style="position: fixed; top: 0; left: 0; bottom: 0; width: 240px; height: 100vh; z-index: 1050; background: #071426 !important; overflow: hidden; display: flex; flex-direction: column;">
+<script>/* collapsed sidebar remembered per browser: applied before the menu is drawn (no flicker) */
+try { if (localStorage.getItem('lg_sidebar_collapsed') === '1') document.documentElement.classList.add('lg-sb-collapsed'); } catch (e) {}
+</script>
+<style>
+/* Sidebar collapse (desktop): a 72px icon strip; the page and the top bar take the freed width */
+.lg-sb-toggle { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 12px; margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.03); color: #CBD5E1;
+    font: 600 13px/1 inherit; cursor: pointer; transition: background .15s, color .15s; }
+.lg-sb-toggle:hover { background: rgba(255,255,255,0.08); color: #FFFFFF; }
+.lg-sb-toggle svg { flex-shrink: 0; transition: transform .2s; }
+@media (max-width: 991.98px) { .lg-sb-toggle { display: none; } }
+@media (min-width: 992px) {
+    #aside.app-aside, #aside .lg-sidebar-inner, .app-header, .top-header, #content.app-content { transition: width .2s, min-width .2s, max-width .2s, left .2s, margin-left .2s; }
+    html.lg-sb-collapsed #aside.app-aside, html.lg-sb-collapsed #aside .left.navside, html.lg-sb-collapsed #aside .lg-sidebar-inner {
+        width: 72px !important; min-width: 72px !important; max-width: 72px !important; }
+    html.lg-sb-collapsed #content.app-content, html.lg-sb-collapsed .app-content {
+        margin-left: 72px !important; width: calc(100% - 72px) !important; min-width: calc(100% - 72px) !important; max-width: calc(100% - 72px) !important; }
+    html.lg-sb-collapsed .top-header.app-header, html.lg-sb-collapsed .app-header, html.lg-sb-collapsed .top-header {
+        left: 72px !important; width: calc(100% - 72px) !important; }
+    html.lg-sb-collapsed #aside .lg-sidebar-brand { padding: 0 8px !important; justify-content: center !important; }
+    html.lg-sb-collapsed #aside .lg-sidebar-brand img { width: 50px !important; height: 50px !important; object-fit: cover !important; object-position: left center !important; }
+    html.lg-sb-collapsed #aside .lg-menu-label, html.lg-sb-collapsed #aside .lg-arrow, html.lg-sb-collapsed #aside .lg-nav-badge,
+    html.lg-sb-collapsed #aside .lg-submenu, html.lg-sb-collapsed #aside .lg-sb-brandtext, html.lg-sb-collapsed #aside .lg-sb-toggle-text { display: none !important; }
+    html.lg-sb-collapsed #aside .lg-menu-row { justify-content: center !important; padding: 0 !important; }
+    html.lg-sb-collapsed #aside .lg-sidebar-footer { padding: 12px 10px !important; }
+    html.lg-sb-collapsed #aside .lg-sb-toggle { justify-content: center; padding: 0; margin-bottom: 0; }
+    html.lg-sb-collapsed #aside .lg-sb-toggle svg { transform: scaleX(-1); }
+}
+</style>
+<div id="aside" class="app-aside nav-expand sidebar"style="position: fixed; top: 0; left: 0; bottom: 0; width: 240px; height: 100vh; z-index: 1050; background: #071426 !important; overflow: hidden; display: flex; flex-direction: column;">
     <div class="left navside lg-sidebar-inner" layout="column" style="height: 100%; flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: #071426 !important; box-sizing: border-box; width: 100%;">
         
         <!-- FIXED TOP: LeadGER Logo (Above Dashboard) -->
@@ -626,14 +655,54 @@ try {
 
         <!-- FIXED FOOTER -->
         <div class="sidebar-footer lg-sidebar-footer" style="background: #071426 !important;">
-            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em;"><span style="color: #FFFFFF;">Lead</span><span style="color: var(--lg-accent);">GER</span></div>
-            <div style="font-size: 9px; color: #64748B; margin-top: 2px;">Generate, Engage &amp; Retain</div>
+            <button type="button" class="lg-sb-toggle" id="lgSidebarToggle" onclick="lgToggleSidebar()" title="Collapse sidebar" aria-label="Collapse sidebar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><polyline points="16 15 13 12 16 9"/></svg>
+                <span class="lg-sb-toggle-text">Collapse</span>
+            </button>
+            <div class="lg-sb-brandtext">
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em;"><span style="color: #FFFFFF;">Lead</span><span style="color: var(--lg-accent);">GER</span></div>
+                <div style="font-size: 9px; color: #64748B; margin-top: 2px;">Generate, Engage &amp; Retain</div>
+            </div>
         </div>
 
     </div>
 </div>
 
 <!-- Interactive Expand/Collapse Logic -->
+<script>
+/* Collapse / expand the whole sidebar (remembered in this browser) */
+function lgSetSidebarCollapsed(collapsed, initial) {
+    document.documentElement.classList.toggle('lg-sb-collapsed', collapsed);
+    var btn = document.getElementById('lgSidebarToggle');
+    if (btn) { var t = collapsed ? 'Expand sidebar' : 'Collapse sidebar'; btn.title = t; btn.setAttribute('aria-label', t); }
+    if (initial) return;
+    try { localStorage.setItem('lg_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 250);   // tables / charts re-fit after the animation
+}
+function lgToggleSidebar() {
+    lgSetSidebarCollapsed(!document.documentElement.classList.contains('lg-sb-collapsed'));
+}
+(function () {
+    var aside = document.getElementById('aside');
+    if (!aside) return;
+    // collapsed: hovering an icon shows its name
+    aside.querySelectorAll('.lg-menu-row').forEach(function (row) {
+        var label = row.querySelector('.lg-menu-label');
+        if (label && !row.title) row.title = label.textContent.trim();
+    });
+    // collapsed: clicking a menu group opens the sidebar with that group open
+    aside.addEventListener('click', function (e) {
+        if (!document.documentElement.classList.contains('lg-sb-collapsed')) return;
+        var row = e.target.closest('.lg-menu-toggle');
+        if (!row) return;
+        e.stopPropagation(); e.preventDefault();
+        lgSetSidebarCollapsed(false);
+        var item = row.closest('.lg-nav-item');
+        if (item) item.classList.add('open');
+    }, true);
+    lgSetSidebarCollapsed(document.documentElement.classList.contains('lg-sb-collapsed'), true);
+})();
+</script>
 <script>
 function initSidebarNav() {
     const navToggles = document.querySelectorAll('.lg-menu-toggle');
